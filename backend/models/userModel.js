@@ -1,61 +1,81 @@
 const bcrypt = require("bcrypt");
-
-// Simple in-memory store for demo purposes.
-// Replace this with a real database model later.
-const users = [];
-let nextUserId = 1;
-let isInitialized = false;
+const { prisma } = require("../config/db");
 
 const demoAdminCredentials = {
   email: "admin@novara.com",
   password: "admin123",
 };
 
-async function initializeUserStore() {
-  if (isInitialized) {
-    return;
+function mapUser(user) {
+  if (!user) {
+    return undefined;
   }
 
-  const existingAdmin = findUserByEmail(demoAdminCredentials.email);
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    passwordHash: user.password,
+    role: user.role,
+  };
+}
 
-  if (!existingAdmin) {
-    const passwordHash = await bcrypt.hash(demoAdminCredentials.password, 10);
+async function initializeUserStore() {
+  const passwordHash = await bcrypt.hash(demoAdminCredentials.password, 10);
 
-    users.push({
-      id: String(nextUserId++),
+  await prisma.user.upsert({
+    where: {
+      email: demoAdminCredentials.email.toLowerCase(),
+    },
+    update: {
+      name: "Novara Admin",
+      password: passwordHash,
+      role: "ADMIN",
+    },
+    create: {
       name: "Novara Admin",
       email: demoAdminCredentials.email.toLowerCase(),
-      passwordHash,
+      password: passwordHash,
       role: "ADMIN",
-    });
-  }
-
-  isInitialized = true;
+    },
+  });
 }
 
-function createUser(user) {
-  const newUser = {
-    id: String(nextUserId++),
-    name: user.name,
-    email: user.email.toLowerCase(),
-    passwordHash: user.passwordHash,
-    role: user.role || "USER",
-  };
+async function createUser(user) {
+  const createdUser = await prisma.user.create({
+    data: {
+      name: user.name,
+      email: user.email.toLowerCase(),
+      password: user.passwordHash,
+      role: user.role || "USER",
+    },
+  });
 
-  users.push(newUser);
-  return newUser;
+  return mapUser(createdUser);
 }
 
-function findUserByEmail(email) {
+async function findUserByEmail(email) {
   if (!email) {
     return undefined;
   }
 
-  return users.find((user) => user.email === email.toLowerCase());
+  const user = await prisma.user.findUnique({
+    where: {
+      email: email.toLowerCase(),
+    },
+  });
+
+  return mapUser(user);
 }
 
-function findUserById(id) {
-  return users.find((user) => user.id === String(id));
+async function findUserById(id) {
+  const user = await prisma.user.findUnique({
+    where: {
+      id: String(id),
+    },
+  });
+
+  return mapUser(user);
 }
 
 module.exports = {

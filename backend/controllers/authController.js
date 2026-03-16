@@ -23,7 +23,7 @@ async function signup(req, res) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const existingUser = findUserByEmail(normalizedEmail);
+    const existingUser = await findUserByEmail(normalizedEmail);
 
     if (existingUser) {
       return res.status(409).json({
@@ -33,7 +33,7 @@ async function signup(req, res) {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const user = createUser({
+    const user = await createUser({
       name: name.trim(),
       email: normalizedEmail,
       passwordHash,
@@ -65,7 +65,7 @@ async function signin(req, res) {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const user = findUserByEmail(normalizedEmail);
+    const user = await findUserByEmail(normalizedEmail);
 
     if (!user) {
       return res.status(401).json({

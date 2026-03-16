@@ -7,7 +7,7 @@ const { connectDatabase } = require("./config/db");
 const { initializeUserStore } = require("./models/userModel");
 
 const app = express();
-const PORT = 5000;
+const PORT = Number(process.env.PORT) || 5000;
 
 app.use(
   cors({
@@ -29,6 +29,28 @@ app.use(
     },
   })
 );
+
+app.get("/", (req, res) => {
+  return res.json({
+    success: true,
+    message: "Novara backend is running",
+    routes: {
+      health: "/health",
+      signup: "POST /api/auth/signup",
+      signin: "POST /api/auth/signin",
+      signout: "POST /api/auth/signout",
+      currentUser: "GET /api/auth/me",
+      admin: "GET /api/auth/admin",
+    },
+  });
+});
+
+app.get("/health", (req, res) => {
+  return res.json({
+    success: true,
+    status: "ok",
+  });
+});
 
 app.use("/api/auth", authRoutes);
 
