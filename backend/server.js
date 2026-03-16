@@ -2,7 +2,12 @@ const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
 
-const authRoutes = require("./routes/authRoutes");
+const authRoutes      = require("./routes/authRoutes");
+const bookRoutes      = require("./routes/bookRoutes");
+const adminBookRoutes = require("./routes/adminBookRoutes");
+const chapterRoutes = require("./routes/chapterRoutes");
+const adminChapterRoutes = require("./routes/adminChapterRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 const { connectDatabase } = require("./config/db");
 const { initializeUserStore } = require("./models/userModel");
 
@@ -35,12 +40,25 @@ app.get("/", (req, res) => {
     success: true,
     message: "Novara backend is running",
     routes: {
-      health: "/health",
-      signup: "POST /api/auth/signup",
-      signin: "POST /api/auth/signin",
-      signout: "POST /api/auth/signout",
-      currentUser: "GET /api/auth/me",
-      admin: "GET /api/auth/admin",
+      health:          "GET  /health",
+      signup:          "POST /api/auth/signup",
+      signin:          "POST /api/auth/signin",
+      signout:         "POST /api/auth/signout",
+      currentUser:     "GET  /api/auth/me",
+      books:           "GET  /api/books",
+      book:            "GET  /api/books/:id",
+      adminCreateBook: "POST /api/admin/books",
+      adminUpdateBook: "PUT  /api/admin/books/:id",
+      adminDeleteBook: "DELETE /api/admin/books/:id",
+      adminPublish:    "POST /api/admin/books/:id/publish",
+      adminUnpublish:  "POST /api/admin/books/:id/unpublish",
+      chaptersByBook:  "GET  /api/books/:bookId/chapters",
+      chapterById:     "GET  /api/chapters/:id",
+      adminCreateChapter: "POST /api/admin/books/:bookId/chapters",
+      adminUpdateChapter: "PUT  /api/admin/chapters/:id",
+      adminDeleteChapter: "DELETE /api/admin/chapters/:id",
+      saveReadingProgress: "POST /api/progress/reading",
+      getReadingProgress: "GET  /api/progress/reading/:bookId",
     },
   });
 });
@@ -52,7 +70,12 @@ app.get("/health", (req, res) => {
   });
 });
 
-app.use("/api/auth", authRoutes);
+app.use("/api/auth",        authRoutes);
+app.use("/api/books",       bookRoutes);
+app.use("/api/admin/books", adminBookRoutes);
+app.use("/api", chapterRoutes);
+app.use("/api/admin", adminChapterRoutes);
+app.use("/api/progress", progressRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({
