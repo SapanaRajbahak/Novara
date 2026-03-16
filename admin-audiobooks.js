@@ -1,42 +1,46 @@
 const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const BOOKS_STORE_KEY = "novelread.admin.uploadedBooks";
-const CHAPTERS_STORE_KEY = "novelread.admin.chapterDrafts";
-const AUDIO_STORE_KEY = "novelread.admin.audioLibrary";
+const API_BASE_URL = "http://localhost:5000";
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
-  bookSelect: document.getElementById("bookSelect"),
-  fullAudioInput: document.getElementById("fullAudioInput"),
-  fullDropzone: document.getElementById("fullDropzone"),
-  fullAudioName: document.getElementById("fullAudioName"),
-  saveFullBtn: document.getElementById("saveFullBtn"),
-  removeFullBtn: document.getElementById("removeFullBtn"),
-  chapterList: document.getElementById("chapterList"),
-  matchSummary: document.getElementById("matchSummary"),
-  editorHint: document.getElementById("editorHint"),
-  chapterAudioInput: document.getElementById("chapterAudioInput"),
-  chapterDropzone: document.getElementById("chapterDropzone"),
-  chapterAudioName: document.getElementById("chapterAudioName"),
-  saveTrackBtn: document.getElementById("saveTrackBtn"),
-  deleteTrackBtn: document.getElementById("deleteTrackBtn"),
+  bookPicker: document.getElementById("bookPicker"),
+  bookPickerBtn: document.getElementById("bookPickerBtn"),
+  bookPickerMenu: document.getElementById("bookPickerMenu"),
+  refreshBtn: document.getElementById("refreshBtn"),
+  pageMessage: document.getElementById("pageMessage"),
+  formHeading: document.getElementById("formHeading"),
+  formMode: document.getElementById("formMode"),
+  trackForm: document.getElementById("trackForm"),
   trackTitleInput: document.getElementById("trackTitleInput"),
-  narratorInput: document.getElementById("narratorInput"),
+  audioUrlInput: document.getElementById("audioUrlInput"),
+  orderInput: document.getElementById("orderInput"),
   durationInput: document.getElementById("durationInput"),
-  saveMetaBtn: document.getElementById("saveMetaBtn"),
-  message: document.getElementById("message"),
+  chapterIdSelect: document.getElementById("chapterIdSelect"),
+  saveTrackBtn: document.getElementById("saveTrackBtn"),
+  cancelEditBtn: document.getElementById("cancelEditBtn"),
+  formMessage: document.getElementById("formMessage"),
+  trackSummary: document.getElementById("trackSummary"),
   tracksTableBody: document.getElementById("tracksTableBody"),
-  previewPlayer: document.getElementById("previewPlayer"),
-  previewInfo: document.getElementById("previewInfo")
 };
 
 const state = {
   books: [],
   selectedBookId: "",
-  selectedChapterNumber: 0,
-  tempUrls: {}
+  chapters: [],
+  tracks: [],
+  editingTrackId: null,
+  isLoading: false,
 };
 
-function requireAuth() {
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 1600);
+}
+
+function requirePageAuth() {
   const auth = localStorage.getItem(ADMIN_AUTH_KEY);
   if (auth !== "1") {
     const next = encodeURIComponent("admin-audiobooks.html");
@@ -46,338 +50,426 @@ function requireAuth() {
   return true;
 }
 
-function showToast(message) {
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  window.setTimeout(() => toast.remove(), 1400);
+function setPageMessage(text, tone = "info") {
+  elements.pageMessage.textContent = text;
+  elements.pageMessage.dataset.tone = tone;
 }
 
-function readJson(key, fallback) {
+function setFormMessage(text, tone = "info") {
+  elements.formMessage.textContent = text;
+  elements.formMessage.dataset.tone = tone;
+}
+
+function setBusyState(busy) {
+  state.isLoading = busy;
+  elements.bookPickerBtn.disabled = busy;
+  elements.refreshBtn.disabled = busy;
+  elements.saveTrackBtn.disabled = busy;
+  elements.cancelEditBtn.disabled = busy && !state.editingTrackId;
+}
+
+async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    cache: "no-store",
+    ...options,
+  });
+
+  let payload = null;
   try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
+    payload = await response.json();
   } catch (error) {
-    return fallback;
-  }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
-}
-
-function getBooks() {
-  const uploaded = readJson(BOOKS_STORE_KEY, []);
-  if (uploaded.length) {
-    return uploaded.map((book) => ({ id: book.id, title: book.title }));
+    payload = null;
   }
 
-  return [
-    { id: "book-last-lantern", title: "The Last Lantern" },
-    { id: "book-echoes-dawn", title: "Echoes at Dawn" }
-  ];
+  return { response, payload };
 }
 
-function getChaptersByBook(bookId) {
-  const store = readJson(CHAPTERS_STORE_KEY, {});
-  const list = Array.isArray(store[bookId]) ? store[bookId] : [];
-  const sorted = [...list].sort((a, b) => Number(a.number) - Number(b.number));
+function toUiStatus(status) {
+  return status === "PUBLISHED" ? "Published" : "Draft";
+}
 
-  if (sorted.length) {
-    return sorted.map((chapter) => ({ number: Number(chapter.number), title: chapter.title || `Chapter ${chapter.number}` }));
+function toStatusClass(status) {
+  return status === "PUBLISHED" ? "published" : "draft";
+}
+
+function renderSelectedBookLabel() {
+  if (!state.selectedBookId) {
+    elements.bookPickerBtn.innerHTML = "<span>Select a book</span>";
+    return;
   }
 
-  return [
-    { number: 1, title: "Chapter 1" },
-    { number: 2, title: "Chapter 2" },
-    { number: 3, title: "Chapter 3" }
-  ];
-}
-
-function getAudioStore() {
-  return readJson(AUDIO_STORE_KEY, {});
-}
-
-function saveAudioStore(store) {
-  writeJson(AUDIO_STORE_KEY, store);
-}
-
-function ensureBookAudio(bookId) {
-  const store = getAudioStore();
-  if (!store[bookId]) {
-    store[bookId] = {
-      fullAudiobook: null,
-      tracksByChapter: {}
-    };
-    saveAudioStore(store);
+  const selectedBook = state.books.find((book) => book.id === state.selectedBookId);
+  if (!selectedBook) {
+    elements.bookPickerBtn.innerHTML = "<span>Select a book</span>";
+    return;
   }
-  return store;
+
+  elements.bookPickerBtn.innerHTML = `
+    <span class="picker-label">${selectedBook.title}</span>
+    <span class="book-status-chip ${toStatusClass(selectedBook.status)}">${toUiStatus(selectedBook.status)}</span>
+  `;
 }
 
-function getBookAudioData(bookId) {
-  const store = ensureBookAudio(bookId);
-  return store[bookId];
-}
+function renderBookOptions() {
+  elements.bookPickerMenu.innerHTML = "";
 
-function setMessage(text) {
-  elements.message.textContent = text;
-}
+  if (!state.books.length) {
+    elements.bookPickerBtn.disabled = true;
+    elements.bookPickerBtn.innerHTML = "<span>No books available</span>";
+    return;
+  }
 
-function connectDropzone(dropzone, input, labelEl) {
-  dropzone.addEventListener("click", () => input.click());
-
-  dropzone.addEventListener("dragover", (event) => {
-    event.preventDefault();
-    dropzone.classList.add("drag-over");
-  });
-
-  dropzone.addEventListener("dragleave", () => {
-    dropzone.classList.remove("drag-over");
-  });
-
-  dropzone.addEventListener("drop", (event) => {
-    event.preventDefault();
-    dropzone.classList.remove("drag-over");
-    if (!event.dataTransfer?.files?.length) {
-      return;
-    }
-    input.files = event.dataTransfer.files;
-    labelEl.textContent = input.files[0]?.name || "No file selected";
-  });
-
-  input.addEventListener("change", () => {
-    labelEl.textContent = input.files?.[0]?.name || "No file selected";
-  });
-}
-
-function renderBookSelect() {
-  elements.bookSelect.innerHTML = "";
-  state.books.forEach((book) => {
-    const option = document.createElement("option");
-    option.value = book.id;
-    option.textContent = book.title;
-    elements.bookSelect.appendChild(option);
-  });
-
-  if (!state.selectedBookId && state.books.length) {
+  if (!state.selectedBookId) {
     state.selectedBookId = state.books[0].id;
   }
 
-  elements.bookSelect.value = state.selectedBookId;
-}
+  elements.bookPickerBtn.disabled = false;
 
-function renderChapterList() {
-  const chapters = getChaptersByBook(state.selectedBookId);
-  const audioData = getBookAudioData(state.selectedBookId);
-  const tracks = audioData.tracksByChapter || {};
-  elements.chapterList.innerHTML = "";
-
-  let matched = 0;
-  chapters.forEach((chapter) => {
-    const track = tracks[String(chapter.number)];
-    const hasAudio = Boolean(track?.fileName);
-    if (hasAudio) {
-      matched += 1;
-    }
-
-    const li = document.createElement("li");
-    li.className = `chapter-item ${chapter.number === state.selectedChapterNumber ? "active" : ""}`;
-    li.innerHTML = `
-      <button type="button" data-chapter-number="${chapter.number}">
-        Chapter ${chapter.number}: ${chapter.title}
-      </button>
-      <span class="match-pill ${hasAudio ? "ok" : "no"}">${hasAudio ? "Audio matched" : "No audio"}</span>
+  state.books.forEach((book) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = `picker-option ${book.id === state.selectedBookId ? "active" : ""}`;
+    option.setAttribute("role", "option");
+    option.dataset.bookId = book.id;
+    option.innerHTML = `
+      <span class="picker-option-label">${book.title}</span>
+      <span class="book-status-chip ${toStatusClass(book.status)}">${toUiStatus(book.status)}</span>
     `;
-    elements.chapterList.appendChild(li);
+    elements.bookPickerMenu.appendChild(option);
   });
 
-  elements.matchSummary.textContent = `${matched} / ${chapters.length} matched`;
-
-  if (!state.selectedChapterNumber && chapters.length) {
-    state.selectedChapterNumber = chapters[0].number;
-  }
-
-  renderEditor();
-  renderTracksTable();
+  renderSelectedBookLabel();
 }
 
-function getSelectedTrack() {
-  const audioData = getBookAudioData(state.selectedBookId);
-  return audioData.tracksByChapter?.[String(state.selectedChapterNumber)] || null;
+function toggleBookPicker(open) {
+  const shouldOpen = typeof open === "boolean" ? open : elements.bookPickerMenu.classList.contains("hidden");
+  elements.bookPickerMenu.classList.toggle("hidden", !shouldOpen);
+  elements.bookPickerBtn.setAttribute("aria-expanded", String(shouldOpen));
 }
 
-function renderEditor() {
-  const track = getSelectedTrack();
-  elements.editorHint.textContent = `Editing chapter ${state.selectedChapterNumber || "-"}`;
+function renderChapterOptions() {
+  const options = [
+    `<option value="">No chapter linked</option>`,
+    ...state.chapters.map(
+      (chapter) => `<option value="${chapter.id}">Chapter ${chapter.chapterNumber}: ${chapter.title}</option>`
+    ),
+  ];
 
-  elements.trackTitleInput.value = track?.title || `Chapter ${state.selectedChapterNumber} Track`;
-  elements.narratorInput.value = track?.narrator || "";
-  elements.durationInput.value = track?.duration || "";
-  elements.chapterAudioName.textContent = track?.fileName || "No file selected";
+  elements.chapterIdSelect.innerHTML = options.join("");
+}
 
-  const fullAudio = getBookAudioData(state.selectedBookId).fullAudiobook;
-  elements.fullAudioName.textContent = fullAudio?.fileName || "No file selected";
-
-  if (track?.tempUrl) {
-    elements.previewPlayer.src = track.tempUrl;
-    elements.previewInfo.textContent = `Previewing ${track.fileName}`;
-  } else {
-    elements.previewPlayer.removeAttribute("src");
-    elements.previewPlayer.load();
-    elements.previewInfo.textContent = "Select a chapter track with a file to preview.";
+function formatDuration(seconds) {
+  const value = Number(seconds);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "--";
   }
+
+  return `${value}s`;
+}
+
+function getChapterLabel(track) {
+  if (track.chapter && track.chapter.title) {
+    return `Chapter ${track.chapter.chapterNumber}: ${track.chapter.title}`;
+  }
+
+  if (!track.chapterId) {
+    return "Not linked";
+  }
+
+  const chapter = state.chapters.find((item) => item.id === track.chapterId);
+  if (!chapter) {
+    return "Linked chapter unavailable";
+  }
+
+  return `Chapter ${chapter.chapterNumber}: ${chapter.title}`;
 }
 
 function renderTracksTable() {
-  const chapters = getChaptersByBook(state.selectedBookId);
-  const tracks = getBookAudioData(state.selectedBookId).tracksByChapter || {};
   elements.tracksTableBody.innerHTML = "";
+  elements.trackSummary.textContent = `${state.tracks.length} tracks`;
 
-  chapters.forEach((chapter) => {
-    const track = tracks[String(chapter.number)] || null;
+  if (!state.tracks.length) {
+    elements.tracksTableBody.innerHTML = `
+      <tr>
+        <td colspan="8">No audio tracks yet for this book. Use the form to create one.</td>
+      </tr>
+    `;
+    return;
+  }
+
+  state.tracks.forEach((track) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td>Chapter ${chapter.number}</td>
-      <td>${track?.title || "-"}</td>
-      <td>${track?.duration || "--:--"}</td>
-      <td><span class="status-pill ${track?.fileName ? "ok" : "no"}">${track?.fileName ? "Matched" : "Missing"}</span></td>
+      <td>${track.order}</td>
+      <td>${track.title}</td>
+      <td>${getChapterLabel(track)}</td>
+      <td>${formatDuration(track.duration)}</td>
+      <td><a href="${track.audioUrl}" target="_blank" rel="noopener noreferrer">Open URL</a></td>
+      <td><span class="status-pill ok">Ready</span></td>
       <td>
-        <button type="button" class="text-btn" data-action="select" data-chapter="${chapter.number}">Edit</button>
+        <button type="button" class="text-btn" data-action="edit" data-id="${track.id}">Edit</button>
+        <button type="button" class="text-btn danger" data-action="delete" data-id="${track.id}">Delete</button>
       </td>
     `;
     elements.tracksTableBody.appendChild(tr);
   });
 }
 
-function saveTrackFile() {
-  const file = elements.chapterAudioInput.files?.[0] || null;
-  if (!file) {
-    setMessage("Select an audio file first.");
+function resetForm(defaultOrder = 0) {
+  state.editingTrackId = null;
+  elements.formHeading.textContent = "Create Audio Track";
+  elements.formMode.textContent = "Create mode";
+  elements.saveTrackBtn.textContent = "Create Track";
+  elements.cancelEditBtn.disabled = true;
+
+  elements.trackTitleInput.value = "";
+  elements.audioUrlInput.value = "";
+  elements.orderInput.value = String(defaultOrder);
+  elements.durationInput.value = "";
+  elements.chapterIdSelect.value = "";
+  setFormMessage("", "info");
+}
+
+function getNextOrderValue() {
+  if (!state.tracks.length) {
+    return 0;
+  }
+
+  const maxOrder = Math.max(...state.tracks.map((track) => Number(track.order) || 0));
+  return maxOrder + 1;
+}
+
+function startEditTrack(trackId) {
+  const track = state.tracks.find((item) => item.id === trackId);
+  if (!track) {
     return;
   }
 
-  if (!file.type.startsWith("audio/")) {
-    setMessage("Invalid file type. Please upload audio.");
-    return;
+  state.editingTrackId = track.id;
+  elements.formHeading.textContent = "Edit Audio Track";
+  elements.formMode.textContent = `Editing track #${track.order}`;
+  elements.saveTrackBtn.textContent = "Update Track";
+  elements.cancelEditBtn.disabled = false;
+
+  elements.trackTitleInput.value = track.title || "";
+  elements.audioUrlInput.value = track.audioUrl || "";
+  elements.orderInput.value = String(track.order ?? 0);
+  elements.durationInput.value = track.duration ? String(track.duration) : "";
+  elements.chapterIdSelect.value = track.chapterId || "";
+  setFormMessage("You are editing an existing track.", "info");
+}
+
+function parseFormPayload() {
+  const title = elements.trackTitleInput.value.trim();
+  const audioUrl = elements.audioUrlInput.value.trim();
+  const order = Number(elements.orderInput.value);
+  const durationRaw = elements.durationInput.value.trim();
+  const chapterId = elements.chapterIdSelect.value || null;
+
+  if (!title) {
+    return { error: "Title is required." };
   }
 
-  const store = ensureBookAudio(state.selectedBookId);
-  const bookAudio = store[state.selectedBookId];
-  const key = String(state.selectedChapterNumber);
-  const previous = bookAudio.tracksByChapter?.[key];
-
-  if (previous?.tempUrl) {
-    URL.revokeObjectURL(previous.tempUrl);
+  if (!audioUrl) {
+    return { error: "Audio URL is required." };
   }
 
-  const tempUrl = URL.createObjectURL(file);
-  state.tempUrls[`${state.selectedBookId}:${key}`] = tempUrl;
+  if (!Number.isInteger(order) || order < 0) {
+    return { error: "Order must be a non-negative whole number." };
+  }
 
-  bookAudio.tracksByChapter[key] = {
-    ...(previous || {}),
-    title: elements.trackTitleInput.value.trim() || `Chapter ${state.selectedChapterNumber} Track`,
-    narrator: elements.narratorInput.value.trim(),
-    duration: elements.durationInput.value.trim() || "--:--",
-    fileName: file.name,
-    fileType: file.type,
-    updatedAt: new Date().toISOString(),
-    tempUrl
+  let duration;
+  if (durationRaw.length) {
+    duration = Number(durationRaw);
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return { error: "Duration must be a positive number when provided." };
+    }
+  }
+
+  const payload = {
+    title,
+    audioUrl,
+    order,
+    chapterId,
   };
 
-  saveAudioStore(store);
-  renderChapterList();
-  setMessage("Track file saved.");
-  showToast("Track uploaded");
+  if (duration !== undefined) {
+    payload.duration = Math.floor(duration);
+  }
+
+  return { payload };
 }
 
-function saveTrackMeta() {
-  const store = ensureBookAudio(state.selectedBookId);
-  const bookAudio = store[state.selectedBookId];
-  const key = String(state.selectedChapterNumber);
-  const existing = bookAudio.tracksByChapter[key] || {};
+async function loadBooks() {
+  const { response, payload } = await apiFetch(`/api/admin/books?page=1&limit=200&sort=title_asc`);
 
-  bookAudio.tracksByChapter[key] = {
-    ...existing,
-    title: elements.trackTitleInput.value.trim() || `Chapter ${state.selectedChapterNumber} Track`,
-    narrator: elements.narratorInput.value.trim(),
-    duration: elements.durationInput.value.trim() || "--:--",
-    updatedAt: new Date().toISOString()
-  };
+  if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
+    throw new Error(payload?.error || `Failed to load books (HTTP ${response.status})`);
+  }
 
-  saveAudioStore(store);
-  renderTracksTable();
-  setMessage("Track metadata saved.");
-  showToast("Metadata saved");
+  state.books = payload.data;
+  state.selectedBookId = state.books[0]?.id || "";
 }
 
-function deleteTrack() {
-  const store = ensureBookAudio(state.selectedBookId);
-  const bookAudio = store[state.selectedBookId];
-  const key = String(state.selectedChapterNumber);
-  const existing = bookAudio.tracksByChapter[key];
+async function loadChapters(bookId) {
+  const { response, payload } = await apiFetch(`/api/books/${encodeURIComponent(bookId)}/chapters`);
 
-  if (!existing) {
-    setMessage("No audio to delete for this chapter.");
+  if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
+    throw new Error(payload?.error || `Failed to load chapters (HTTP ${response.status})`);
+  }
+
+  state.chapters = payload.data;
+}
+
+async function loadTracks(bookId) {
+  const { response, payload } = await apiFetch(`/api/books/${encodeURIComponent(bookId)}/audio`);
+
+  if (!response.ok || !payload?.success || !Array.isArray(payload.data)) {
+    throw new Error(payload?.error || `Failed to load tracks (HTTP ${response.status})`);
+  }
+
+  state.tracks = [...payload.data].sort((a, b) => Number(a.order) - Number(b.order));
+}
+
+async function refreshBookData() {
+  if (!state.selectedBookId) {
+    state.chapters = [];
+    state.tracks = [];
+    renderChapterOptions();
+    renderTracksTable();
     return;
   }
 
-  if (existing.tempUrl) {
-    URL.revokeObjectURL(existing.tempUrl);
-  }
+  setBusyState(true);
+  setPageMessage("Loading chapters and tracks...", "loading");
 
-  delete bookAudio.tracksByChapter[key];
-  saveAudioStore(store);
-  renderChapterList();
-  setMessage("Chapter audio deleted.");
-  showToast("Audio deleted");
+  try {
+    await Promise.all([
+      loadChapters(state.selectedBookId),
+      loadTracks(state.selectedBookId),
+    ]);
+
+    renderChapterOptions();
+    renderTracksTable();
+    resetForm(getNextOrderValue());
+    setPageMessage("Tracks loaded.", "success");
+  } catch (error) {
+    state.chapters = [];
+    state.tracks = [];
+    renderChapterOptions();
+    renderTracksTable();
+
+    if (String(error.message || "").includes("HTTP 401") || String(error.message || "").includes("HTTP 403")) {
+      setPageMessage("Admin session required. Please sign in again.", "error");
+    } else {
+      setPageMessage(error.message || "Failed to load book data.", "error");
+    }
+  } finally {
+    setBusyState(false);
+  }
 }
 
-function saveFullAudiobook() {
-  const file = elements.fullAudioInput.files?.[0] || null;
-  if (!file) {
-    setMessage("Select a full audiobook file first.");
+async function createTrack(payload) {
+  const { response, payload: body } = await apiFetch(
+    `/api/admin/books/${encodeURIComponent(state.selectedBookId)}/audio`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    }
+  );
+
+  if (!response.ok || !body?.success) {
+    throw new Error(body?.error || `Failed to create track (HTTP ${response.status})`);
+  }
+}
+
+async function updateTrack(trackId, payload) {
+  const { response, payload: body } = await apiFetch(`/api/admin/audio/${encodeURIComponent(trackId)}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok || !body?.success) {
+    throw new Error(body?.error || `Failed to update track (HTTP ${response.status})`);
+  }
+}
+
+async function deleteTrack(trackId) {
+  const { response, payload } = await apiFetch(`/api/admin/audio/${encodeURIComponent(trackId)}`, {
+    method: "DELETE",
+  });
+
+  if (!response.ok || !payload?.success) {
+    throw new Error(payload?.error || `Failed to delete track (HTTP ${response.status})`);
+  }
+}
+
+async function handleSubmit(event) {
+  event.preventDefault();
+
+  if (!state.selectedBookId) {
+    setFormMessage("Select a book first.", "error");
     return;
   }
 
-  if (!file.type.startsWith("audio/")) {
-    setMessage("Invalid full audiobook format.");
+  const { payload, error } = parseFormPayload();
+  if (error) {
+    setFormMessage(error, "error");
     return;
   }
 
-  const store = ensureBookAudio(state.selectedBookId);
-  const bookAudio = store[state.selectedBookId];
-  const previous = bookAudio.fullAudiobook;
-  if (previous?.tempUrl) {
-    URL.revokeObjectURL(previous.tempUrl);
+  setBusyState(true);
+  setFormMessage(state.editingTrackId ? "Updating track..." : "Creating track...", "loading");
+
+  try {
+    if (state.editingTrackId) {
+      await updateTrack(state.editingTrackId, payload);
+      showToast("Track updated");
+    } else {
+      await createTrack(payload);
+      showToast("Track created");
+    }
+
+    await refreshBookData();
+    setFormMessage("Saved successfully.", "success");
+  } catch (submitError) {
+    setFormMessage(submitError.message || "Failed to save track.", "error");
+  } finally {
+    setBusyState(false);
   }
-
-  const tempUrl = URL.createObjectURL(file);
-  state.tempUrls[`${state.selectedBookId}:full`] = tempUrl;
-
-  bookAudio.fullAudiobook = {
-    fileName: file.name,
-    fileType: file.type,
-    tempUrl,
-    updatedAt: new Date().toISOString()
-  };
-
-  saveAudioStore(store);
-  renderEditor();
-  setMessage("Full audiobook saved.");
-  showToast("Full audiobook uploaded");
 }
 
-function removeFullAudiobook() {
-  const store = ensureBookAudio(state.selectedBookId);
-  const bookAudio = store[state.selectedBookId];
-  if (bookAudio.fullAudiobook?.tempUrl) {
-    URL.revokeObjectURL(bookAudio.fullAudiobook.tempUrl);
+async function handleDelete(trackId) {
+  const track = state.tracks.find((item) => item.id === trackId);
+  if (!track) {
+    return;
   }
-  bookAudio.fullAudiobook = null;
-  saveAudioStore(store);
-  renderEditor();
-  setMessage("Full audiobook removed.");
+
+  const confirmed = window.confirm(`Delete track \"${track.title}\" (order ${track.order})?`);
+  if (!confirmed) {
+    return;
+  }
+
+  setBusyState(true);
+  setPageMessage("Deleting track...", "loading");
+
+  try {
+    await deleteTrack(trackId);
+    showToast("Track deleted");
+    await refreshBookData();
+    setPageMessage("Track deleted.", "success");
+  } catch (error) {
+    setPageMessage(error.message || "Failed to delete track.", "error");
+  } finally {
+    setBusyState(false);
+  }
 }
 
 function bindEvents() {
@@ -386,66 +478,88 @@ function bindEvents() {
     window.location.href = "admin-login.html";
   });
 
-  elements.bookSelect.addEventListener("change", () => {
-    state.selectedBookId = elements.bookSelect.value;
-    state.selectedChapterNumber = 0;
-    renderChapterList();
-    setMessage("Book changed.");
-  });
-
-  elements.chapterList.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-chapter-number]");
-    if (!button) {
+  elements.bookPickerBtn.addEventListener("click", () => {
+    if (!state.books.length || state.isLoading) {
       return;
     }
-    state.selectedChapterNumber = Number(button.dataset.chapterNumber);
-    renderChapterList();
+    toggleBookPicker();
   });
 
-  elements.tracksTableBody.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-action='select'][data-chapter]");
-    if (!button) {
+  elements.bookPickerMenu.addEventListener("click", async (event) => {
+    const option = event.target.closest("button[data-book-id]");
+    if (!option) {
       return;
     }
-    state.selectedChapterNumber = Number(button.dataset.chapter);
-    renderChapterList();
+
+    const nextBookId = option.dataset.bookId;
+    if (!nextBookId || nextBookId === state.selectedBookId) {
+      toggleBookPicker(false);
+      return;
+    }
+
+    state.selectedBookId = nextBookId;
+    renderBookOptions();
+    toggleBookPicker(false);
+    await refreshBookData();
   });
 
-  connectDropzone(elements.fullDropzone, elements.fullAudioInput, elements.fullAudioName);
-  connectDropzone(elements.chapterDropzone, elements.chapterAudioInput, elements.chapterAudioName);
+  document.addEventListener("click", (event) => {
+    if (!elements.bookPicker.contains(event.target)) {
+      toggleBookPicker(false);
+    }
+  });
 
-  elements.saveTrackBtn.addEventListener("click", saveTrackFile);
-  elements.deleteTrackBtn.addEventListener("click", deleteTrack);
-  elements.saveMetaBtn.addEventListener("click", saveTrackMeta);
-  elements.saveFullBtn.addEventListener("click", saveFullAudiobook);
-  elements.removeFullBtn.addEventListener("click", removeFullAudiobook);
+  elements.refreshBtn.addEventListener("click", async () => {
+    await refreshBookData();
+  });
 
-  window.addEventListener("beforeunload", () => {
-    Object.values(state.tempUrls).forEach((url) => {
-      try {
-        URL.revokeObjectURL(url);
-      } catch (error) {
-        return;
-      }
-    });
+  elements.trackForm.addEventListener("submit", handleSubmit);
+
+  elements.cancelEditBtn.addEventListener("click", () => {
+    resetForm(getNextOrderValue());
+    setFormMessage("Switched to create mode.", "info");
+  });
+
+  elements.tracksTableBody.addEventListener("click", async (event) => {
+    const editButton = event.target.closest("button[data-action='edit'][data-id]");
+    if (editButton) {
+      startEditTrack(editButton.dataset.id);
+      return;
+    }
+
+    const deleteButton = event.target.closest("button[data-action='delete'][data-id]");
+    if (deleteButton) {
+      await handleDelete(deleteButton.dataset.id);
+    }
   });
 }
 
-function bootstrap() {
-  if (!requireAuth()) {
+async function bootstrap() {
+  if (!requirePageAuth()) {
     return;
   }
 
-  state.books = getBooks();
-  if (!state.books.length) {
-    setMessage("No books found. Upload a book first.");
-    return;
-  }
-
-  state.selectedBookId = state.books[0].id;
-  renderBookSelect();
-  renderChapterList();
   bindEvents();
+  setBusyState(true);
+  setPageMessage("Loading books...", "loading");
+
+  try {
+    await loadBooks();
+    renderBookOptions();
+
+    if (!state.selectedBookId) {
+      setPageMessage("No books available. Create or publish a book first.", "error");
+      renderChapterOptions();
+      renderTracksTable();
+      return;
+    }
+
+    await refreshBookData();
+  } catch (error) {
+    setPageMessage(error.message || "Failed to load audiobook admin data.", "error");
+  } finally {
+    setBusyState(false);
+  }
 }
 
 bootstrap();

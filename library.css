@@ -229,6 +229,54 @@ a {
   line-height: 1.4;
 }
 
+.reading-progress {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.progress-badge {
+  margin: 0;
+  width: fit-content;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: color-mix(in oklab, var(--primary) 80%, var(--text));
+  background: color-mix(in oklab, var(--primary) 14%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--primary) 35%, var(--border));
+  border-radius: 999px;
+  padding: 0.2rem 0.5rem;
+}
+
+.progress-badge-link {
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.progress-badge-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  background: color-mix(in oklab, var(--primary) 20%, var(--surface));
+}
+
+.progress-badge-link:focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--primary) 68%, var(--accent));
+  outline-offset: 2px;
+}
+
+.progress-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--border) 75%, var(--surface));
+  overflow: hidden;
+}
+
+.progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), color-mix(in oklab, var(--accent) 68%, var(--primary)));
+}
+
 .tags {
   display: flex;
   gap: 0.35rem;
@@ -260,6 +308,17 @@ a {
   cursor: pointer;
   background: var(--surface-2);
   color: var(--text);
+}
+
+.card-actions .card-link-btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.48rem 0.38rem;
+  font-weight: 700;
+  font-size: 0.79rem;
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: center;
 }
 
 .card-actions button:disabled {

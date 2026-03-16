@@ -8,6 +8,7 @@ const {
   validateCreateBook,
   validateUpdateBook,
   validateListQuery,
+  validateAdminListQuery,
 } = require("../validators/bookValidator");
 
 // ─── Public controllers ───────────────────────────────────────────────────────
@@ -62,6 +63,32 @@ async function getBookById(req, res) {
   } catch (error) {
     console.error("getBookById error:", error);
     return res.status(500).json({ success: false, error: "Failed to fetch book" });
+  }
+}
+
+/**
+ * GET /api/admin/books
+ * Return a paginated, filterable list of all books for admin screens.
+ * Includes both DRAFT and PUBLISHED unless status is explicitly filtered.
+ */
+async function getAdminBooks(req, res) {
+  try {
+    const queryErrors = validateAdminListQuery(req.query);
+    if (queryErrors.length > 0) {
+      return res.status(400).json({ success: false, error: queryErrors.join(". ") });
+    }
+
+    const result = await bookService.listAdminBooks(req.query);
+
+    return res.json({
+      success: true,
+      message: "Admin books fetched successfully",
+      data: result.books,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    console.error("getAdminBooks error:", error);
+    return res.status(500).json({ success: false, error: "Failed to fetch admin books" });
   }
 }
 
@@ -193,6 +220,7 @@ async function unpublishBook(req, res) {
 module.exports = {
   getBooks,
   getBookById,
+  getAdminBooks,
   createBook,
   updateBook,
   deleteBook,

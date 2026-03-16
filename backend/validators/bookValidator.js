@@ -146,8 +146,23 @@ function validateListQuery(query) {
   return errors;
 }
 
+/**
+ * Validate query parameters for GET /api/admin/books.
+ * Same as public list query, plus optional status filtering.
+ */
+function validateAdminListQuery(query) {
+  const errors = validateListQuery(query);
+
+  if (query.status !== undefined && !VALID_STATUSES.includes(query.status)) {
+    errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
+  }
+
+  return errors;
+}
+
 module.exports = {
   validateCreateBook,
   validateUpdateBook,
   validateListQuery,
+  validateAdminListQuery,
 };

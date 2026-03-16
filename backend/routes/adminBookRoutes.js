@@ -8,6 +8,7 @@
 const express = require("express");
 const { requireAdmin } = require("../middleware/auth");
 const {
+  getAdminBooks,
   createBook,
   updateBook,
   deleteBook,
@@ -19,6 +20,9 @@ const router = express.Router();
 
 // Protect every route in this file with the admin check
 router.use(requireAdmin);
+
+// GET    /api/admin/books             – list all books (draft + published)
+router.get("/", getAdminBooks);
 
 // POST   /api/admin/books             – create a new book
 router.post("/", createBook);

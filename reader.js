@@ -2,11 +2,16 @@ const SETTINGS_KEY = "novelread.reader.settings";
 const PROGRESS_KEY = "novelread.reader.progress";
 const BOOKMARK_KEY = "novelread.reader.bookmarks";
 const NOTES_KEY = "novelread.reader.notes";
+const API_BASE_URL = "http://localhost:5000";
 
 const state = {
-  books: [],
   currentBook: null,
+  chapterCache: {},
+  currentChapter: null,
   currentChapterIndex: 0,
+  progressApiEnabled: true,
+  progressApiAuthMissingNotified: false,
+  resumeApplied: false,
   settings: {
     fontSize: 19,
     fontFamily: "Fraunces, serif",
@@ -73,9 +78,13 @@ function showToast(message) {
 
 function getParams() {
   const params = new URLSearchParams(window.location.search);
+
+  const chapterFromQuery = Number(params.get("chapter") || 1);
+
   return {
-    bookId: params.get("book") || "book-last-lantern",
-    chapter: Number(params.get("chapter") || 1),
+    bookId: params.get("bookId") || params.get("book") || "",
+    chapterId: params.get("chapterId") || "",
+    chapter: Number.isFinite(chapterFromQuery) ? chapterFromQuery : 1,
     mode: params.get("mode") || "read"
   };
 }
@@ -133,25 +142,173 @@ function persistSettings() {
   saveJsonStorage(SETTINGS_KEY, state.settings);
 }
 
-async function loadBookData() {
-  try {
-    const response = await fetch("./data/reader-content.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const data = await response.json();
-    state.books = Array.isArray(data.books) ? data.books : [];
-  } catch (error) {
-    state.books = [];
+async function fetchBookMetadata(bookId) {
+  const response = await fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch book metadata (HTTP ${response.status})`);
   }
+
+  const payload = await response.json();
+  if (!payload.success || !payload.data) {
+    throw new Error("Book metadata response is invalid");
+  }
+
+  const book = payload.data;
+  return {
+    id: book.id,
+    title: book.title,
+    hasAudiobook: Boolean(book.isAudiobookAvailable),
+    audiobookTracks: [],
+  };
 }
 
-function resolveBook(bookId) {
-  return state.books.find((book) => book.id === bookId) || state.books[0] || null;
+async function fetchChapterList(bookId) {
+  const response = await fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}/chapters`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch chapter list (HTTP ${response.status})`);
+  }
+
+  const payload = await response.json();
+  if (!payload.success || !Array.isArray(payload.data)) {
+    throw new Error("Chapter list response is invalid");
+  }
+
+  return payload.data.map((chapter) => ({
+    id: chapter.id,
+    number: chapter.chapterNumber,
+    title: chapter.title,
+  }));
+}
+
+async function fetchChapterById(chapterId) {
+  if (state.chapterCache[chapterId]) {
+    return state.chapterCache[chapterId];
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/chapters/${encodeURIComponent(chapterId)}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch chapter content (HTTP ${response.status})`);
+  }
+
+  const payload = await response.json();
+  if (!payload.success || !payload.data) {
+    throw new Error("Chapter response is invalid");
+  }
+
+  state.chapterCache[chapterId] = payload.data;
+  return payload.data;
 }
 
 function getProgressMap() {
   return loadJsonStorage(PROGRESS_KEY, {});
+}
+
+function getCurrentChapterMeta() {
+  if (!state.currentBook) {
+    return null;
+  }
+
+  return state.currentBook.chapters[state.currentChapterIndex] || null;
+}
+
+function buildLastLocation(scrollTop, chapterProgress) {
+  return JSON.stringify({
+    scrollTop: Math.max(0, Math.round(scrollTop)),
+    chapterProgress: Number(chapterProgress.toFixed(4)),
+  });
+}
+
+function parseLastLocation(lastLocation) {
+  if (!lastLocation) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(lastLocation);
+    if (typeof parsed !== "object" || parsed === null) {
+      return null;
+    }
+
+    return {
+      scrollTop: Math.max(0, Number(parsed.scrollTop) || 0),
+      chapterProgress: Number(parsed.chapterProgress) || 0,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+async function saveReadingProgressToApi(payload) {
+  if (!state.progressApiEnabled) {
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/reading`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.status === 401) {
+      state.progressApiEnabled = false;
+      if (!state.progressApiAuthMissingNotified) {
+        state.progressApiAuthMissingNotified = true;
+        showToast("Sign in to sync reading progress across devices");
+      }
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    console.warn("Progress sync failed:", error);
+  }
+}
+
+async function getReadingProgressFromApi(bookId) {
+  if (!state.progressApiEnabled) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/reading/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      state.progressApiEnabled = false;
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (!payload.success || !payload.data) {
+      return null;
+    }
+
+    return payload.data;
+  } catch (error) {
+    console.warn("Failed to fetch reading progress from API:", error);
+    return null;
+  }
 }
 
 function saveProgress() {
@@ -159,16 +316,31 @@ function saveProgress() {
     return;
   }
 
+  const currentChapter = getCurrentChapterMeta();
+  if (!currentChapter) {
+    return;
+  }
+
   const progress = getProgressMap();
   const chapterCount = state.currentBook.chapters.length || 1;
   const chapterProgress = getChapterScrollRatio();
+  const scrollTop = Math.max(0, elements.readingViewport.scrollTop);
+  const percent = Number((((state.currentChapterIndex + chapterProgress) / chapterCount) * 100).toFixed(2));
+
   progress[getBookStorageKey(state.currentBook.id)] = {
     chapterIndex: state.currentChapterIndex,
-    scrollTop: Math.max(0, elements.readingViewport.scrollTop),
-    percent: (((state.currentChapterIndex + chapterProgress) / chapterCount) * 100).toFixed(2)
+    scrollTop,
+    percent,
   };
 
   saveJsonStorage(PROGRESS_KEY, progress);
+
+  saveReadingProgressToApi({
+    bookId: state.currentBook.id,
+    chapterId: currentChapter.id,
+    progressPercent: percent,
+    lastLocation: buildLastLocation(scrollTop, chapterProgress),
+  });
 }
 
 function loadProgress() {
@@ -235,12 +407,32 @@ function updateProgressUi() {
   elements.progressText.textContent = `${Math.round(totalPercent)}%`;
 }
 
+function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function createParagraphMarkup(paragraph) {
-  return `<p>${paragraph}</p>`;
+  return `<p>${escapeHtml(paragraph)}</p>`;
 }
 
 function renderStructuredChapter(chapter) {
-  elements.readerContent.innerHTML = chapter.paragraphs.map(createParagraphMarkup).join("");
+  const text = String(chapter.content || "").trim();
+  if (!text) {
+    elements.readerContent.innerHTML = "<p>No chapter content available.</p>";
+    return;
+  }
+
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+
+  elements.readerContent.innerHTML = paragraphs.map(createParagraphMarkup).join("");
 }
 
 function renderPdfShell() {
@@ -267,12 +459,12 @@ function renderEpubShell() {
 }
 
 function renderCurrentChapter() {
-  if (!state.currentBook) {
-    elements.readerContent.innerHTML = "<p>Book not found.</p>";
+  if (!state.currentBook || !state.currentChapter) {
+    elements.readerContent.innerHTML = "<p>Chapter not found.</p>";
     return;
   }
 
-  const chapter = state.currentBook.chapters[state.currentChapterIndex];
+  const chapter = state.currentChapter;
   elements.toolbarBookTitle.textContent = state.currentBook.title;
   elements.toolbarChapterTitle.textContent = `Chapter ${chapter.number}: ${chapter.title}`;
   document.title = `${state.currentBook.title} - Chapter ${chapter.number}`;
@@ -364,18 +556,72 @@ function renderNotes() {
   });
 }
 
-function resumeProgress() {
-  const saved = loadProgress();
-  if (!saved || !state.currentBook) {
+async function resumeProgress() {
+  if (!state.currentBook || state.resumeApplied) {
+    return;
+  }
+
+  const apiProgress = await getReadingProgressFromApi(state.currentBook.id);
+
+  if (apiProgress && apiProgress.chapterId) {
+    const chapterIndex = state.currentBook.chapters.findIndex(
+      (chapter) => chapter.id === apiProgress.chapterId
+    );
+
+    if (chapterIndex >= 0) {
+      state.currentChapterIndex = chapterIndex;
+      await loadAndRenderChapterByIndex(state.currentChapterIndex);
+
+      const location = parseLastLocation(apiProgress.lastLocation);
+      if (location) {
+        elements.readingViewport.scrollTop = location.scrollTop;
+      }
+
+      updateProgressUi();
+      showToast(`Resumed at ${Math.round(Number(apiProgress.progressPercent || 0))}%`);
+      state.resumeApplied = true;
+      return;
+    }
+  }
+
+  const localProgress = loadProgress();
+  if (!localProgress) {
     return;
   }
 
   const chapterMax = state.currentBook.chapters.length - 1;
-  state.currentChapterIndex = Math.min(chapterMax, Math.max(0, saved.chapterIndex || 0));
-  renderCurrentChapter();
-  elements.readingViewport.scrollTop = Math.max(0, saved.scrollTop || 0);
+  state.currentChapterIndex = Math.min(chapterMax, Math.max(0, localProgress.chapterIndex || 0));
+  await loadAndRenderChapterByIndex(state.currentChapterIndex);
+  elements.readingViewport.scrollTop = Math.max(0, localProgress.scrollTop || 0);
   updateProgressUi();
-  showToast(`Resumed at ${Math.round(Number(saved.percent || 0))}%`);
+  showToast(`Resumed at ${Math.round(Number(localProgress.percent || 0))}%`);
+  state.resumeApplied = true;
+}
+
+async function loadAndRenderChapterByIndex(index) {
+  if (!state.currentBook) {
+    return;
+  }
+
+  const chapterMeta = state.currentBook.chapters[index];
+  if (!chapterMeta) {
+    return;
+  }
+
+  elements.readerContent.innerHTML = "<p>Loading chapter...</p>";
+
+  const chapter = await fetchChapterById(chapterMeta.id);
+  state.currentChapter = {
+    ...chapterMeta,
+    content: chapter.content,
+  };
+
+  const params = new URLSearchParams(window.location.search);
+  params.set("bookId", state.currentBook.id);
+  params.set("chapterId", chapterMeta.id);
+  window.history.replaceState({}, "", `reader.html?${params.toString()}`);
+
+  renderCurrentChapter();
 }
 
 function jumpToChapter(index) {
@@ -384,8 +630,13 @@ function jumpToChapter(index) {
   }
   const chapterMax = state.currentBook.chapters.length - 1;
   state.currentChapterIndex = Math.min(chapterMax, Math.max(0, index));
-  renderCurrentChapter();
-  saveProgress();
+  loadAndRenderChapterByIndex(state.currentChapterIndex)
+    .then(saveProgress)
+    .catch((error) => {
+      console.error("Failed to load chapter:", error);
+      elements.readerContent.innerHTML = "<p>Unable to load this chapter.</p>";
+      showToast("Unable to load chapter");
+    });
 }
 
 function openSettingsModal() {
@@ -719,29 +970,80 @@ function setupBackLink(bookId) {
   elements.backButton.href = `book.html?id=${encodeURIComponent(bookId)}`;
 }
 
+function renderLoadingState(message) {
+  elements.readerContent.innerHTML = `<p>${message}</p>`;
+  elements.toolbarBookTitle.textContent = "Loading book...";
+  elements.toolbarChapterTitle.textContent = "Loading chapter...";
+}
+
+function renderErrorState(message) {
+  elements.readerContent.innerHTML = `<p>${message}</p>`;
+  elements.toolbarBookTitle.textContent = "Unable to load book";
+  elements.toolbarChapterTitle.textContent = "";
+  elements.chapterList.innerHTML = "";
+  elements.prevBtn.disabled = true;
+  elements.nextBtn.disabled = true;
+}
+
+function renderEmptyState() {
+  elements.readerContent.innerHTML = "<p>No published chapters available for this book.</p>";
+  elements.toolbarChapterTitle.textContent = "No chapters";
+  elements.chapterList.innerHTML = "";
+  elements.prevBtn.disabled = true;
+  elements.nextBtn.disabled = true;
+}
+
 async function bootstrap() {
   loadSettings();
   applySettings();
   bindEvents();
 
-  await loadBookData();
-  const { bookId, chapter, mode } = getParams();
-  setupBackLink(bookId);
-
-  const book = resolveBook(bookId);
-  if (!book) {
-    elements.readerContent.innerHTML = "<p>Unable to load this book. Return to library and try again.</p>";
+  const { bookId, chapterId, chapter, mode } = getParams();
+  if (!bookId) {
+    renderErrorState("Missing bookId in URL.");
     return;
   }
 
-  state.currentBook = book;
-  state.currentChapterIndex = Math.min(book.chapters.length - 1, Math.max(0, chapter - 1));
+  renderLoadingState("Loading chapters...");
+  setupBackLink(bookId);
+
+  try {
+    const [bookMeta, chapters] = await Promise.all([
+      fetchBookMetadata(bookId),
+      fetchChapterList(bookId),
+    ]);
+
+    state.currentBook = {
+      ...bookMeta,
+      chapters,
+    };
+  } catch (error) {
+    console.error("Failed to initialize reader:", error);
+    renderErrorState("Unable to load this book. Return to library and try again.");
+    return;
+  }
+
+  if (!state.currentBook.chapters.length) {
+    renderEmptyState();
+    return;
+  }
+
+  const chapterIndexFromId = state.currentBook.chapters.findIndex((item) => item.id === chapterId);
+  const fallbackIndex = Math.min(state.currentBook.chapters.length - 1, Math.max(0, chapter - 1));
+  state.currentChapterIndex = chapterIndexFromId >= 0 ? chapterIndexFromId : fallbackIndex;
 
   renderChapterDrawer();
-  renderCurrentChapter();
+  try {
+    await loadAndRenderChapterByIndex(state.currentChapterIndex);
+  } catch (error) {
+    console.error("Failed to load initial chapter:", error);
+    renderErrorState("Unable to load chapter content.");
+    return;
+  }
+
   renderNotes();
   applyIncomingMode(mode);
-  resumeProgress();
+  await resumeProgress();
 }
 
 bootstrap();

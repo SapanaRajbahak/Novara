@@ -8,6 +8,9 @@ const adminBookRoutes = require("./routes/adminBookRoutes");
 const chapterRoutes = require("./routes/chapterRoutes");
 const adminChapterRoutes = require("./routes/adminChapterRoutes");
 const progressRoutes = require("./routes/progressRoutes");
+const listeningProgressRoutes = require("./routes/listeningProgressRoutes");
+const audioRoutes = require("./routes/audioRoutes");
+const adminAudioRoutes = require("./routes/adminAudioRoutes");
 const { connectDatabase } = require("./config/db");
 const { initializeUserStore } = require("./models/userModel");
 
@@ -59,6 +62,12 @@ app.get("/", (req, res) => {
       adminDeleteChapter: "DELETE /api/admin/chapters/:id",
       saveReadingProgress: "POST /api/progress/reading",
       getReadingProgress: "GET  /api/progress/reading/:bookId",
+      saveListeningProgress: "POST /api/progress/listening",
+      getListeningProgress: "GET  /api/progress/listening/:bookId",
+      bookAudio: "GET  /api/books/:id/audio",
+      adminCreateAudio: "POST /api/admin/books/:id/audio",
+      adminUpdateAudio: "PUT  /api/admin/audio/:id",
+      adminDeleteAudio: "DELETE /api/admin/audio/:id",
     },
   });
 });
@@ -76,6 +85,9 @@ app.use("/api/admin/books", adminBookRoutes);
 app.use("/api", chapterRoutes);
 app.use("/api/admin", adminChapterRoutes);
 app.use("/api/progress", progressRoutes);
+app.use("/api/progress", listeningProgressRoutes);
+app.use("/api", audioRoutes);
+app.use("/api/admin", adminAudioRoutes);
 
 app.use((req, res) => {
   return res.status(404).json({

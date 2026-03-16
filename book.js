@@ -1,9 +1,12 @@
 const SAVE_KEY = "novelread.savedBooks";
 const FAVORITE_KEY = "novelread.favoriteBooks";
+const API_BASE_URL = "http://localhost:5000";
 
 const elements = {
   coverImage: document.getElementById("coverImage"),
   readBtn: document.getElementById("readBtn"),
+  resumeBtn: document.getElementById("resumeBtn"),
+  resumeHint: document.getElementById("resumeHint"),
   listenBtn: document.getElementById("listenBtn"),
   saveBtn: document.getElementById("saveBtn"),
   favoriteBtn: document.getElementById("favoriteBtn"),
@@ -64,8 +67,8 @@ const fallbackData = {
   ]
 };
 
-let books = [];
 let currentBook = null;
+let resumeChapterId = null;
 let savedBooks = loadSet(SAVE_KEY);
 let favoriteBooks = loadSet(FAVORITE_KEY);
 
@@ -85,7 +88,7 @@ function persistSet(key, setValue) {
 
 function getBookIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("id") || "book-last-lantern";
+  return params.get("id");
 }
 
 function getInitialTabFromUrl() {
@@ -154,6 +157,59 @@ function showToast(message) {
   }, 1500);
 }
 
+function buildReaderUrl(bookId, chapterId) {
+  const params = new URLSearchParams();
+  params.set("bookId", bookId);
+
+  if (chapterId) {
+    params.set("chapterId", chapterId);
+  }
+
+  return `reader.html?${params.toString()}`;
+}
+
+function toAbsoluteUrl(url) {
+  if (!url) {
+    return "";
+  }
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
+}
+
+function mapApiBookToViewModel(book, chapters) {
+  const chaptersCount = book?._count?.chapters ?? 0;
+  const tracksCount = book?._count?.audioTracks ?? 0;
+  const hasAudio = Boolean(book.isAudiobookAvailable);
+
+  const primaryGenre = book.genre || "General";
+
+  return {
+    id: book.id,
+    title: book.title || "Untitled",
+    author: book.authorName || "Unknown Author",
+    genre: [primaryGenre],
+    rating: null,
+    description: book.description || "No description available for this book yet.",
+    about:
+      book.description ||
+      "No long description is available yet. More editorial content can be added later.",
+    language: "English",
+    chapters,
+    format: hasAudio ? "eBook + Audiobook" : "eBook",
+    hasAudiobook: hasAudio,
+    audiobookTracks: Array.from({ length: Math.min(tracksCount, 20) }, (_, index) => ({
+      number: index + 1,
+      title: `Track ${index + 1}`,
+    })),
+    reviews: [],
+    relatedBooks: [],
+    coverImage: toAbsoluteUrl(book.coverUrl) || createCoverSvg(book.title || "Book", [primaryGenre]),
+    fileUrl: book.fileUrl || "",
+  };
+}
+
 function renderGenres(genres) {
   elements.genreTags.innerHTML = "";
   genres.forEach((genre) => {
@@ -166,10 +222,16 @@ function renderGenres(genres) {
 
 function renderChapterList(chapters) {
   elements.chapterList.innerHTML = "";
+
+  if (!chapters.length) {
+    elements.chapterList.innerHTML = "<li><p>No published chapters yet.</p></li>";
+    return;
+  }
+
   chapters.forEach((chapter) => {
     const li = document.createElement("li");
     li.innerHTML = `
-      <button class="chapter-item" type="button" data-chapter-number="${chapter.number}">
+      <button class="chapter-item" type="button" data-chapter-id="${chapter.id}">
         <span>Chapter ${chapter.number}</span>
         ${chapter.title}
       </button>
@@ -232,9 +294,10 @@ function renderRelatedBooks(relatedBooks) {
 
 function renderBook(book) {
   currentBook = book;
+  resumeChapterId = null;
   document.title = `${book.title} | NovelRead`;
 
-  elements.coverImage.src = createCoverSvg(book.title, book.genre);
+  elements.coverImage.src = book.coverImage || createCoverSvg(book.title, book.genre);
   elements.coverImage.alt = `${book.title} cover`;
   elements.bookTitle.textContent = book.title;
   elements.bookAuthor.textContent = `by ${book.author}`;
@@ -260,6 +323,11 @@ function renderBook(book) {
   elements.favoriteBtn.textContent = favored ? "Favorited" : "Bookmark/Favorite";
 
   elements.listenBtn.disabled = !book.hasAudiobook;
+
+  // Hide resume UI by default until progress API returns.
+  elements.resumeBtn.classList.add("hidden");
+  elements.resumeHint.classList.add("hidden");
+  elements.resumeHint.textContent = "";
 }
 
 function setActiveTab(tabName) {
@@ -283,17 +351,84 @@ function setupTabEvents() {
   });
 }
 
-function openReader(chapterNumber) {
-  window.location.href = `reader.html?book=${encodeURIComponent(currentBook.id)}&chapter=${encodeURIComponent(chapterNumber)}`;
+function openReader(chapterId) {
+  window.location.href = buildReaderUrl(currentBook.id, chapterId);
+}
+
+async function loadReadingProgress(bookId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/reading/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      // Not signed in: this is a valid state, just skip resume UI.
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (!payload.success || !payload.data) {
+      return null;
+    }
+
+    return payload.data;
+  } catch (error) {
+    console.warn("Failed to load reading progress:", error);
+    return null;
+  }
+}
+
+function applyReadingProgressUi(progress) {
+  if (!progress || !progress.chapterId) {
+    elements.resumeBtn.classList.add("hidden");
+    elements.resumeHint.classList.add("hidden");
+    elements.resumeHint.textContent = "";
+    resumeChapterId = null;
+    return;
+  }
+
+  resumeChapterId = progress.chapterId;
+  elements.resumeBtn.classList.remove("hidden");
+
+  const chapterFromList = currentBook.chapters.find((item) => item.id === progress.chapterId);
+  const chapterNumber = chapterFromList?.number || progress?.chapter?.chapterNumber;
+
+  if (chapterNumber) {
+    elements.resumeHint.textContent = `Continue from Chapter ${chapterNumber}`;
+    elements.resumeHint.classList.remove("hidden");
+  } else {
+    elements.resumeHint.classList.add("hidden");
+    elements.resumeHint.textContent = "";
+  }
+}
+
+async function initializeResumeReading() {
+  if (!currentBook) {
+    return;
+  }
+
+  elements.resumeBtn.disabled = true;
+  elements.resumeBtn.textContent = "Checking...";
+
+  const progress = await loadReadingProgress(currentBook.id);
+  applyReadingProgressUi(progress);
+
+  elements.resumeBtn.disabled = false;
+  elements.resumeBtn.textContent = "Resume Reading";
 }
 
 function setupChapterEvents() {
   elements.chapterList.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-chapter-number]");
+    const button = event.target.closest("button[data-chapter-id]");
     if (!button) {
       return;
     }
-    openReader(button.dataset.chapterNumber);
+    openReader(button.dataset.chapterId);
   });
 
   elements.trackList.addEventListener("click", (event) => {
@@ -306,8 +441,22 @@ function setupChapterEvents() {
 }
 
 function setupPrimaryActions() {
-  elements.readBtn.addEventListener("click", () => {
-    openReader(1);
+  elements.readBtn.addEventListener("click", async () => {
+    if (!currentBook.chapters.length) {
+      showToast("No published chapters yet");
+      return;
+    }
+
+    const firstChapter = currentBook.chapters[0];
+    openReader(firstChapter.id);
+  });
+
+  elements.resumeBtn.addEventListener("click", () => {
+    if (!resumeChapterId) {
+      return;
+    }
+
+    openReader(resumeChapterId);
   });
 
   elements.listenBtn.addEventListener("click", () => {
@@ -368,30 +517,89 @@ function setupPrimaryActions() {
   });
 }
 
-async function loadData() {
-  try {
-    const response = await fetch("./data/book-details.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const data = await response.json();
-    books = Array.isArray(data.books) ? data.books : fallbackData.books;
-  } catch (error) {
-    books = fallbackData.books;
+async function loadBookFromApi(bookId) {
+  const [bookResponse, chapterResponse] = await Promise.all([
+    fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+    }),
+    fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}/chapters`, {
+      cache: "no-store",
+    }),
+  ]);
+
+  if (!bookResponse.ok) {
+    throw new Error(`Book fetch failed with HTTP ${bookResponse.status}`);
   }
+  if (!chapterResponse.ok) {
+    throw new Error(`Chapter list fetch failed with HTTP ${chapterResponse.status}`);
+  }
+
+  const bookPayload = await bookResponse.json();
+  const chapterPayload = await chapterResponse.json();
+
+  if (!bookPayload.success || !bookPayload.data) {
+    throw new Error("Invalid book API response");
+  }
+  if (!chapterPayload.success || !Array.isArray(chapterPayload.data)) {
+    throw new Error("Invalid chapters API response");
+  }
+
+  const chapters = chapterPayload.data.map((chapter) => ({
+    id: chapter.id,
+    number: chapter.chapterNumber,
+    title: chapter.title,
+  }));
+
+  return mapApiBookToViewModel(bookPayload.data, chapters);
 }
 
-function findBookById(bookId) {
-  return books.find((book) => book.id === bookId) || books[0];
+function renderLoadError(message) {
+  elements.bookTitle.textContent = "Book not available";
+  elements.bookAuthor.textContent = "Unable to load this book right now";
+  elements.bookDescription.textContent = message;
+  elements.aboutText.textContent = "Please go back to Library and open another book.";
+  elements.genreTags.innerHTML = "";
+  elements.coverImage.src = createCoverSvg("Unavailable", ["default"]);
+  elements.coverImage.alt = "Unavailable book";
+  elements.metaLanguage.textContent = "-";
+  elements.metaChapters.textContent = "-";
+  elements.metaFormat.textContent = "-";
+  elements.metaAudio.textContent = "-";
+  elements.chapterList.innerHTML = "";
+  elements.trackList.innerHTML = "";
+  elements.reviewsList.innerHTML = "";
+  elements.relatedList.innerHTML = "";
+  elements.readBtn.disabled = true;
+  elements.resumeBtn.disabled = true;
+  elements.resumeBtn.classList.add("hidden");
+  elements.resumeHint.classList.add("hidden");
+  elements.listenBtn.disabled = true;
+  elements.saveBtn.disabled = true;
+  elements.favoriteBtn.disabled = true;
+  elements.shareBtn.disabled = true;
 }
 
 async function bootstrap() {
-  await loadData();
   const bookId = getBookIdFromUrl();
-  renderBook(findBookById(bookId));
+
+  if (!bookId) {
+    renderLoadError("Missing book id in URL. Open a book from the Library page.");
+    return;
+  }
+
+  try {
+    const book = await loadBookFromApi(bookId);
+    renderBook(book);
+  } catch (error) {
+    console.error("Failed to load book details:", error);
+    renderLoadError("Could not fetch book details from the backend API.");
+    return;
+  }
+
   setupTabEvents();
   setupChapterEvents();
   setupPrimaryActions();
+  await initializeResumeReading();
   setActiveTab(getInitialTabFromUrl());
   if (getModeFromUrl() === "audio" && currentBook.hasAudiobook) {
     showToast("Audiobook tracks ready");

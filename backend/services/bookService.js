@@ -144,6 +144,69 @@ async function listBooks(filters) {
 }
 
 /**
+ * Return a paginated list of all books for admin screens.
+ * Includes both DRAFT and PUBLISHED by default, with optional status filter.
+ *
+ * @param {object} filters - Parsed query params from the request
+ */
+async function listAdminBooks(filters) {
+  const {
+    page = 1,
+    limit = 10,
+    sort = "newest",
+    search,
+    status,
+    genre,
+    categoryId,
+    fileType,
+    isAudiobookAvailable,
+    isAiGenerated,
+  } = filters;
+
+  const skip = (Number(page) - 1) * Number(limit);
+  const take = Number(limit);
+  const orderBy = SORT_MAP[sort] || SORT_MAP.newest;
+
+  const where = {};
+
+  if (status) where.status = status;
+  if (genre) where.genre = { equals: genre, mode: "insensitive" };
+  if (categoryId) where.categoryId = categoryId;
+  if (fileType) where.fileType = fileType;
+
+  if (isAudiobookAvailable !== undefined) {
+    where.isAudiobookAvailable = isAudiobookAvailable === "true";
+  }
+  if (isAiGenerated !== undefined) {
+    where.isAiGenerated = isAiGenerated === "true";
+  }
+
+  if (search) {
+    where.OR = [
+      { title: { contains: search, mode: "insensitive" } },
+      { authorName: { contains: search, mode: "insensitive" } },
+      { description: { contains: search, mode: "insensitive" } },
+      { tags: { hasSome: [search] } },
+    ];
+  }
+
+  const [books, total] = await Promise.all([
+    prisma.book.findMany({ where, orderBy, skip, take, include: BOOK_INCLUDE }),
+    prisma.book.count({ where }),
+  ]);
+
+  return {
+    books,
+    pagination: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / take),
+    },
+  };
+}
+
+/**
  * Return a single published book by its id OR slug.
  * Returns null when the book doesn't exist or isn't published.
  *
@@ -298,6 +361,7 @@ async function unpublishBook(id) {
 
 module.exports = {
   listBooks,
+  listAdminBooks,
   getBookById,
   createBook,
   updateBook,
