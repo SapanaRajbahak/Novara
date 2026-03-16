@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Annotations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="annotations.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>NovelRead</span>
+    </a>
+    <nav class="nav-links" aria-label="Navigation">
+      <a href="index.html">Home</a>
+      <a href="library.html">Library</a>
+      <a href="discover.html">Discover</a>
+      <a href="annotations.html" class="active">Annotations</a>
+    </nav>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div>
+        <h1>Bookmarks, Highlights, and Notes</h1>
+        <p>Resume exactly where you left off and revisit your most important passages.</p>
+      </div>
+      <label class="filter" for="bookFilter">
+        <span>Filter by book</span>
+        <select id="bookFilter">
+          <option value="all">All Books</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="panel" aria-labelledby="bookmarksHeading">
+      <div class="panel-head">
+        <h2 id="bookmarksHeading">Bookmarks</h2>
+        <span id="bookmarksCount">0</span>
+      </div>
+      <div id="bookmarksList" class="items-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="highlightsHeading">
+      <div class="panel-head">
+        <h2 id="highlightsHeading">Highlights</h2>
+        <span id="highlightsCount">0</span>
+      </div>
+      <div id="highlightsList" class="items-grid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="notesHeading">
+      <div class="panel-head">
+        <h2 id="notesHeading">Notes</h2>
+        <span id="notesCount">0</span>
+      </div>
+      <div id="notesList" class="items-grid"></div>
+    </section>
+  </main>
+
+  <script src="annotations.js"></script>
+</body>
+</html>

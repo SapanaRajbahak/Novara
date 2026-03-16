@@ -1,0 +1,210 @@
+{
+  "categories": [
+    "All",
+    "Fantasy",
+    "Mystery",
+    "Romance",
+    "Sci-Fi",
+    "Drama",
+    "Adventure",
+    "ebook",
+    "audiobook",
+    "both"
+  ],
+  "trendingSearches": [
+    "dark academia",
+    "cozy mystery",
+    "slow burn romance",
+    "space opera",
+    "historical drama"
+  ],
+  "recommendedGenres": [
+    "Fantasy",
+    "Mystery",
+    "Sci-Fi",
+    "Romance",
+    "Historical",
+    "Adventure"
+  ],
+  "books": [
+    {
+      "id": "book-last-lantern",
+      "title": "The Last Lantern",
+      "author": "M. K. Vale",
+      "genre": "Mystery",
+      "language": "English",
+      "type": "both",
+      "access": "paid",
+      "tags": ["Noir", "Coastal", "Bestseller"],
+      "publishedAt": "2026-02-12",
+      "popularity": 95
+    },
+    {
+      "id": "book-echoes-dawn",
+      "title": "Echoes at Dawn",
+      "author": "Nira Sol",
+      "genre": "Fantasy",
+      "language": "English",
+      "type": "ebook",
+      "access": "free",
+      "tags": ["Magic", "Epic", "Coming of Age"],
+      "publishedAt": "2026-01-19",
+      "popularity": 88
+    },
+    {
+      "id": "book-glass-orchard",
+      "title": "The Glass Orchard",
+      "author": "Emi Hart",
+      "genre": "Romance",
+      "language": "English",
+      "type": "ebook",
+      "access": "free",
+      "tags": ["Romance", "Magical Realism"],
+      "publishedAt": "2026-03-02",
+      "popularity": 91
+    },
+    {
+      "id": "book-velvet-constellations",
+      "title": "Velvet Constellations",
+      "author": "Ira Bloom",
+      "genre": "Sci-Fi",
+      "language": "English",
+      "type": "both",
+      "access": "paid",
+      "tags": ["Space", "AI", "Adventure"],
+      "publishedAt": "2026-01-03",
+      "popularity": 93
+    },
+    {
+      "id": "book-poets-harbor",
+      "title": "The Poet's Harbor",
+      "author": "Jamie Cross",
+      "genre": "Drama",
+      "language": "English",
+      "type": "audiobook",
+      "access": "paid",
+      "tags": ["Emotional", "Coastal"],
+      "publishedAt": "2025-11-06",
+      "popularity": 84
+    },
+    {
+      "id": "book-quiet-waters",
+      "title": "Below Quiet Waters",
+      "author": "Adrian Poe",
+      "genre": "Mystery",
+      "language": "French",
+      "type": "both",
+      "access": "paid",
+      "tags": ["Underwater", "Letters", "Suspense"],
+      "publishedAt": "2025-09-14",
+      "popularity": 82
+    },
+    {
+      "id": "book-midnight-atlas",
+      "title": "Midnight Atlas",
+      "author": "Jonas Reed",
+      "genre": "Adventure",
+      "language": "English",
+      "type": "both",
+      "access": "paid",
+      "tags": ["Quest", "Maps", "Legend"],
+      "publishedAt": "2025-12-02",
+      "popularity": 90
+    },
+    {
+      "id": "book-whisperline",
+      "title": "Whisperline",
+      "author": "Ana Flores",
+      "genre": "Drama",
+      "language": "Spanish",
+      "type": "ebook",
+      "access": "free",
+      "tags": ["Social", "Mystery", "Near Future"],
+      "publishedAt": "2025-12-18",
+      "popularity": 73
+    }
+  ],
+  "audiobooks": [
+    {
+      "id": "book-last-lantern",
+      "title": "The Last Lantern",
+      "author": "M. K. Vale",
+      "genre": "Mystery",
+      "language": "English",
+      "type": "audiobook",
+      "access": "paid",
+      "trackCount": 4,
+      "tags": ["Noir", "Bestseller"],
+      "publishedAt": "2026-02-15",
+      "popularity": 92
+    },
+    {
+      "id": "book-poets-harbor",
+      "title": "The Poet's Harbor",
+      "author": "Jamie Cross",
+      "genre": "Drama",
+      "language": "English",
+      "type": "audiobook",
+      "access": "paid",
+      "trackCount": 3,
+      "tags": ["Emotional", "Literary"],
+      "publishedAt": "2025-11-09",
+      "popularity": 86
+    },
+    {
+      "id": "book-echoes-dawn",
+      "title": "Echoes at Dawn (Narrated Edition)",
+      "author": "Nira Sol",
+      "genre": "Fantasy",
+      "language": "English",
+      "type": "audiobook",
+      "access": "free",
+      "trackCount": 3,
+      "tags": ["Magic", "Narrated"],
+      "publishedAt": "2026-03-07",
+      "popularity": 87
+    }
+  ],
+  "authors": [
+    {
+      "name": "M. K. Vale",
+      "genres": ["Mystery", "Thriller"],
+      "bookCount": 5,
+      "tags": ["Noir", "Coastal"],
+      "popularity": 93,
+      "publishedAt": "2026-02-12"
+    },
+    {
+      "name": "Nira Sol",
+      "genres": ["Fantasy", "Adventure"],
+      "bookCount": 4,
+      "tags": ["Magic", "Epic"],
+      "popularity": 89,
+      "publishedAt": "2026-01-19"
+    },
+    {
+      "name": "Emi Hart",
+      "genres": ["Romance", "Contemporary"],
+      "bookCount": 3,
+      "tags": ["Romance", "Magical Realism"],
+      "popularity": 85,
+      "publishedAt": "2026-03-02"
+    },
+    {
+      "name": "Ira Bloom",
+      "genres": ["Sci-Fi", "Adventure"],
+      "bookCount": 6,
+      "tags": ["Space", "AI"],
+      "popularity": 91,
+      "publishedAt": "2026-01-03"
+    },
+    {
+      "name": "Jamie Cross",
+      "genres": ["Drama", "Literary"],
+      "bookCount": 2,
+      "tags": ["Emotional", "Coastal"],
+      "popularity": 81,
+      "publishedAt": "2025-11-06"
+    }
+  ]
+}

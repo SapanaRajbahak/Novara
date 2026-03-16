@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Audiobook Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin-audiobooks.css" />
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin Navigation">
+      <a href="admin.html" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>NovelRead Admin</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        <a href="admin.html">Dashboard</a>
+        <a href="admin-books.html">Books</a>
+        <a href="admin-upload.html">Upload Book</a>
+        <a href="admin-chapters.html">Chapters</a>
+        <a href="admin-audiobooks.html" class="active">Audiobooks</a>
+        <a href="admin-ai.html">AI Generator</a>
+        <a href="admin-users.html">Users</a>
+        <a href="admin-analytics.html">Analytics</a>
+        <a href="admin-settings.html">Settings</a>
+      </nav>
+
+      <button type="button" id="logoutBtn" class="logout-btn">Logout</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="main-topbar">
+        <div>
+          <p class="eyebrow">Admin Panel</p>
+          <h1>Audiobook Management</h1>
+        </div>
+        <a href="admin.html" class="text-btn">Back to Dashboard</a>
+      </header>
+
+      <section class="panel controls">
+        <label class="field" for="bookSelect">
+          <span>Choose Book</span>
+          <select id="bookSelect"></select>
+        </label>
+
+        <div class="field">
+          <span>Upload Full Audiobook (Optional)</span>
+          <div class="dropzone" id="fullDropzone">
+            <input id="fullAudioInput" type="file" accept="audio/*" hidden />
+            <p>Drag full audiobook file here, or click to browse</p>
+            <small id="fullAudioName">No file selected</small>
+          </div>
+        </div>
+
+        <div class="field compact">
+          <button type="button" id="saveFullBtn" class="btn">Save Full Audiobook</button>
+          <button type="button" id="removeFullBtn" class="text-btn danger">Remove Full File</button>
+        </div>
+      </section>
+
+      <section class="layout">
+        <aside class="panel chapter-panel" aria-label="Chapter audio mapping">
+          <div class="panel-head">
+            <h2>Chapters</h2>
+            <span id="matchSummary" class="hint">0 / 0 matched</span>
+          </div>
+          <ul id="chapterList" class="chapter-list"></ul>
+        </aside>
+
+        <section class="panel editor-panel" aria-label="Audio track editor">
+          <div class="panel-head">
+            <h2>Track Editor</h2>
+            <span id="editorHint" class="hint">Select a chapter</span>
+          </div>
+
+          <div class="upload-row">
+            <div class="field">
+              <span>Upload Chapter Audio</span>
+              <div class="dropzone" id="chapterDropzone">
+                <input id="chapterAudioInput" type="file" accept="audio/*" hidden />
+                <p>Drag chapter audio here, or click to browse</p>
+                <small id="chapterAudioName">No file selected</small>
+              </div>
+            </div>
+
+            <div class="field compact">
+              <button type="button" id="saveTrackBtn" class="btn">Save / Replace File</button>
+              <button type="button" id="deleteTrackBtn" class="text-btn danger">Delete Audio</button>
+            </div>
+          </div>
+
+          <div class="meta-grid">
+            <label class="field" for="trackTitleInput">
+              <span>Track Title</span>
+              <input id="trackTitleInput" type="text" maxlength="140" />
+            </label>
+
+            <label class="field" for="narratorInput">
+              <span>Narrator</span>
+              <input id="narratorInput" type="text" maxlength="80" placeholder="Narrator name" />
+            </label>
+
+            <label class="field" for="durationInput">
+              <span>Duration (Placeholder)</span>
+              <input id="durationInput" type="text" maxlength="20" placeholder="00:00" />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="saveMetaBtn" class="btn">Save Track Metadata</button>
+            <span id="message" class="hint" aria-live="polite"></span>
+          </div>
+
+          <section class="panel subpanel" aria-labelledby="tracksHeading">
+            <div class="panel-head">
+              <h3 id="tracksHeading">Tracks by Chapter</h3>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Chapter</th>
+                    <th>Track Title</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="tracksTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel subpanel" aria-labelledby="previewHeading">
+            <div class="panel-head">
+              <h3 id="previewHeading">Preview Player</h3>
+            </div>
+            <div class="preview-wrap">
+              <audio id="previewPlayer" controls preload="none"></audio>
+              <p id="previewInfo" class="hint">Select a chapter track with a file to preview.</p>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="admin-audiobooks.js"></script>
+</body>
+</html>

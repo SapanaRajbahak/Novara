@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Chapter Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin-chapters.css" />
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin Navigation">
+      <a href="admin.html" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>NovelRead Admin</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        <a href="admin.html">Dashboard</a>
+        <a href="admin-books.html">Books</a>
+        <a href="admin-upload.html">Upload Book</a>
+        <a href="admin-chapters.html" class="active">Chapters</a>
+        <a href="admin-audiobooks.html">Audiobooks</a>
+        <a href="admin-ai.html">AI Generator</a>
+        <a href="admin-users.html">Users</a>
+        <a href="admin-analytics.html">Analytics</a>
+        <a href="admin-settings.html">Settings</a>
+      </nav>
+
+      <button type="button" id="logoutBtn" class="logout-btn">Logout</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="main-topbar">
+        <div>
+          <p class="eyebrow">Admin Panel</p>
+          <h1>Chapter Editor</h1>
+        </div>
+        <a href="admin.html" class="text-btn">Back to Dashboard</a>
+      </header>
+
+      <section class="panel controls">
+        <label class="field" for="bookSelect">
+          <span>Select Book</span>
+          <select id="bookSelect"></select>
+        </label>
+        <button type="button" id="createChapterBtn" class="btn">Create Chapter</button>
+        <span id="globalMessage" class="hint" aria-live="polite"></span>
+      </section>
+
+      <section class="editor-layout">
+        <aside class="panel chapter-panel" aria-label="Chapters list">
+          <div class="panel-head">
+            <h2>Chapters</h2>
+          </div>
+          <ul id="chapterList" class="chapter-list"></ul>
+        </aside>
+
+        <section class="panel editor-panel" aria-label="Chapter editor">
+          <div class="panel-head">
+            <h2>Edit Chapter</h2>
+            <div class="editor-actions">
+              <button type="button" id="publishBtn" class="text-btn">Publish Chapter</button>
+              <button type="button" id="deleteBtn" class="text-btn danger">Delete Chapter</button>
+            </div>
+          </div>
+
+          <label class="field" for="chapterTitleInput">
+            <span>Chapter Title</span>
+            <input id="chapterTitleInput" type="text" maxlength="140" />
+          </label>
+
+          <div class="toolbar" role="toolbar" aria-label="Markdown formatting">
+            <button type="button" data-md="bold" class="text-btn">Bold</button>
+            <button type="button" data-md="italic" class="text-btn">Italic</button>
+            <button type="button" data-md="h2" class="text-btn">H2</button>
+            <button type="button" data-md="quote" class="text-btn">Quote</button>
+            <button type="button" data-md="ul" class="text-btn">List</button>
+            <button type="button" data-md="code" class="text-btn">Code</button>
+          </div>
+
+          <label class="field" for="chapterContentInput">
+            <span>Chapter Content (Markdown style)</span>
+            <textarea id="chapterContentInput" rows="14" placeholder="Write chapter content using markdown-style syntax..."></textarea>
+          </label>
+
+          <div class="save-row">
+            <span id="autosaveStatus" class="hint">Draft autosave idle</span>
+            <button type="button" id="saveBtn" class="btn">Save Chapter</button>
+          </div>
+
+          <div class="preview-head">
+            <h3>Reader Style Preview</h3>
+          </div>
+          <article id="previewPane" class="preview-pane"></article>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="admin-chapters.js"></script>
+</body>
+</html>

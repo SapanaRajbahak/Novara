@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Primary">
+      <div class="sidebar__brand">
+        <div class="brand-dot" aria-hidden="true"></div>
+        <span>NovelRead</span>
+      </div>
+      <nav class="sidebar__nav">
+        <a href="#" class="active">Home</a>
+        <a href="library.html">Library</a>
+        <a href="discover.html">Discover</a>
+        <a href="annotations.html">Bookmarks</a>
+        <a href="#">Audiobooks</a>
+        <a href="#">Your Uploads</a>
+      </nav>
+      <div class="sidebar__footer">
+        <p>Daily Goal</p>
+        <strong>35 / 60 min</strong>
+        <div class="goal-track"><span style="width:58%"></span></div>
+      </div>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div class="topbar__logo">
+          <div class="brand-dot" aria-hidden="true"></div>
+          <h1>NovelRead</h1>
+        </div>
+
+        <label class="search" for="searchInput">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 4a6 6 0 1 0 3.8 10.6l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
+          </svg>
+          <input id="searchInput" type="search" placeholder="Search novels, authors, genres..." />
+        </label>
+
+        <div class="topbar__actions">
+          <button class="icon-btn" aria-label="Notifications">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.7 3.4h15.4L18 12.6V9a6 6 0 0 0-6-6zm0 19a3 3 0 0 0 2.8-2H9.2A3 3 0 0 0 12 22z" />
+            </svg>
+            <span class="badge">3</span>
+          </button>
+          <div class="profile-menu">
+            <button class="profile-menu__trigger" id="profileMenuBtn" aria-haspopup="true" aria-expanded="false">
+              <span class="avatar">AR</span>
+              <span class="profile-name">Ariana</span>
+            </button>
+            <div class="profile-menu__dropdown" id="profileDropdown" role="menu">
+              <a href="profile.html" role="menuitem">Profile</a>
+              <a href="#" role="menuitem">Reading Stats</a>
+              <a href="admin-login.html" role="menuitem">Admin Login</a>
+              <a href="settings.html" role="menuitem">Settings</a>
+              <a href="#" role="menuitem">Sign Out</a>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <section class="hero-banner" aria-labelledby="welcomeTitle">
+          <p class="eyebrow">Welcome back</p>
+          <h2 id="welcomeTitle">Your next chapter is waiting</h2>
+          <p>Pick up where you left off, discover trending stories, and switch seamlessly between reading and listening.</p>
+        </section>
+
+        <section class="dashboard-section" data-section="continueReading">
+          <div class="section-head">
+            <h3>Continue Reading</h3>
+            <a href="#">View all</a>
+          </div>
+          <div class="section-row" id="continueReadingRow" aria-live="polite"></div>
+        </section>
+
+        <section class="dashboard-section" data-section="trendingNovels">
+          <div class="section-head">
+            <h3>Trending Novels</h3>
+            <a href="#">View all</a>
+          </div>
+          <div class="section-row" id="trendingNovelsRow" aria-live="polite"></div>
+        </section>
+
+        <section class="dashboard-section" data-section="newReleases">
+          <div class="section-head">
+            <h3>New Releases</h3>
+            <a href="#">View all</a>
+          </div>
+          <div class="section-row" id="newReleasesRow" aria-live="polite"></div>
+        </section>
+
+        <section class="dashboard-section" data-section="recommendedForYou">
+          <div class="section-head">
+            <h3>Recommended for You</h3>
+            <a href="#">Refresh</a>
+          </div>
+          <div class="section-row" id="recommendedForYouRow" aria-live="polite"></div>
+        </section>
+
+        <section class="dashboard-section" data-section="audiobooks">
+          <div class="section-head">
+            <h3>Audiobooks</h3>
+            <a href="#">Browse</a>
+          </div>
+          <div class="section-row" id="audiobooksRow" aria-live="polite"></div>
+        </section>
+
+        <section class="dashboard-section categories" data-section="categoriesGenres">
+          <div class="section-head">
+            <h3>Categories & Genres</h3>
+            <a href="#">Manage interests</a>
+          </div>
+          <div class="chips" id="categoriesRow" aria-live="polite"></div>
+        </section>
+
+        <section class="dashboard-section" data-section="recentlyAdded">
+          <div class="section-head">
+            <h3>Recently Added</h3>
+            <a href="#">See archive</a>
+          </div>
+          <div class="section-row" id="recentlyAddedRow" aria-live="polite"></div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <nav class="mobile-nav" aria-label="Mobile navigation">
+    <a href="#" class="active">Home</a>
+    <a href="library.html">Library</a>
+    <a href="discover.html">Discover</a>
+    <a href="annotations.html">Saved</a>
+    <a href="profile.html">Profile</a>
+  </nav>
+
+  <script src="app.js"></script>
+</body>
+</html>

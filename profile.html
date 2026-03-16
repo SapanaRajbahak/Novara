@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="profile.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>NovelRead</span>
+    </a>
+
+    <nav class="top-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="library.html">Library</a>
+      <a href="discover.html">Discover</a>
+      <a href="profile.html" class="active">Profile</a>
+    </nav>
+  </header>
+
+  <main class="profile-page">
+    <section class="user-card" aria-label="User info">
+      <div class="user-row">
+        <div class="avatar" id="userAvatar">AR</div>
+        <div>
+          <h1 id="userName">Loading...</h1>
+          <p id="userEmail" class="muted"></p>
+          <p id="userPlan" class="muted"></p>
+        </div>
+      </div>
+      <p id="userBio" class="bio"></p>
+      <div class="user-actions">
+        <a href="#" class="btn">Edit Profile</a>
+        <a href="#" class="btn">Manage Subscription</a>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="statsHeading">
+      <div class="panel-head">
+        <h2 id="statsHeading">Reading Stats</h2>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="savedHeading">
+      <div class="panel-head">
+        <h2 id="savedHeading">Saved Books</h2>
+        <a href="library.html" class="text-link">Open Library</a>
+      </div>
+      <div class="books-grid" id="savedBooksList"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="downloadHeading">
+      <div class="panel-head">
+        <h2 id="downloadHeading">Downloaded Books</h2>
+      </div>
+      <div class="placeholder" id="downloadsPlaceholder">
+        Downloaded books will appear here for offline reading.
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="achievementsHeading">
+      <div class="panel-head">
+        <h2 id="achievementsHeading">Achievements</h2>
+      </div>
+      <div class="placeholder" id="achievementsPlaceholder">
+        Reading badges and milestones will appear here.
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="settingsHeading">
+      <div class="panel-head">
+        <h2 id="settingsHeading">Account Settings</h2>
+      </div>
+      <div class="settings-shortcut">
+        <p>Quickly manage privacy, notifications, and account preferences.</p>
+        <button type="button" class="btn" id="settingsShortcutBtn">Go to Settings</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="profile.js"></script>
+</body>
+</html>

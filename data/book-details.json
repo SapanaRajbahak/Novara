@@ -1,0 +1,63 @@
+{
+  "books": [
+    {
+      "id": "book-last-lantern",
+      "title": "The Last Lantern",
+      "author": "M. K. Vale",
+      "genre": ["Mystery", "Thriller"],
+      "rating": null,
+      "description": "A detective returns to a coastal town where every answer is hidden in lighthouse logs and tide charts.",
+      "about": "The Last Lantern blends investigative suspense with atmospheric coastal fiction. As clues emerge from journals and forgotten boat ledgers, the story explores grief, legacy, and what people protect when the town is watching.",
+      "language": "English",
+      "chapters": [
+        { "number": 1, "title": "A Light on the Water" },
+        { "number": 2, "title": "Old Harbor Notes" },
+        { "number": 3, "title": "The Keeper's Name" },
+        { "number": 4, "title": "Storm Ledger" },
+        { "number": 5, "title": "Signal in the Fog" }
+      ],
+      "format": "eBook + Audiobook",
+      "hasAudiobook": true,
+      "audiobookTracks": [
+        { "number": 1, "title": "Track 1 - A Light on the Water" },
+        { "number": 2, "title": "Track 2 - Old Harbor Notes" },
+        { "number": 3, "title": "Track 3 - The Keeper's Name" },
+        { "number": 4, "title": "Track 4 - Storm Ledger" }
+      ],
+      "reviews": [
+        { "name": "Rina", "text": "Perfect pacing and an ending that lands." },
+        { "name": "Joel", "text": "Loved the maritime setting and mystery threads." }
+      ],
+      "relatedBooks": [
+        { "title": "Below Quiet Waters", "author": "Adrian Poe" },
+        { "title": "Copper Rain", "author": "Elio Park" }
+      ]
+    },
+    {
+      "id": "book-echoes-dawn",
+      "title": "Echoes at Dawn",
+      "author": "Nira Sol",
+      "genre": ["Fantasy", "Adventure"],
+      "rating": null,
+      "description": "A cursed musician can rewrite fate by performing forbidden songs at sunrise.",
+      "about": "A lyrical fantasy where sound becomes magic and every performance has a cost. Echoes at Dawn follows a reluctant hero through abandoned theaters, mountain shrines, and villages that trade memories for songs.",
+      "language": "English",
+      "chapters": [
+        { "number": 1, "title": "Sun before Storm" },
+        { "number": 2, "title": "The Broken Violin" },
+        { "number": 3, "title": "A Debt of Silence" },
+        { "number": 4, "title": "Dawn Choir" }
+      ],
+      "format": "eBook",
+      "hasAudiobook": false,
+      "audiobookTracks": [],
+      "reviews": [
+        { "name": "Asha", "text": "Beautifully written worldbuilding and unique magic rules." }
+      ],
+      "relatedBooks": [
+        { "title": "River of Ink", "author": "K. Y. Moss" },
+        { "title": "Ashes of Winter", "author": "R. T. Crow" }
+      ]
+    }
+  ]
+}
