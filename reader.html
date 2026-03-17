@@ -24,6 +24,8 @@
 
       <div class="toolbar-right">
         <input id="searchInput" class="search-inline" type="search" placeholder="Search in chapter" />
+        <button id="listenBtn" class="icon-btn" type="button">Listen</button>
+        <span id="listenModeLabel" class="listen-mode-label">Idle</span>
         <button id="bookmarkBtn" class="icon-btn" type="button">Bookmark</button>
         <button id="settingsBtn" class="icon-btn" type="button">Settings</button>
         <button id="notesToggleBtn" class="icon-btn" type="button">Notes</button>
@@ -63,6 +65,38 @@
         <span id="progressText">0%</span>
       </div>
     </footer>
+
+    <div id="listenMiniPlayer" class="listen-mini-player hidden" aria-live="polite">
+      <div class="listen-mini-top">
+        <div class="listen-mini-meta">
+          <strong id="miniPlaybackTitle">Playback idle</strong>
+          <span id="miniPlaybackMode">-</span>
+          <span id="miniPulse" class="mini-pulse" aria-hidden="true"></span>
+        </div>
+        <div class="listen-mini-controls">
+          <button id="miniBackBtn" class="icon-btn" type="button" aria-label="Skip back">-10s</button>
+          <button id="miniPlayPauseBtn" class="icon-btn" type="button" aria-label="Play or pause">Play</button>
+          <button id="miniForwardBtn" class="icon-btn" type="button" aria-label="Skip forward">+10s</button>
+          <button id="miniStopBtn" class="icon-btn" type="button" aria-label="Stop playback">Stop</button>
+          <select id="miniSpeedSelect" aria-label="Playback speed">
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+          </select>
+        </div>
+      </div>
+      <div class="tts-voice-row hidden" id="ttsVoiceRow">
+        <label class="tts-voice-label">
+          <span>Accent</span>
+          <select id="ttsAccentSelect" aria-label="TTS accent / language"></select>
+        </label>
+        <label class="tts-voice-label">
+          <span>Voice</span>
+          <select id="ttsVoiceSelect" aria-label="TTS voice name"></select>
+        </label>
+      </div>
+    </div>
   </div>
 
   <div id="selectionTools" class="selection-tools" role="toolbar" aria-label="Selection actions">

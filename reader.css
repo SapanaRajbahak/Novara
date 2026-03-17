@@ -103,6 +103,15 @@ a {
   text-overflow: ellipsis;
 }
 
+.listen-mode-label {
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 90%, var(--bg));
+  border-radius: 999px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
 .icon-btn,
 .text-btn {
   border: 1px solid var(--border);
@@ -224,6 +233,16 @@ a {
   margin: 0 0 1.1rem;
 }
 
+.sentence {
+  cursor: pointer;
+  transition: background-color 0.18s ease;
+}
+
+.sentence.active-sentence {
+  background: color-mix(in oklab, var(--accent) 26%, var(--surface));
+  border-radius: 4px;
+}
+
 .highlight {
   background: color-mix(in oklab, #ffd54f 62%, var(--surface));
   border-radius: 4px;
@@ -293,6 +312,106 @@ a {
   border-top: 1px solid color-mix(in oklab, var(--border) 85%, transparent);
   background: color-mix(in oklab, var(--bg) 86%, transparent);
   backdrop-filter: blur(8px);
+}
+
+.listen-mini-player {
+  position: sticky;
+  bottom: 3.9rem;
+  z-index: 19;
+  margin: 0 0.9rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--surface) 92%, var(--bg));
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  box-shadow: var(--shadow);
+}
+
+.listen-mini-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+}
+
+.listen-mini-meta {
+  display: grid;
+  gap: 0.14rem;
+}
+
+.listen-mini-meta strong {
+  font-size: 0.9rem;
+}
+
+.listen-mini-meta span {
+  font-size: 0.77rem;
+  color: var(--muted);
+}
+
+.mini-pulse {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.mini-pulse.pulsing {
+  opacity: 1;
+  animation: pulse-beat 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-beat {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.55); opacity: 0.6; }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+.listen-mini-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.listen-mini-controls select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.4rem 0.45rem;
+}
+
+.tts-voice-row {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  border-top: 1px solid color-mix(in oklab, var(--border) 65%, transparent);
+  padding-top: 0.45rem;
+}
+
+.tts-voice-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.tts-voice-label select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.36rem 0.42rem;
+  font-size: 0.8rem;
+  max-width: 200px;
 }
 
 .progress-wrap {
@@ -419,6 +538,14 @@ a {
 @media (max-width: 900px) {
   .reader-main {
     grid-template-columns: 1fr;
+  }
+
+  .listen-mini-player {
+    bottom: 4.25rem;
+  }
+
+  .listen-mini-top {
+    flex-wrap: wrap;
   }
 
   .chapter-drawer {

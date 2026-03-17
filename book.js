@@ -322,7 +322,7 @@ function renderBook(book) {
   const favored = favoriteBooks.has(book.id);
   elements.favoriteBtn.textContent = favored ? "Favorited" : "Bookmark/Favorite";
 
-  elements.listenBtn.disabled = !book.hasAudiobook;
+  elements.listenBtn.disabled = !book.chapters.length;
 
   // Hide resume UI by default until progress API returns.
   elements.resumeBtn.classList.add("hidden");
@@ -460,10 +460,13 @@ function setupPrimaryActions() {
   });
 
   elements.listenBtn.addEventListener("click", () => {
-    if (!currentBook.hasAudiobook) {
+    if (!currentBook.chapters.length) {
+      showToast("No published chapters yet");
       return;
     }
-    window.location.href = `audiobook.html?book=${encodeURIComponent(currentBook.id)}`;
+
+    const chapterId = resumeChapterId || currentBook.chapters[0].id;
+    window.location.href = `${buildReaderUrl(currentBook.id, chapterId)}&mode=audio`;
   });
 
   elements.saveBtn.addEventListener("click", () => {
