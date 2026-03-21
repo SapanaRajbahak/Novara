@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Writer Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="writer-dashboard.css" />
+</head>
+<body>
+  <main class="writer-shell">
+    <section class="writer-page" aria-live="polite">
+      <header class="writer-hero writer-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Writer Dashboard</p>
+          <h1 id="writerHeading">Loading your premium writer workspace...</h1>
+          <p class="writer-subtitle" id="writerSubtitle">Preparing your author profile, stories, and publishing performance in one place.</p>
+          <div class="hero-actions" id="heroActions">
+            <button type="button" class="btn btn-primary" data-action="create-story">Create New Story</button>
+            <button type="button" class="btn btn-secondary" data-action="new-chapter">New Chapter</button>
+            <button type="button" class="btn btn-soft" data-action="preview-profile">Preview Author Profile</button>
+          </div>
+        </div>
+        <div class="hero-switcher" id="dashboardSwitcher" aria-label="Dashboard Switcher" aria-live="polite"></div>
+        <button type="button" class="btn btn-soft" id="writerSignOutBtn">Sign Out</button>
+      </header>
+
+      <section class="hero-grid">
+        <article class="writer-card author-card" aria-labelledby="authorIdentityHeading">
+          <div class="section-head">
+            <div>
+              <p class="label">Author Identity</p>
+              <h2 id="authorIdentityHeading">Your premium profile</h2>
+            </div>
+            <span class="status-badge status-badge--enabled">Writer Enabled</span>
+          </div>
+          <div class="author-banner" id="authorBanner">
+            <div class="author-avatar" id="authorAvatar" aria-hidden="true">NR</div>
+            <div class="author-meta">
+              <p class="label">Pen Name</p>
+              <h3 id="writerPenName">-</h3>
+              <p class="copy" id="writerBio"></p>
+            </div>
+          </div>
+          <div class="genre-list" id="writerGenres"></div>
+          <div class="author-actions">
+            <button type="button" class="btn btn-soft" data-action="edit-profile">Edit Profile</button>
+            <button type="button" class="btn btn-soft" data-action="upload-photo">Upload Author Photo</button>
+          </div>
+        </article>
+
+        <section class="writer-card" aria-labelledby="statsHeading">
+          <div class="section-head">
+            <div>
+              <p class="label">Overview</p>
+              <h2 id="statsHeading">Writer performance snapshot</h2>
+            </div>
+          </div>
+          <div class="stats-grid" id="writerStats"></div>
+        </section>
+      </section>
+
+      <section class="writer-card access-card" id="accessNotice" hidden></section>
+
+      <section class="layout-grid">
+        <section class="stack-main" aria-label="Primary workspace">
+          <article class="writer-card stories-card" aria-labelledby="workspaceHeading">
+            <div class="section-head section-head--spread">
+              <div>
+                <p class="label">Workspace</p>
+                <h2 id="workspaceHeading">Your Stories</h2>
+              </div>
+              <div class="story-controls">
+                <div class="filter-tabs" role="tablist" aria-label="Story filters" id="storyFilterTabs"></div>
+                <label class="sort-control" for="storySort">
+                  <span>Sort</span>
+                  <select id="storySort">
+                    <option value="last-edited">Last Edited</option>
+                    <option value="most-read">Most Read</option>
+                    <option value="a-z">A-Z</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <label class="search-control" for="storySearch">
+              <span class="label">Search your stories</span>
+              <input id="storySearch" type="search" placeholder="Search your stories" autocomplete="off" />
+            </label>
+            <div id="writerContent"></div>
+          </article>
+
+          <article class="writer-card" aria-labelledby="writingToolsHeading">
+            <div class="section-head section-head--spread">
+              <div>
+                <p class="label">Writing Tools</p>
+                <h2 id="writingToolsHeading">Productivity overview</h2>
+              </div>
+              <button type="button" class="btn btn-primary" data-action="continue-writing">Continue Writing</button>
+            </div>
+            <div class="tools-grid" id="writingTools"></div>
+          </article>
+
+          <article class="writer-card" aria-labelledby="analyticsHeading">
+            <div class="section-head section-head--spread">
+              <div>
+                <p class="label">Analytics</p>
+                <h2 id="analyticsHeading">Reader engagement and growth</h2>
+              </div>
+            </div>
+            <div class="analytics-grid">
+              <section class="chart-panel" aria-label="Reads over time">
+                <p class="label">Reads Over Time</p>
+                <div id="readsChart" class="reads-chart" role="img" aria-label="Reads over time chart"></div>
+              </section>
+              <section class="analytics-stats" id="analyticsStats"></section>
+            </div>
+          </article>
+        </section>
+
+        <aside class="stack-side" aria-label="Secondary tools and activity">
+          <article class="writer-card" aria-labelledby="activityHeading">
+            <div class="section-head">
+              <div>
+                <p class="label">Notifications</p>
+                <h2 id="activityHeading">Recent activity</h2>
+              </div>
+            </div>
+            <div id="recentActivity" class="activity-list"></div>
+          </article>
+
+          <article class="writer-card monetization-card" aria-labelledby="monetizationHeading">
+            <div class="section-head">
+              <div>
+                <p class="label">Monetization</p>
+                <h2 id="monetizationHeading">Growth and earnings</h2>
+              </div>
+            </div>
+            <div class="monetization-grid" id="monetizationStats"></div>
+            <button type="button" class="btn btn-disabled" disabled>Withdraw / Payout (Coming Soon)</button>
+          </article>
+
+          <article class="writer-card" aria-labelledby="assistantHeading">
+            <div class="section-head">
+              <div>
+                <p class="label">AI Writing Assistant</p>
+                <h2 id="assistantHeading">Creative acceleration toolkit</h2>
+              </div>
+            </div>
+            <div class="assistant-actions" id="assistantActions"></div>
+          </article>
+        </aside>
+      </section>
+    </section>
+  </main>
+
+  <script src="novelread-session.js"></script>
+  <script src="writer-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Reader</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="reader.css" />
+</head>
+<body>
+  <div class="reader-app" id="readerApp">
+    <header class="reader-toolbar" id="readerToolbar">
+      <div class="toolbar-left">
+        <a id="backButton" href="library.html" class="text-btn">Back</a>
+        <button id="drawerToggleBtn" class="icon-btn" type="button">Chapters</button>
+      </div>
+
+      <div class="toolbar-center">
+        <p id="toolbarBookTitle" class="book-title">Loading book...</p>
+        <p id="toolbarChapterTitle" class="chapter-title">Loading chapter...</p>
+      </div>
+
+      <div class="toolbar-right">
+        <input id="searchInput" class="search-inline" type="search" placeholder="Search in chapter" />
+        <button id="listenBtn" class="icon-btn" type="button">Listen</button>
+        <span id="listenModeLabel" class="listen-mode-label">Idle</span>
+        <button id="bookmarkBtn" class="icon-btn" type="button">Bookmark</button>
+        <button id="settingsBtn" class="icon-btn" type="button">Settings</button>
+        <button id="notesToggleBtn" class="icon-btn" type="button">Notes</button>
+      </div>
+    </header>
+
+    <main class="reader-main">
+      <aside id="chapterDrawer" class="chapter-drawer" aria-label="Chapter navigation">
+        <h2>Chapters</h2>
+        <ul id="chapterList" class="chapter-list"></ul>
+        <div id="trackSection" class="hidden">
+          <h2>Audiobook Tracks</h2>
+          <ul id="trackList" class="track-list"></ul>
+        </div>
+      </aside>
+
+      <section class="reader-center" aria-label="Reading area">
+        <div id="readingViewport" class="reading-viewport">
+          <article id="readerContent" class="reader-content"></article>
+        </div>
+        <div id="leftTapZone" class="left-tap-zone" aria-hidden="true"></div>
+        <div id="centerTapZone" class="center-tap-zone" aria-hidden="true"></div>
+        <div id="rightTapZone" class="right-tap-zone" aria-hidden="true"></div>
+      </section>
+
+      <aside id="notesPanel" class="notes-panel hidden" aria-label="Notes and highlights">
+        <h2>Highlights & Notes</h2>
+        <ul id="noteList" class="note-list"></ul>
+      </aside>
+    </main>
+
+    <footer class="reader-bottom" id="readerBottom">
+      <button id="prevBtn" class="icon-btn" type="button">Prev</button>
+      <button id="nextBtn" class="icon-btn" type="button">Next</button>
+      <div class="progress-wrap">
+        <input id="progressSlider" type="range" min="0" max="100" step="1" value="0" />
+        <span id="progressText">0%</span>
+      </div>
+    </footer>
+
+    <div id="listenMiniPlayer" class="listen-mini-player hidden" aria-live="polite">
+      <div class="listen-mini-top">
+        <div class="listen-mini-meta">
+          <strong id="miniPlaybackTitle">Playback idle</strong>
+          <span id="miniPlaybackMode">-</span>
+          <span id="miniPulse" class="mini-pulse" aria-hidden="true"></span>
+        </div>
+        <div class="listen-mini-controls">
+          <button id="miniBackBtn" class="icon-btn" type="button" aria-label="Skip back">-10s</button>
+          <button id="miniPlayPauseBtn" class="icon-btn" type="button" aria-label="Play or pause">Play</button>
+          <button id="miniForwardBtn" class="icon-btn" type="button" aria-label="Skip forward">+10s</button>
+          <button id="miniStopBtn" class="icon-btn" type="button" aria-label="Stop playback">Stop</button>
+          <select id="miniSpeedSelect" aria-label="Playback speed">
+            <option value="0.75">0.75x</option>
+            <option value="1" selected>1x</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+          </select>
+        </div>
+      </div>
+      <div class="tts-voice-row hidden" id="ttsVoiceRow">
+        <label class="tts-voice-label">
+          <span>Accent</span>
+          <select id="ttsAccentSelect" aria-label="TTS accent / language"></select>
+        </label>
+        <label class="tts-voice-label">
+          <span>Voice</span>
+          <select id="ttsVoiceSelect" aria-label="TTS voice name"></select>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <div id="selectionTools" class="selection-tools" role="toolbar" aria-label="Selection actions">
+    <button id="highlightBtn" type="button">Highlight</button>
+    <button id="addNoteBtn" type="button">Add Note</button>
+  </div>
+
+  <div id="settingsModal" class="settings-modal" aria-hidden="true">
+    <div class="settings-card">
+      <h2>Reader Settings</h2>
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="fontSizeInput">Font Size</label>
+          <input id="fontSizeInput" type="range" min="14" max="30" value="19" />
+        </div>
+        <div class="settings-field">
+          <label for="fontFamilySelect">Font Family</label>
+          <select id="fontFamilySelect">
+            <option value="Fraunces, serif">Serif</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Manrope, sans-serif">Sans</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="lineHeightInput">Line Height</label>
+          <input id="lineHeightInput" type="range" min="1.2" max="2.1" step="0.05" value="1.75" />
+        </div>
+        <div class="settings-field">
+          <label for="themeSelect">Theme</label>
+          <select id="themeSelect">
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="sepia">Sepia</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="pageWidthInput">Page Width</label>
+          <input id="pageWidthInput" type="range" min="520" max="980" step="10" value="760" />
+        </div>
+        <div class="settings-field">
+          <label for="modeSelect">Reading Mode</label>
+          <select id="modeSelect">
+            <option value="scroll">Scroll</option>
+            <option value="paginated">Paginated</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="formatSelect">Content Format</label>
+          <select id="formatSelect">
+            <option value="structured">Structured Text</option>
+            <option value="pdf">PDF</option>
+            <option value="epub">EPUB</option>
+          </select>
+        </div>
+        <div class="settings-field">
+          <label for="filePicker">Open Local EPUB/PDF</label>
+          <input id="filePicker" type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" />
+        </div>
+        <div class="settings-field">
+          <label>&nbsp;</label>
+          <button id="closeSettingsBtn" class="text-btn" type="button">Close Settings</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="reader.js"></script>
+</body>
+</html>

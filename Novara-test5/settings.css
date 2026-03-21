@@ -1,0 +1,241 @@
+:root {
+  --bg: #f5f1e9;
+  --bg-soft: #faf7f1;
+  --surface: #ffffff;
+  --surface-2: #fffaf0;
+  --text: #1f1c1a;
+  --muted: #6f6760;
+  --primary: #2f5145;
+  --accent: #bf773d;
+  --border: #e3dacd;
+  --shadow-soft: 0 10px 30px rgba(44, 31, 20, 0.08);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #171614;
+    --bg-soft: #1e1d1b;
+    --surface: #242321;
+    --surface-2: #2b2824;
+    --text: #f7f1e8;
+    --muted: #b7ac9f;
+    --primary: #8ab5a0;
+    --accent: #dfa063;
+    --border: #3c3833;
+    --shadow-soft: 0 12px 28px rgba(0, 0, 0, 0.35);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  font-family: "Manrope", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(circle at 8% 8%, rgba(191, 119, 61, 0.12), transparent 26%),
+    radial-gradient(circle at 95% 2%, rgba(47, 81, 69, 0.18), transparent 30%),
+    var(--bg);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-family: "Fraunces", serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 86%, transparent);
+  backdrop-filter: blur(8px);
+  background: color-mix(in oklab, var(--bg) 82%, transparent);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 700;
+}
+
+.brand-dot {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--primary));
+}
+
+.top-nav {
+  display: inline-flex;
+  gap: 0.35rem;
+}
+
+.top-nav a {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.45rem 0.68rem;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.top-nav a.active {
+  color: var(--text);
+  background: color-mix(in oklab, var(--primary) 18%, var(--surface));
+}
+
+.settings-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.hero,
+.panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 92%, var(--bg-soft));
+  box-shadow: var(--shadow-soft);
+  padding: 0.85rem;
+}
+
+.hero p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+}
+
+.message {
+  margin-top: 0.55rem;
+  min-height: 1.2rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.message.ok {
+  color: color-mix(in oklab, var(--primary) 70%, var(--text));
+}
+
+.message.error {
+  color: #b54836;
+}
+
+.panel-head {
+  margin-bottom: 0.55rem;
+}
+
+.fields {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.two-col {
+  grid-template-columns: 1fr 1fr;
+}
+
+.three-col {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.field {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.field span {
+  font-size: 0.79rem;
+  color: var(--muted);
+}
+
+.field input,
+.field textarea,
+.field select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.5rem 0.56rem;
+  font: inherit;
+}
+
+.checkbox-row {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 0.45rem 0.52rem;
+}
+
+.checkbox-row input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.actions {
+  margin-top: 0.6rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 86%, black), color-mix(in oklab, var(--primary) 72%, black));
+  color: #fff;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: #b54836;
+  min-height: 1rem;
+}
+
+@media (max-width: 860px) {
+  .three-col,
+  .two-col {
+    grid-template-columns: 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 700px) {
+  .top-nav {
+    display: none;
+  }
+
+  .settings-page {
+    padding: 0.75rem;
+  }
+}

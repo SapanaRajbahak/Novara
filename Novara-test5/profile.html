@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="profile.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a href="index.html" class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>NovelRead</span>
+    </a>
+
+    <nav class="top-nav" aria-label="Primary">
+      <a href="index.html">Home</a>
+      <a href="library.html">Library</a>
+      <a href="discover.html">Discover</a>
+      <a href="writer-dashboard.html" id="writerProfileNavLink" hidden>Writer</a>
+      <a href="profile.html" class="active">Profile</a>
+    </nav>
+  </header>
+
+  <main class="profile-page">
+    <section class="user-card" aria-label="User info">
+      <div class="user-row">
+        <div class="avatar" id="userAvatar">NR</div>
+        <div>
+          <h1 id="userName">Loading...</h1>
+          <p id="userEmail" class="muted"></p>
+          <p id="userJoinedAt" class="muted"></p>
+          <div id="userRoles" class="role-row"></div>
+        </div>
+      </div>
+      <p id="userBio" class="bio"></p>
+      <p id="profilePhotoNote" class="helper-text"></p>
+      <div id="profileDashboardSwitcher" class="dashboard-switcher-slot" aria-live="polite"></div>
+      <div class="user-actions">
+        <button type="button" class="btn" id="editProfileBtn">Edit Profile</button>
+        <button type="button" class="btn btn-secondary" id="viewSettingsBtn">Account Settings</button>
+      </div>
+    </section>
+
+    <section class="panel" id="profileWriterPanel" hidden aria-live="polite"></section>
+
+    <section class="panel" id="editProfilePanel" hidden aria-labelledby="editProfileHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="editProfileHeading">Edit Profile</h2>
+          <p class="panel-subtext">Update the profile fields backed by your real account record.</p>
+        </div>
+      </div>
+      <form id="profileForm" class="profile-form">
+        <div class="field-grid">
+          <label class="field" for="nameInput">
+            <span>Display Name</span>
+            <input id="nameInput" type="text" autocomplete="name" />
+          </label>
+          <label class="field" for="preferredGenresInput">
+            <span>Preferred Genres</span>
+            <input id="preferredGenresInput" type="text" placeholder="Fantasy, Mystery, Romance" />
+          </label>
+        </div>
+        <label class="field" for="penNameInput" id="penNameField" hidden>
+          <span>Pen Name</span>
+          <input id="penNameInput" type="text" />
+        </label>
+        <label class="field" for="bioInput">
+          <span>Bio</span>
+          <textarea id="bioInput" rows="4"></textarea>
+        </label>
+        <label class="field" for="avatarInput">
+          <span>Profile Photo</span>
+          <input id="avatarInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" />
+        </label>
+        <label class="field" for="removeAvatarToggle">
+          <span>Avatar Options</span>
+          <label class="inline-toggle">
+            <input id="removeAvatarToggle" type="checkbox" />
+            <span>Remove current profile photo</span>
+          </label>
+        </label>
+        <div class="photo-support" id="photoSupportMessage"></div>
+        <div class="form-actions">
+          <button type="submit" class="btn">Save Changes</button>
+          <button type="button" class="btn btn-secondary" id="cancelEditBtn">Cancel</button>
+        </div>
+        <p id="profileFormMessage" class="helper-text" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="panel" aria-labelledby="statsHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="statsHeading">Reader Stats</h2>
+          <p class="panel-subtext">Real reading and listening progress for this account.</p>
+        </div>
+      </div>
+      <div class="stats-grid" id="statsGrid"></div>
+    </section>
+
+    <section class="panel" id="writerStatsSection" hidden aria-labelledby="writerStatsHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="writerStatsHeading">Writer Stats</h2>
+          <p class="panel-subtext">Only visible when writer access is enabled for this account.</p>
+        </div>
+      </div>
+      <div class="stats-grid" id="writerStatsGrid"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="savedHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="savedHeading">Library</h2>
+          <p class="panel-subtext">Books with real bookmark, reading, or listening activity.</p>
+        </div>
+        <a href="library.html" class="text-link">Open Library</a>
+      </div>
+      <div class="books-grid" id="savedBooksList"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="preferencesHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="preferencesHeading">Preferences</h2>
+          <p class="panel-subtext">Stored profile preferences from your real account record.</p>
+        </div>
+      </div>
+      <div id="preferencesList" class="chip-list"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="activityHeading">
+      <div class="panel-head">
+        <div>
+          <h2 id="activityHeading">Recent Activity</h2>
+          <p class="panel-subtext">Latest real reader and writer activity for this account.</p>
+        </div>
+      </div>
+      <ul id="activityList" class="activity-list"></ul>
+    </section>
+
+    <section class="panel" aria-labelledby="settingsHeading">
+      <div class="panel-head">
+        <h2 id="settingsHeading">Account Settings</h2>
+      </div>
+      <div class="settings-shortcut">
+        <p>Open the settings page for reader environment preferences. Profile identity is managed above.</p>
+        <button type="button" class="btn" id="settingsShortcutBtn">Go to Settings</button>
+      </div>
+    </section>
+  </main>
+
+  <script src="novelread-session.js"></script>
+  <script src="profile.js"></script>
+</body>
+</html>

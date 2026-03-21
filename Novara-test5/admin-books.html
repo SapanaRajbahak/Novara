@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Books Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin-books.css" />
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin Navigation">
+      <a href="admin.html" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>NovelRead Admin</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        <a href="admin.html">Dashboard</a>
+        <a href="admin-books.html" class="active">Books</a>
+        <a href="admin-upload.html">Upload Book</a>
+        <a href="admin-chapters.html">Chapters</a>
+        <a href="admin-audiobooks.html">Audiobooks</a>
+        <a href="admin-ai.html">AI Generator</a>
+        <a href="admin-users.html">Users</a>
+        <a href="admin-analytics.html">Analytics</a>
+        <a href="admin-settings.html">Settings</a>
+      </nav>
+
+      <button type="button" id="logoutBtn" class="logout-btn">Logout</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="main-topbar">
+        <div>
+          <p class="eyebrow">Admin Panel</p>
+          <h1>Books Management</h1>
+        </div>
+        <div class="top-actions">
+          <a href="admin-upload.html" class="text-btn">Upload New Book</a>
+          <a href="admin.html" class="text-btn">Back to Dashboard</a>
+        </div>
+      </header>
+
+      <section class="controls panel">
+        <div class="search-wrap">
+          <label for="searchInput">Search</label>
+          <input id="searchInput" type="search" placeholder="Search title, author, genre..." />
+        </div>
+
+        <div class="filter-wrap">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="all">All</option>
+            <option value="published">Published</option>
+            <option value="draft">Draft</option>
+          </select>
+        </div>
+
+        <div class="filter-wrap">
+          <label for="sourceFilter">Source</label>
+          <select id="sourceFilter">
+            <option value="all">All</option>
+            <option value="ai-generated">AI-generated</option>
+            <option value="uploaded-manually">Uploaded manually</option>
+          </select>
+        </div>
+
+        <div class="filter-wrap">
+          <label for="viewMode">View</label>
+          <select id="viewMode">
+            <option value="table">Table</option>
+            <option value="grid">Grid</option>
+          </select>
+        </div>
+      </section>
+
+      <section class="panel" aria-labelledby="booksHeading">
+        <div class="panel-head">
+          <h2 id="booksHeading">All Books</h2>
+          <span id="resultsMeta">0 results</span>
+        </div>
+
+        <div id="tableView" class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Cover</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Upload Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="booksTableBody"></tbody>
+          </table>
+        </div>
+
+        <div id="gridView" class="books-grid hidden"></div>
+
+        <div class="pagination">
+          <button type="button" id="prevPageBtn" class="text-btn">Previous</button>
+          <span id="pageMeta">Page 1 of 1</span>
+          <button type="button" id="nextPageBtn" class="text-btn">Next</button>
+        </div>
+      </section>
+
+      <section id="editModal" class="modal hidden" aria-hidden="true">
+        <div class="modal__backdrop" data-close-modal="true"></div>
+        <div class="modal__dialog panel" role="dialog" aria-modal="true" aria-labelledby="editBookHeading">
+          <div class="panel-head">
+            <h2 id="editBookHeading">Edit Book</h2>
+            <button type="button" class="text-btn" id="closeEditModalBtn">Close</button>
+          </div>
+
+          <form id="editBookForm" class="edit-form" novalidate>
+            <div class="search-wrap">
+              <label for="editTitle">Title</label>
+              <input id="editTitle" type="text" maxlength="140" required />
+            </div>
+
+            <div class="controls controls--compact">
+              <div class="filter-wrap">
+                <label for="editAuthor">Author</label>
+                <input id="editAuthor" type="text" maxlength="100" required />
+              </div>
+
+              <div class="filter-wrap">
+                <label for="editGenre">Genre</label>
+                <input id="editGenre" type="text" maxlength="80" />
+              </div>
+
+              <div class="filter-wrap">
+                <label for="editFileType">Type</label>
+                <select id="editFileType">
+                  <option value="TXT">Text Chapters</option>
+                  <option value="EPUB">EPUB</option>
+                  <option value="PDF">PDF</option>
+                </select>
+              </div>
+
+              <div class="filter-wrap">
+                <label for="editStatus">Status</label>
+                <select id="editStatus">
+                  <option value="DRAFT">Draft</option>
+                  <option value="PUBLISHED">Published</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="search-wrap">
+              <label for="editTags">Tags</label>
+              <input id="editTags" type="text" placeholder="magic, mystery, coastal" />
+            </div>
+
+            <div class="search-wrap">
+              <label for="editDescription">Description</label>
+              <textarea id="editDescription" rows="5" maxlength="1500"></textarea>
+            </div>
+
+            <div class="modal__checks">
+              <label><input id="editIsAudiobookAvailable" type="checkbox" /> Audiobook available</label>
+              <label><input id="editIsAiGenerated" type="checkbox" /> AI-generated source</label>
+            </div>
+
+            <div class="modal__actions">
+              <p id="editFormError" class="modal__message" aria-live="polite"></p>
+              <button type="submit" class="text-btn">Save Changes</button>
+            </div>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="admin-books.js"></script>
+</body>
+</html>

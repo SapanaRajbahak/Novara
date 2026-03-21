@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Writer Chapters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="writer-story-chapters.css" />
+</head>
+<body>
+  <main class="chapters-shell">
+    <section class="chapters-page">
+      <header class="card page-head">
+        <div>
+          <p class="eyebrow">Writer Studio</p>
+          <h1 id="storyTitle">Story Chapters</h1>
+          <p id="storyMeta" class="subcopy">Manage chapter flow, preview your story, and publish when ready.</p>
+        </div>
+        <div class="switcher-wrap">
+          <div id="dashboardSwitcher" class="dashboard-switcher-slot" aria-live="polite"></div>
+          <button type="button" class="back-btn" id="writerSignOutBtn">Sign Out</button>
+        </div>
+        <div class="head-actions">
+          <a class="back-btn" href="./writer-dashboard.html">Back to Writer Dashboard</a>
+          <button class="btn soft" id="previewBtn" type="button">Preview Story</button>
+          <button class="btn" id="publishBtn" type="button">Publish Story</button>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="chapterFormHeading">
+        <h2 id="chapterFormHeading">Add Chapter</h2>
+        <form id="chapterForm" class="chapter-form" novalidate>
+          <div class="grid two-col">
+            <label class="field" for="chapterNumber">
+              <span>Chapter Number</span>
+              <input id="chapterNumber" type="number" min="1" step="1" required />
+            </label>
+            <label class="field" for="chapterTitle">
+              <span>Chapter Title</span>
+              <input id="chapterTitle" type="text" maxlength="180" required />
+            </label>
+          </div>
+
+          <label class="field" for="chapterContent">
+            <span>Chapter Content</span>
+            <textarea id="chapterContent" rows="8" maxlength="40000" required></textarea>
+          </label>
+
+          <label class="checkbox">
+            <input id="isPublished" type="checkbox" />
+            <span>Mark chapter as published</span>
+          </label>
+
+          <div class="actions">
+            <p id="formError" class="error" aria-live="polite"></p>
+            <button class="btn" type="submit">Save Chapter</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="chapterListHeading">
+        <h2 id="chapterListHeading">Saved Chapters</h2>
+        <div id="chapterList" class="chapter-list" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <script src="novelread-session.js"></script>
+  <script src="writer-story-chapters.js"></script>
+</body>
+</html>

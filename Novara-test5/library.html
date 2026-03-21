@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NovelRead Library</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="library.css" />
+</head>
+<body>
+  <header class="library-topbar">
+    <a href="index.html" class="brand">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>NovelRead</span>
+    </a>
+    <h1>Library</h1>
+    <div class="topbar-actions">
+      <a href="discover.html" class="ghost-link">Discover</a>
+      <a href="annotations.html" class="ghost-link">Annotations</a>
+      <a href="profile.html" class="ghost-link">Profile</a>
+      <a href="index.html" class="ghost-link">Back to Home</a>
+    </div>
+  </header>
+
+  <main class="library-main">
+    <section class="controls" aria-label="Library controls">
+      <label class="search-wrap" for="searchInput">
+        <span>Search</span>
+        <input id="searchInput" type="search" placeholder="Search books, authors, tags..." />
+      </label>
+
+      <div class="view-toggle" role="group" aria-label="View toggle">
+        <button type="button" class="view-btn active" data-view="grid" aria-pressed="true">Grid</button>
+        <button type="button" class="view-btn" data-view="list" aria-pressed="false">List</button>
+      </div>
+
+      <label class="control-field" for="genreFilter">
+        <span>Genre</span>
+        <select id="genreFilter"></select>
+      </label>
+
+      <label class="control-field" for="languageFilter">
+        <span>Language</span>
+        <select id="languageFilter"></select>
+      </label>
+
+      <label class="control-field" for="typeFilter">
+        <span>Type</span>
+        <select id="typeFilter">
+          <option value="all">All Types</option>
+          <option value="ebook">eBook</option>
+          <option value="audiobook">Audiobook</option>
+          <option value="both">Both</option>
+        </select>
+      </label>
+
+      <label class="control-field" for="accessFilter">
+        <span>Free/Paid</span>
+        <select id="accessFilter">
+          <option value="all">All</option>
+          <option value="free">Free</option>
+          <option value="paid">Paid</option>
+        </select>
+      </label>
+
+      <label class="control-field" for="discoveryFilter">
+        <span>Latest/Popular</span>
+        <select id="discoveryFilter">
+          <option value="all">All</option>
+          <option value="latest">Latest</option>
+          <option value="popular">Popular</option>
+        </select>
+      </label>
+
+      <label class="control-field" for="sortBy">
+        <span>Sort By</span>
+        <select id="sortBy">
+          <option value="newest">Newest</option>
+          <option value="title">Title</option>
+          <option value="popularity">Popularity</option>
+        </select>
+      </label>
+    </section>
+
+    <section class="results-head" aria-live="polite">
+      <p id="resultsMeta">Loading books...</p>
+    </section>
+
+    <section id="booksContainer" class="books books-grid" aria-label="Books listing"></section>
+
+    <nav class="pagination" aria-label="Pagination">
+      <button id="prevPageBtn" type="button">Previous</button>
+      <p id="pageMeta">Page 1 of 1</p>
+      <button id="nextPageBtn" type="button">Next</button>
+    </nav>
+  </main>
+
+  <script src="library.js"></script>
+</body>
+</html>
