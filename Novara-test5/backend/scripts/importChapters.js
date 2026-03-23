@@ -1,5 +1,5 @@
 if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "postgresql://novara:novara_password@localhost:5433/novara";
+  process.env.DATABASE_URL = "postgresql://Novara:Novara_password@localhost:5433/Novara";
 }
 
 const prisma = require("../prisma/client");

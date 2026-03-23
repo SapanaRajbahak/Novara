@@ -1,5 +1,17 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const PAGE_SIZE = 8;
 
 const elements = {
@@ -121,13 +133,26 @@ function getTypeLabel(book) {
   return book.isAudiobookAvailable ? `${base} + Audio` : base;
 }
 
+function toAbsoluteAssetUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:")) {
+    return raw;
+  }
+
+  return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
 function normalizeBook(book) {
   return {
     id: book.id,
     title: book.title || "Untitled",
     author: book.authorName || "Unknown Author",
     genre: book.genre || "General",
-    coverUrl: book.coverUrl || "",
+    coverUrl: toAbsoluteAssetUrl(book.coverUrl),
     status: formatStatus(book.status),
     source: getSource(book.isAiGenerated),
     type: getTypeLabel(book),

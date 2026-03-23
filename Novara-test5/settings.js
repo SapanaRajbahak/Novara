@@ -1,4 +1,4 @@
-const SETTINGS_STORAGE_KEY = "novelread.user.settings";
+const SETTINGS_STORAGE_KEY = "novara.user.settings";
 
 const formMap = {
   accountForm: {
@@ -29,7 +29,7 @@ const formMap = {
 
 const defaultSettings = {
   displayName: "Ariana Rivers",
-  email: "ariana.rivers@novelread.app",
+  email: "ariana.rivers@novara.app",
   bio: "I read mysteries at dawn and fantasy at night.",
   appTheme: "system",
   appDensity: "comfortable",

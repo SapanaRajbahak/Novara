@@ -1,6 +1,18 @@
-const AUDIO_PROGRESS_KEY = "novelread.audio.progress";
-const AUDIO_BOOKMARKS_KEY = "novelread.audio.bookmarks";
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+const AUDIO_PROGRESS_KEY = "novara.audio.progress";
+const AUDIO_BOOKMARKS_KEY = "novara.audio.bookmarks";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const state = {
   currentBook: null,

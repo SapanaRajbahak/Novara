@@ -1,4 +1,16 @@
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const elements = {
   userAvatar: document.getElementById("userAvatar"),
@@ -140,8 +152,8 @@ function renderWriterStats(stats) {
 
 function applyAvatar(profile) {
   const displayName = profile.fullName || "Account";
-  const initials = window.NovelReadSession
-    ? window.NovelReadSession.getInitials(displayName)
+  const initials = window.NovaraSession
+    ? window.NovaraSession.getInitials(displayName)
     : displayName.slice(0, 2).toUpperCase();
 
   if (profile.avatarUrl) {
@@ -309,7 +321,7 @@ async function refreshProfilePage() {
     apiFetch("/api/profile/stats"),
     apiFetch("/api/profile/library"),
     apiFetch("/api/profile/activity"),
-    window.NovelReadSession ? window.NovelReadSession.fetchCurrentUser(true) : Promise.resolve(null),
+    window.NovaraSession ? window.NovaraSession.fetchCurrentUser(true) : Promise.resolve(null),
   ]);
 
   renderProfile(profilePayload.data);
@@ -322,18 +334,18 @@ async function refreshProfilePage() {
   renderSavedBooks(state.library);
   renderActivity(state.activity);
 
-  if (window.NovelReadSession) {
-    window.NovelReadSession.renderDashboardSwitcher(elements.profileDashboardSwitcher, {
+  if (window.NovaraSession) {
+    window.NovaraSession.renderDashboardSwitcher(elements.profileDashboardSwitcher, {
       currentDashboard: "reader",
       readerHref: "reader-dashboard.html",
       writerHref: "writer-dashboard.html",
     });
-    window.NovelReadSession.renderWriterJourneyCard(elements.profileWriterPanel, {
+    window.NovaraSession.renderWriterJourneyCard(elements.profileWriterPanel, {
       readerHref: "profile.html",
       writerHref: "writer-dashboard.html",
       onboardingHref: "writer-onboarding.html",
     });
-    elements.writerProfileNavLink.hidden = !window.NovelReadSession.canUseWriter(sessionUser);
+    elements.writerProfileNavLink.hidden = !window.NovaraSession.canUseWriter(sessionUser);
   }
 }
 
@@ -395,8 +407,8 @@ function bindEvents() {
       await refreshProfilePage();
       elements.editProfilePanel.hidden = true;
       setFormMessage("Profile updated successfully.");
-      if (window.NovelReadSession) {
-        window.NovelReadSession.showToast("Profile updated");
+      if (window.NovaraSession) {
+        window.NovaraSession.showToast("Profile updated");
       }
     } catch (error) {
       setFormMessage(error.message || "Unable to update profile.");

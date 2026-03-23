@@ -1,7 +1,7 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const BOOKS_STORE_KEY = "novelread.admin.uploadedBooks";
-const CHAPTERS_STORE_KEY = "novelread.admin.chapterDrafts";
-const AI_DRAFTS_KEY = "novelread.admin.aiDrafts";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+const BOOKS_STORE_KEY = "novara.admin.uploadedBooks";
+const CHAPTERS_STORE_KEY = "novara.admin.chapterDrafts";
+const AI_DRAFTS_KEY = "novara.admin.aiDrafts";
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),

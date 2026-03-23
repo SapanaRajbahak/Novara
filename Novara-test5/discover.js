@@ -1,4 +1,26 @@
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const PAGE_SIZE = 12;
 
 const elements = {

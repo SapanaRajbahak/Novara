@@ -4,7 +4,7 @@ const bcrypt = require("bcrypt");
 
 // Use a sensible default for local Docker Postgres if DATABASE_URL is not set.
 if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL = "postgresql://novara:novara_password@localhost:5433/novara";
+  process.env.DATABASE_URL = "postgresql://Novara:Novara_password@localhost:5433/Novara";
 }
 
 const prisma = require("../prisma/client");
@@ -61,7 +61,7 @@ async function ensureAdminUserId() {
   const createdAdmin = await prisma.user.create({
     data: {
       name: "Import Admin",
-      email: "import-admin@novara.local",
+      email: "import-admin@Novara.local",
       password: passwordHash,
       role: "ADMIN",
     },

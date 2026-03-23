@@ -1,170 +1,127 @@
-const defaultDashboardData = {
-  continueReading: [
-    { id: "book-last-lantern", title: "The Last Lantern", author: "M. K. Vale", genre: "Mystery", progress: 68 },
-    { id: "book-echoes-dawn", title: "Echoes at Dawn", author: "Nira Sol", genre: "Fantasy", progress: 34 },
-    { id: "book-code-silence", title: "Code of Silence", author: "Leah Warren", genre: "Thriller", progress: 82 }
-  ],
-  trendingNovels: [
-    { id: "book-midnight-atlas", title: "Midnight Atlas", author: "Jonas Reed", genre: "Adventure" },
-    { id: "book-glass-orchard", title: "The Glass Orchard", author: "Emi Hart", genre: "Romance" },
-    { id: "book-ashes-winter", title: "Ashes of Winter", author: "R. T. Crow", genre: "Epic" },
-    { id: "book-velvet-constellations", title: "Velvet Constellations", author: "Ira Bloom", genre: "Sci-Fi" }
-  ],
-  newReleases: [
-    { id: "book-paper-moons", title: "Paper Moons", author: "Talia Mercer", genre: "Contemporary" },
-    { id: "book-ninth-listener", title: "The Ninth Listener", author: "Miko Hale", genre: "Horror" },
-    { id: "book-whisperline", title: "Whisperline", author: "Ana Flores", genre: "Drama" }
-  ],
-  recommendedForYou: [
-    { id: "book-quiet-waters", title: "Below Quiet Waters", author: "Adrian Poe", genre: "Mystery", progress: 12 },
-    { id: "book-sun-attic", title: "Sun in the Attic", author: "Hazel Nyx", genre: "Historical" },
-    { id: "book-clockmaker-signal", title: "The Clockmaker's Signal", author: "Noah Pierce", genre: "Steampunk", progress: 49 }
-  ],
-  audiobooks: [
-    { id: "book-wild-meridian", title: "Wild Meridian", author: "Sara Quinn", genre: "Audiobook" },
-    { id: "book-house-wind", title: "A House of Wind", author: "Peter Lane", genre: "Audiobook", progress: 55 },
-    { id: "book-poets-harbor", title: "The Poet's Harbor", author: "Jamie Cross", genre: "Audiobook" }
-  ],
-  categoriesGenres: [
-    "Fantasy",
-    "Romance",
-    "Mystery",
-    "Sci-Fi",
-    "Historical",
-    "Self Growth",
-    "Young Adult",
-    "Dark Academia"
-  ],
-  recentlyAdded: []
-};
-
-const dashboardData = structuredClone(defaultDashboardData);
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
-const SECTION_KEYS = [
-  "continueReading",
-  "trendingNovels",
-  "newReleases",
-  "recommendedForYou",
-  "audiobooks",
-  "recentlyAdded"
-];
-const SAVED_BOOKS_KEY = "novelread.savedBooks";
-const LOCAL_UPLOADED_BOOKS_KEY = "novelread.admin.uploadedBooks";
-let savedBooks = loadSavedBooks();
-
-const sectionRows = {
-  continueReading: document.getElementById("continueReadingRow"),
-  trendingNovels: document.getElementById("trendingNovelsRow"),
-  newReleases: document.getElementById("newReleasesRow"),
-  recommendedForYou: document.getElementById("recommendedForYouRow"),
-  audiobooks: document.getElementById("audiobooksRow"),
-  categoriesGenres: document.getElementById("categoriesRow"),
-  recentlyAdded: document.getElementById("recentlyAddedRow")
-};
-const searchInput = document.getElementById("searchInput");
-const profileName = document.getElementById("dashboardProfileName");
-const dashboardAvatar = document.getElementById("dashboardAvatar");
-const writerJourneyPanel = document.getElementById("writerJourneyPanel");
-const writerNavLink = document.getElementById("writerNavLink");
-const writerDropdownLink = document.getElementById("writerDropdownLink");
-const dashboardSwitcher = document.getElementById("dashboardSwitcher");
-
-function deriveProgressFromId(bookId, index = 0) {
-  const seedSource = String(bookId || index);
-  let hash = 0;
-  for (let i = 0; i < seedSource.length; i += 1) {
-    hash = ((hash << 5) - hash) + seedSource.charCodeAt(i);
-    hash |= 0;
-  }
-  const normalized = Math.abs(hash % 65);
-  return 25 + normalized;
+// === Unified Data Persistence Utilities ===
+function getCurrentUserId() {
+  // Replace with real user logic if available
+  return localStorage.getItem('novara.userId') || 'guest';
 }
 
-function normalizeCatalogBook(rawBook, index = 0) {
-  const title = rawBook.title || "Untitled";
-  const author = rawBook.author || rawBook.authorName || "Unknown Author";
-  const genre = rawBook.genre || "General";
-  const id = rawBook.id || `${title}-${author}-${index}`.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-
-  return {
-    id,
-    title,
-    author,
-    genre,
-    isAudiobookAvailable: Boolean(rawBook.isAudiobookAvailable),
-    createdAt: rawBook.createdAt || rawBook.publishedAt || rawBook.createdDate || null,
-  };
+// CONTINUE READING
+function getContinueReading() {
+  return JSON.parse(localStorage.getItem('novara.continueReading') || '[]');
+}
+function setContinueReading(entries) {
+  localStorage.setItem('novara.continueReading', JSON.stringify(entries));
+}
+function addContinueReading({ bookId, source, currentChapter, progress }) {
+  const userId = getCurrentUserId();
+  let entries = getContinueReading();
+  // Remove any existing for this user/book
+  entries = entries.filter(e => !(e.userId === userId && e.bookId === bookId));
+  entries.unshift({ userId, bookId, source, currentChapter, progress });
+  setContinueReading(entries);
 }
 
-function buildDashboardFromCatalog(catalog) {
-  const books = catalog.slice();
-  const withProgress = books.slice(0, 8).map((book, index) => ({
-    ...book,
-    progress: deriveProgressFromId(book.id, index),
-  }));
-
-  const newReleases = books
-    .slice()
-    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
-    .slice(0, 12);
-
-  const recommended = books.slice(3, 15).map((book, index) => {
-    if (index % 2 === 0) {
-      return {
-        ...book,
-        progress: deriveProgressFromId(book.id, index + 15),
-      };
-    }
-    return book;
-  });
-
-  const audiobooks = books.filter((book) => book.isAudiobookAvailable).slice(0, 12);
-  const genres = [...new Set(books.map((book) => book.genre).filter(Boolean))].slice(0, 12);
-
-  return {
-    continueReading: withProgress.length ? withProgress : books.slice(0, 8),
-    trendingNovels: books.slice(0, 12),
-    newReleases,
-    recommendedForYou: recommended.length ? recommended : books.slice(0, 12),
-    audiobooks: audiobooks.length ? audiobooks : books.slice(0, 8),
-    categoriesGenres: genres,
-    recentlyAdded: newReleases.slice(0, 12),
-  };
+// LIBRARY
+function getLibrary() {
+  return JSON.parse(localStorage.getItem('novara.savedBooks') || '[]');
 }
-
-function applyDashboardCatalog(catalog) {
-  const mapped = buildDashboardFromCatalog(catalog);
-  SECTION_KEYS.forEach((key) => {
-    dashboardData[key] = Array.isArray(mapped[key]) ? mapped[key] : [];
-  });
-  dashboardData.categoriesGenres = Array.isArray(mapped.categoriesGenres) ? mapped.categoriesGenres : [];
+function setLibrary(entries) {
+  localStorage.setItem('novara.savedBooks', JSON.stringify(entries));
 }
-
-function loadLocalUploadedCatalog() {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LOCAL_UPLOADED_BOOKS_KEY) || "[]");
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed
-      .filter((book) => {
-        if (typeof book.status !== "string") {
-          return true;
-        }
-        return book.status.toLowerCase() !== "draft";
-      })
-      .map((book, index) => normalizeCatalogBook(book, index));
-  } catch (error) {
-    return [];
+function addToLibrary(bookId) {
+  const userId = getCurrentUserId();
+  let entries = getLibrary();
+  if (!entries.some(e => e.userId === userId && e.bookId === bookId)) {
+    entries.unshift({ userId, bookId });
+    setLibrary(entries);
   }
 }
 
-function clearDashboardData() {
-  SECTION_KEYS.forEach((key) => {
-    dashboardData[key] = [];
+// BOOKMARKS
+function getBookmarks() {
+  return JSON.parse(localStorage.getItem('novara.bookmarks') || '[]');
+}
+function setBookmarks(entries) {
+  localStorage.setItem('novara.bookmarks', JSON.stringify(entries));
+}
+function addBookmark({ bookId, chapterId, note }) {
+  const userId = getCurrentUserId();
+  let entries = getBookmarks();
+  entries.unshift({ userId, bookId, chapterId, note });
+  setBookmarks(entries);
+}
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const SAVED_BOOKS_KEY = "novara.savedBooks";
+const elements = {
+  continueReadingRow: document.getElementById("continueReadingRow"),
+  trendingRow: document.getElementById("trendingRow"),
+  genreRow: document.getElementById("genreRow"),
+  browseGrid: document.getElementById("browseGrid"),
+  loadMoreBtn: document.getElementById("loadMoreBtn"),
+  globalSearchInput: document.getElementById("globalSearchInput"),
+  discoverySearchInput: document.getElementById("discoverySearchInput"),
+  quickGenreChips: document.getElementById("quickGenreChips"),
+  dashboardProfileName: document.getElementById("dashboardProfileName"),
+  dashboardAvatar: document.getElementById("dashboardAvatar"),
+  dashboardSwitcher: document.getElementById("dashboardSwitcher"),
+  writerJourneyPanel: document.getElementById("writerJourneyPanel"),
+  writerNavLink: document.getElementById("writerNavLink"),
+  writerDropdownLink: document.getElementById("writerDropdownLink"),
+  profileMenuBtn: document.getElementById("profileMenuBtn"),
+  profileDropdown: document.getElementById("profileDropdown"),
+  profileSignOutLink: document.getElementById("profileSignOutLink"),
+};
+
+const state = {
+  allBooks: [],
+  inProgress: [],
+  trending: [],
+  genres: [],
+  activeGenre: "all",
+  browsePage: 1,
+  pageSize: 10,
+  searchTerm: "",
+  savedBooks: loadSavedBooks(),
+};
+
+function getApiBaseCandidates() {
+  const candidates = [API_BASE_URL];
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+
+  const localCandidates = [
+    `${protocol}//localhost:5001`,
+    `${protocol}//127.0.0.1:5001`,
+  ];
+
+  localCandidates.forEach((base) => {
+    if (!candidates.includes(base)) {
+      candidates.push(base);
+    }
   });
-  dashboardData.categoriesGenres = [];
+
+  return candidates;
 }
 
 function loadSavedBooks() {
@@ -178,22 +135,31 @@ function loadSavedBooks() {
 }
 
 function persistSavedBooks() {
-  localStorage.setItem(SAVED_BOOKS_KEY, JSON.stringify([...savedBooks]));
+  localStorage.setItem(SAVED_BOOKS_KEY, JSON.stringify([...state.savedBooks]));
 }
 
-function getBookId(book) {
-  if (book.id) {
-    return book.id;
+function showToast(message) {
+  let root = document.getElementById("toastRoot");
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "toastRoot";
+    root.className = "toast-root";
+    document.body.appendChild(root);
   }
 
-  return `${book.title}-${book.author}`
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+  root.appendChild(toast);
+
+  window.setTimeout(() => {
+    toast.classList.add("hide");
+    window.setTimeout(() => toast.remove(), 200);
+  }, 1800);
 }
 
 function createCoverSvg(title, genre) {
-  const initials = title
+  const initials = String(title || "Book")
     .split(" ")
     .map((word) => word[0])
     .slice(0, 2)
@@ -201,21 +167,14 @@ function createCoverSvg(title, genre) {
     .toUpperCase();
 
   const palette = {
-    Mystery: ["#23323f", "#46667b"],
-    Fantasy: ["#553458", "#9d6aa6"],
-    Thriller: ["#3f2a1b", "#ab6a3a"],
     Romance: ["#6a3047", "#bf6e91"],
+    Fantasy: ["#553458", "#9d6aa6"],
+    Mystery: ["#23323f", "#46667b"],
+    Thriller: ["#3f2a1b", "#ab6a3a"],
     "Sci-Fi": ["#1f3d55", "#53a2d8"],
     Historical: ["#4f412d", "#a58a5a"],
-    Epic: ["#253b2f", "#6a9f74"],
     Drama: ["#3f3348", "#8672a1"],
-    Horror: ["#282225", "#7f4f59"],
-    Adventure: ["#2b4337", "#5f9267"],
-    Contemporary: ["#2f3945", "#7191b1"],
-    Audiobook: ["#4a3325", "#b67c4b"],
-    "Self Growth": ["#3a4a2a", "#8fb063"],
-    "Dark Academia": ["#2f2b23", "#8f7e57"],
-    default: ["#2d3b3a", "#608982"]
+    default: ["#2d3b3a", "#608982"],
   };
 
   const [c1, c2] = palette[genre] || palette.default;
@@ -230,292 +189,401 @@ function createCoverSvg(title, genre) {
     <rect x='22' y='24' width='256' height='352' rx='16' fill='rgba(255,255,255,0.10)'/>
     <text x='50%' y='55%' dominant-baseline='middle' text-anchor='middle' fill='rgba(255,255,255,0.9)' font-family='Arial' font-size='62' font-weight='700'>${initials}</text>
   </svg>`;
+
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-function createSkeletonCard() {
-  const card = document.createElement("article");
-  card.className = "skeleton-card";
-  card.innerHTML = `
-    <div class="skeleton-content">
-      <div class="skeleton-line"></div>
-      <div class="skeleton-line short"></div>
-      <div class="skeleton-line"></div>
-    </div>
-  `;
-  return card;
+function toAbsoluteCoverUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:")) {
+    return raw;
+  }
+
+  return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
 }
 
-function renderSkeletons() {
-  Object.entries(sectionRows).forEach(([key, row]) => {
-    row.innerHTML = "";
-    if (key === "categoriesGenres") {
-      for (let i = 0; i < 6; i += 1) {
-        const chip = document.createElement("div");
-        chip.className = "skeleton-chip";
-        row.appendChild(chip);
+function normalizeBook(raw, index = 0) {
+  return {
+    id: raw.id || `book-${index + 1}`,
+    title: raw.title || "Untitled",
+    authorName: raw.authorName || raw.author || "Unknown Author",
+    genre: raw.genre || "General",
+    coverUrl: toAbsoluteCoverUrl(raw.coverUrl) || createCoverSvg(raw.title, raw.genre),
+    createdAt: raw.createdAt || raw.publishedAt || "",
+  };
+}
+
+function clampPercent(value) {
+  const number = Number(value);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(number)));
+}
+
+async function fetchBooksCatalog() {
+  let lastError = null;
+
+  for (const apiBase of getApiBaseCandidates()) {
+    try {
+      const response = await fetch(`${apiBase}/api/books?page=1&limit=120&sort=newest`, {
+        cache: "no-store",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
       }
-      return;
-    }
 
-    for (let i = 0; i < 4; i += 1) {
-      row.appendChild(createSkeletonCard());
-    }
-  });
-}
-
-function createBookCard(book) {
-  const card = document.createElement("article");
-  card.className = "book-card";
-  const bookId = getBookId(book);
-  const isSaved = savedBooks.has(bookId);
-
-  const progressMarkup = typeof book.progress === "number"
-    ? `
-      <div class="progress-wrap" aria-label="Reading progress ${book.progress}%">
-        <small>${book.progress}% complete</small>
-        <div class="progress-track"><span style="width:${book.progress}%"></span></div>
-      </div>`
-    : "";
-
-  card.innerHTML = `
-    <img class="cover" src="${createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" />
-    <p class="book-title">${book.title}</p>
-    <p class="book-meta">${book.author}<br>${book.genre}</p>
-    ${progressMarkup}
-    <div class="card-actions">
-      <button type="button" data-action="read" data-book-id="${bookId}" data-book-title="${book.title}">Read</button>
-      <button type="button" data-action="listen" data-book-id="${bookId}" data-book-title="${book.title}">Listen</button>
-      <button type="button" data-action="save" data-book-id="${bookId}" data-book-title="${book.title}" class="${isSaved ? "is-saved" : ""}">${isSaved ? "Saved" : "Save"}</button>
-    </div>
-  `;
-  return card;
-}
-
-function createEmptyState(message) {
-  const empty = document.createElement("div");
-  empty.className = "empty-state";
-  empty.innerHTML = `<div><strong>Nothing here yet</strong><p>${message}</p></div>`;
-  return empty;
-}
-
-function filterBooks(items, query) {
-  if (!query) {
-    return items;
-  }
-
-  const normalizedQuery = query.trim().toLowerCase();
-  return items.filter((book) => [book.title, book.author, book.genre].join(" ").toLowerCase().includes(normalizedQuery));
-}
-
-function renderSectionBooks(sectionKey, emptyMessage, query = "") {
-  const row = sectionRows[sectionKey];
-  const items = filterBooks(dashboardData[sectionKey] || [], query);
-
-  row.innerHTML = "";
-
-  if (!items.length) {
-    row.appendChild(createEmptyState(emptyMessage));
-    return;
-  }
-
-  items.forEach((book) => {
-    row.appendChild(createBookCard(book));
-  });
-}
-
-function renderCategories() {
-  const row = sectionRows.categoriesGenres;
-  const categories = dashboardData.categoriesGenres || [];
-
-  row.innerHTML = "";
-
-  if (!categories.length) {
-    row.appendChild(createEmptyState("Add genre preferences to personalize recommendations."));
-    return;
-  }
-
-  categories.forEach((label) => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "chip";
-    chip.textContent = label;
-    row.appendChild(chip);
-  });
-}
-
-function renderDashboard() {
-  const query = searchInput.value || "";
-  renderSectionBooks("continueReading", "Start reading a novel and continue it from here.", query);
-  renderSectionBooks("trendingNovels", "No trending novels available right now.", query);
-  renderSectionBooks("newReleases", "New releases are on the way.", query);
-  renderSectionBooks("recommendedForYou", "Complete a few reads to unlock recommendations.", query);
-  renderSectionBooks("audiobooks", "No audiobooks available yet.", query);
-  renderSectionBooks("recentlyAdded", "Recently added books will appear once new content is uploaded.", query);
-  renderCategories();
-}
-
-function setupBookActions() {
-  document.addEventListener("click", (event) => {
-    const actionButton = event.target.closest("button[data-action]");
-    if (!actionButton) {
-      return;
-    }
-
-    const { action, bookId, bookTitle } = actionButton.dataset;
-    if (!action || !bookId || !bookTitle) {
-      return;
-    }
-
-    if (action === "save") {
-      const isSaved = savedBooks.has(bookId);
-      if (isSaved) {
-        savedBooks.delete(bookId);
-        actionButton.classList.remove("is-saved");
-        actionButton.textContent = "Save";
-        showToast(`Removed ${bookTitle} from saved books`);
-      } else {
-        savedBooks.add(bookId);
-        actionButton.classList.add("is-saved");
-        actionButton.textContent = "Saved";
-        showToast(`Saved ${bookTitle}`);
+      const payload = await response.json();
+      if (!payload.success || !Array.isArray(payload.data)) {
+        throw new Error("Invalid books payload");
       }
-      persistSavedBooks();
-      return;
+
+      return payload.data.map(normalizeBook);
+    } catch (error) {
+      lastError = error;
     }
-
-    if (action === "read") {
-      window.location.href = `book.html?id=${encodeURIComponent(bookId)}`;
-      return;
-    }
-
-    if (action === "listen") {
-      window.location.href = `audiobook.html?book=${encodeURIComponent(bookId)}`;
-    }
-  });
-}
-
-function setupSearch() {
-  searchInput.addEventListener("input", () => {
-    renderDashboard();
-  });
-}
-
-function showToast(message) {
-  let toastRoot = document.getElementById("toastRoot");
-  if (!toastRoot) {
-    toastRoot = document.createElement("div");
-    toastRoot.id = "toastRoot";
-    toastRoot.className = "toast-root";
-    document.body.appendChild(toastRoot);
   }
 
-  const toast = document.createElement("div");
-  toast.className = "toast";
-  toast.textContent = message;
-  toastRoot.appendChild(toast);
-
-  window.setTimeout(() => {
-    toast.classList.add("hide");
-    window.setTimeout(() => toast.remove(), 220);
-  }, 1700);
+  console.warn("Reader dashboard could not load backend catalog:", lastError);
+  showToast("Unable to load backend books right now.");
+  return [];
 }
 
-async function loadDashboardData() {
+async function fetchReadingProgress(bookId) {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/books?page=1&limit=200&sort=newest`, {
+    const response = await fetch(`${API_BASE_URL}/api/progress/reading/${encodeURIComponent(bookId)}`, {
       cache: "no-store",
       credentials: "include",
     });
 
-    if (response.ok) {
-      const payload = await response.json();
-      if (payload.success && Array.isArray(payload.data) && payload.data.length > 0) {
-        const catalog = payload.data.map((book, index) => normalizeCatalogBook(book, index));
-        applyDashboardCatalog(catalog);
-        return;
-      }
+    if (!response.ok) {
+      return null;
     }
+
+    const payload = await response.json();
+    if (!payload.success || !payload.data) {
+      return null;
+    }
+
+    return payload.data;
   } catch (error) {
-    // Clear view if backend request fails.
+    return null;
+  }
+}
+
+function createEmptyState(message) {
+  const node = document.createElement("div");
+  node.className = "empty-state";
+  node.innerHTML = `<div><strong>Nothing here yet</strong><p>${message}</p></div>`;
+  return node;
+}
+
+function createContinueCard(item) {
+  const chapterLabel = item.chapterNumber ? `Chapter ${item.chapterNumber}` : "Continue reading";
+  const progress = clampPercent(item.progressPercent);
+  const chapterIdParam = item.chapterId ? `&chapterId=${encodeURIComponent(item.chapterId)}` : "";
+
+  const card = document.createElement("article");
+  card.className = "continue-card";
+  card.innerHTML = `
+    <img class="cover" src="${item.coverUrl}" alt="${item.title} cover" loading="lazy" />
+    <div>
+      <p class="title">${item.title}</p>
+      <p class="meta">${item.authorName}</p>
+      <p class="progress-text">${chapterLabel} · ${progress}%</p>
+      <div class="progress-track"><span style="width:${progress}%"></span></div>
+      <div class="inline-actions">
+        <a class="solid-btn" href="reader.html?bookId=${encodeURIComponent(item.id)}${chapterIdParam}">Resume</a>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+function createRailCard(book, tag) {
+  const card = document.createElement("article");
+  card.className = "rail-card";
+  card.innerHTML = `
+    <img class="cover" src="${book.coverUrl}" alt="${book.title} cover" loading="lazy" />
+    <p class="title">${book.title}</p>
+    <p class="meta">${book.authorName}</p>
+    <span class="tag-pill">${tag}</span>
+    <div class="inline-actions">
+      <a href="book.html?id=${encodeURIComponent(book.id)}">Open</a>
+      <a href="reader.html?bookId=${encodeURIComponent(book.id)}">Read</a>
+    </div>
+  `;
+  return card;
+}
+
+function createGenreCard(genre) {
+  const card = document.createElement("article");
+  card.className = "genre-card";
+  card.innerHTML = `
+    <p class="title">${genre}</p>
+    <p>Explore top ${genre.toLowerCase()} stories curated for you.</p>
+  `;
+  return card;
+}
+
+function createBrowseCard(book) {
+  const saved = state.savedBooks.has(book.id);
+  const card = document.createElement("article");
+  card.className = "browse-card";
+  card.innerHTML = `
+    <img class="cover" src="${book.coverUrl}" alt="${book.title} cover" loading="lazy" />
+    <p class="title">${book.title}</p>
+    <p class="meta">${book.authorName} · ${book.genre}</p>
+    <div class="inline-actions">
+      <a href="book.html?id=${encodeURIComponent(book.id)}">Details</a>
+      <a href="reader.html?bookId=${encodeURIComponent(book.id)}">Read</a>
+      <button type="button" data-save-book-id="${book.id}">${saved ? "Saved" : "Save"}</button>
+    </div>
+  `;
+  return card;
+}
+
+function renderContinueReading() {
+  elements.continueReadingRow.innerHTML = "";
+  // Use unified continue reading data
+  const entries = getContinueReading().filter(e => e.userId === getCurrentUserId());
+  if (!entries.length) {
+    elements.continueReadingRow.appendChild(createEmptyState("Start reading any book to see it here."));
+    return;
+  }
+  // Map bookId to book data
+  entries.slice(0, 10).forEach((entry) => {
+    const book = state.allBooks.find(b => b.id === entry.bookId);
+    if (book) {
+      elements.continueReadingRow.appendChild(createContinueCard({
+        ...book,
+        chapterId: entry.currentChapter,
+        chapterNumber: entry.currentChapter ? (parseInt(entry.currentChapter.replace(/\D/g, "")) || 1) : 1,
+        progressPercent: entry.progress || 0
+      }));
+    }
+  });
+}
+
+function renderTrending() {
+  elements.trendingRow.innerHTML = "";
+  const items = state.trending.slice(0, 14);
+  if (!items.length) {
+    elements.trendingRow.appendChild(createEmptyState("Trending stories will show up here soon."));
+    return;
   }
 
-  clearDashboardData();
-  showToast("No uploaded books found in backend yet");
+  items.forEach((book) => {
+    elements.trendingRow.appendChild(createRailCard(book, "Trending"));
+  });
+}
+
+function renderGenres() {
+  elements.genreRow.innerHTML = "";
+  if (!state.genres.length) {
+    elements.genreRow.appendChild(createEmptyState("Pick a genre from discovery to personalize this row."));
+    return;
+  }
+
+  state.genres.slice(0, 8).forEach((genre) => {
+    elements.genreRow.appendChild(createGenreCard(genre));
+  });
+}
+
+function renderGenreChips() {
+  elements.quickGenreChips.innerHTML = "";
+  const allChip = document.createElement("button");
+  allChip.type = "button";
+  allChip.className = `chip ${state.activeGenre === "all" ? "active" : ""}`;
+  allChip.textContent = "All";
+  allChip.dataset.genre = "all";
+  elements.quickGenreChips.appendChild(allChip);
+
+  state.genres.slice(0, 10).forEach((genre) => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = `chip ${state.activeGenre === genre ? "active" : ""}`;
+    chip.textContent = genre;
+    chip.dataset.genre = genre;
+    elements.quickGenreChips.appendChild(chip);
+  });
+}
+
+function getFilteredBrowseBooks() {
+  const query = state.searchTerm.trim().toLowerCase();
+
+  return state.allBooks.filter((book) => {
+    const matchesGenre = state.activeGenre === "all" || book.genre === state.activeGenre;
+    if (!matchesGenre) {
+      return false;
+    }
+
+    if (!query) {
+      return true;
+    }
+
+    const haystack = `${book.title} ${book.authorName} ${book.genre}`.toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+function renderBrowseGrid() {
+  elements.browseGrid.innerHTML = "";
+  const filtered = getFilteredBrowseBooks();
+  if (!filtered.length) {
+    elements.browseGrid.appendChild(createEmptyState("No books match your search yet. Try another keyword."));
+    elements.loadMoreBtn.hidden = true;
+    return;
+  }
+
+  const maxItems = state.browsePage * state.pageSize;
+  filtered.slice(0, maxItems).forEach((book) => {
+    elements.browseGrid.appendChild(createBrowseCard(book));
+  });
+
+  elements.loadMoreBtn.hidden = maxItems >= filtered.length;
+}
+
+function bindDiscoveryEvents() {
+  const syncSearch = () => {
+    state.searchTerm = elements.discoverySearchInput.value || elements.globalSearchInput.value || "";
+    elements.globalSearchInput.value = state.searchTerm;
+    elements.discoverySearchInput.value = state.searchTerm;
+    state.browsePage = 1;
+    renderBrowseGrid();
+  };
+
+  elements.globalSearchInput.addEventListener("input", syncSearch);
+  elements.discoverySearchInput.addEventListener("input", syncSearch);
+
+  elements.quickGenreChips.addEventListener("click", (event) => {
+    const chip = event.target.closest("button[data-genre]");
+    if (!chip) {
+      return;
+    }
+
+    state.activeGenre = chip.dataset.genre;
+    state.browsePage = 1;
+    renderGenreChips();
+    renderBrowseGrid();
+  });
+
+  elements.loadMoreBtn.addEventListener("click", () => {
+    state.browsePage += 1;
+    renderBrowseGrid();
+  });
+
+  elements.browseGrid.addEventListener("click", (event) => {
+    const saveBtn = event.target.closest("button[data-save-book-id]");
+    if (!saveBtn) {
+      return;
+    }
+    const bookId = saveBtn.dataset.saveBookId;
+    if (getLibrary().some(e => e.userId === getCurrentUserId() && e.bookId === bookId)) {
+      // Remove from library
+      let entries = getLibrary().filter(e => !(e.userId === getCurrentUserId() && e.bookId === bookId));
+      setLibrary(entries);
+      saveBtn.textContent = "Save";
+      showToast("Removed from saved books");
+    } else {
+      addToLibrary(bookId);
+      saveBtn.textContent = "Saved";
+      showToast("Saved to your library");
+    }
+    // Update UI instantly
+    renderBrowseGrid();
+    renderContinueReading();
+  });
 }
 
 function setupProfileMenu() {
-  const menuBtn = document.getElementById("profileMenuBtn");
-  const dropdown = document.getElementById("profileDropdown");
-  const signOutLink = document.getElementById("profileSignOutLink");
-
-  menuBtn.addEventListener("click", () => {
-    const isOpen = dropdown.classList.toggle("show");
-    menuBtn.setAttribute("aria-expanded", String(isOpen));
+  elements.profileMenuBtn.addEventListener("click", () => {
+    const isOpen = elements.profileDropdown.classList.toggle("show");
+    elements.profileMenuBtn.setAttribute("aria-expanded", String(isOpen));
   });
 
   document.addEventListener("click", (event) => {
     if (!event.target.closest(".profile-menu")) {
-      dropdown.classList.remove("show");
-      menuBtn.setAttribute("aria-expanded", "false");
+      elements.profileDropdown.classList.remove("show");
+      elements.profileMenuBtn.setAttribute("aria-expanded", "false");
     }
   });
 
-  if (signOutLink) {
-    signOutLink.addEventListener("click", async (event) => {
-      event.preventDefault();
-      if (window.NovelReadSession && typeof window.NovelReadSession.signOut === "function") {
-        await window.NovelReadSession.signOut("./index.html");
-        return;
-      }
-      window.location.href = "./index.html";
-    });
-  }
+  elements.profileSignOutLink.addEventListener("click", async (event) => {
+    event.preventDefault();
+    if (window.NovaraSession && typeof window.NovaraSession.signOut === "function") {
+      await window.NovaraSession.signOut("./index.html");
+      return;
+    }
+    window.location.href = "./index.html";
+  });
 }
 
 async function syncSessionUi() {
-  if (!window.NovelReadSession) {
-    return;
+  if (!window.NovaraSession) {
+    return null;
   }
 
-  const user = await window.NovelReadSession.fetchCurrentUser();
-
+  const user = await window.NovaraSession.fetchCurrentUser();
   if (user) {
-    profileName.textContent = user.name;
-    dashboardAvatar.textContent = window.NovelReadSession.getInitials(user.name);
+    elements.dashboardProfileName.textContent = user.name;
+    elements.dashboardAvatar.textContent = window.NovaraSession.getInitials(user.name);
 
     if (user.role === "ADMIN") {
-      window.location.href = window.NovelReadSession.APP_ROUTES.adminDashboard;
-      return;
+      window.location.href = window.NovaraSession.APP_ROUTES.adminDashboard;
+      return user;
     }
   }
 
-  window.NovelReadSession.renderDashboardSwitcher(dashboardSwitcher, {
+  window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
     currentDashboard: "reader",
-    readerHref: window.NovelReadSession.APP_ROUTES.readerDashboard,
-    writerHref: window.NovelReadSession.APP_ROUTES.writerDashboard,
+    readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
+    writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
   });
 
-  window.NovelReadSession.renderWriterJourneyCard(writerJourneyPanel, {
-    readerHref: window.NovelReadSession.APP_ROUTES.readerDashboard,
-    writerHref: window.NovelReadSession.APP_ROUTES.writerDashboard,
+  window.NovaraSession.renderWriterJourneyCard(elements.writerJourneyPanel, {
+    readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
+    writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
     onboardingHref: "writer-onboarding.html",
   });
 
-  const canUseWriter = window.NovelReadSession.canUseWriter(user);
-  writerNavLink.hidden = !canUseWriter;
-  writerNavLink.href = window.NovelReadSession.APP_ROUTES.writerDashboard;
-  writerDropdownLink.hidden = !canUseWriter;
-  writerDropdownLink.href = window.NovelReadSession.APP_ROUTES.writerDashboard;
+  const canUseWriter = window.NovaraSession.canUseWriter(user);
+  elements.writerNavLink.hidden = !canUseWriter;
+  elements.writerNavLink.href = window.NovaraSession.APP_ROUTES.writerDashboard;
+  elements.writerDropdownLink.hidden = !canUseWriter;
+  elements.writerDropdownLink.href = window.NovaraSession.APP_ROUTES.writerDashboard;
+
+  return user;
+}
+
+// buildInProgress no longer needed, handled by getContinueReading
+
+function buildRecommendations() {
+  state.trending = state.allBooks.slice(0, 20);
+  state.genres = [...new Set(state.allBooks.map((book) => book.genre).filter(Boolean))];
 }
 
 async function bootstrap() {
-  renderSkeletons();
   setupProfileMenu();
-  setupBookActions();
-  setupSearch();
-  await Promise.all([loadDashboardData(), syncSessionUi()]);
-  window.setTimeout(renderDashboard, 850);
+  bindDiscoveryEvents();
+
+  await syncSessionUi();
+
+  state.allBooks = await fetchBooksCatalog();
+  state.inProgress = await buildInProgress(state.allBooks);
+  buildRecommendations();
+
+  renderContinueReading();
+  renderTrending();
+  renderGenres();
+  renderGenreChips();
+  renderBrowseGrid();
 }
 
 bootstrap();

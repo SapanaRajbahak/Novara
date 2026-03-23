@@ -28,26 +28,26 @@ function showError(message) {
 }
 
 async function guardWriterAccess() {
-  if (!window.NovelReadSession) {
+  if (!window.NovaraSession) {
     return false;
   }
 
-  const user = await window.NovelReadSession.fetchCurrentUser();
-  if (!user) {
-    window.location.href = "index.html";
-    return false;
+  const user = await window.NovaraSession.fetchCurrentUser();
+    if (!user) {
+      window.location.href = "index.html";
+      return false;
   }
 
-  const hasWriterAccess = window.NovelReadSession.canUseWriter(user) || user.role === "ADMIN";
+  const hasWriterAccess = window.NovaraSession.canUseWriter(user) || user.role === "ADMIN";
   if (!hasWriterAccess) {
     window.location.href = "writer-onboarding.html";
     return false;
   }
 
-  window.NovelReadSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
+  window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
     currentDashboard: "writer",
-    readerHref: window.NovelReadSession.APP_ROUTES.readerDashboard,
-    writerHref: window.NovelReadSession.APP_ROUTES.writerDashboard,
+    readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
+    writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
   });
 
   return true;
@@ -128,7 +128,7 @@ function bindForm() {
     }
 
     try {
-      const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/stories`, {
+        const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/stories`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -158,8 +158,8 @@ async function bootstrap() {
 
   if (elements.writerSignOutBtn) {
     elements.writerSignOutBtn.addEventListener("click", async () => {
-      if (window.NovelReadSession && typeof window.NovelReadSession.signOut === "function") {
-        await window.NovelReadSession.signOut("./index.html");
+        if (window.NovaraSession && typeof window.NovaraSession.signOut === "function") {
+          await window.NovaraSession.signOut("./index.html");
         return;
       }
       window.location.href = "./index.html";

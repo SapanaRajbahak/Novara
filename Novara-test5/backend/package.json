@@ -10,12 +10,17 @@
     "prisma:migrate": "prisma migrate deploy",
     "prisma:migrate:dev": "prisma migrate dev",
     "db:push": "prisma db push",
-    "start:docker": "prisma generate && prisma migrate deploy && npm start"
+    "start:docker": "prisma generate && prisma migrate deploy && npm start",
+    "books:download:gutenberg": "node scripts/downloadGutenbergBooks.js",
+    "books:import:meta": "node scripts/importDownloadedBooksToDb.js",
+    "books:map:genres": "node scripts/mapDownloadedBooksGenres.js",
+    "books:sync:genres": "node scripts/syncMappedGenresToDb.js"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
     "bcrypt": "^5.1.1",
     "cors": "^2.8.5",
+    "dotenv": "^16.6.1",
     "express": "^4.21.2",
     "express-session": "^1.18.1"
   },

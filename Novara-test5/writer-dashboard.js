@@ -47,9 +47,9 @@ const aiActions = [
   "Translate Chapter",
 ];
 
-const appRoutes = window.NovelReadSession && window.NovelReadSession.APP_ROUTES
+const appRoutes = window.NovaraSession && window.NovaraSession.APP_ROUTES
   ? {
-    ...window.NovelReadSession.APP_ROUTES,
+    ...window.NovaraSession.APP_ROUTES,
     writerOnboarding: "./writer-onboarding.html",
   }
   : {
@@ -470,7 +470,7 @@ function onActionClick(event) {
   }
 
   if (action === "publish-story" && storyId) {
-    fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/stories/${storyId}/publish`, {
+    fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/stories/${storyId}/publish`, {
       method: "POST",
       credentials: "include",
     })
@@ -484,25 +484,25 @@ function onActionClick(event) {
       .then((latestData) => {
         const profile = latestData.profile || uiState.profile;
         renderPremiumDashboard(profile, latestData);
-        if (window.NovelReadSession && typeof window.NovelReadSession.showToast === "function") {
-          window.NovelReadSession.showToast("Story published successfully");
+        if (window.NovaraSession && typeof window.NovaraSession.showToast === "function") {
+          window.NovaraSession.showToast("Story published successfully");
         }
       })
       .catch(() => {
-        if (window.NovelReadSession && typeof window.NovelReadSession.showToast === "function") {
-          window.NovelReadSession.showToast("Unable to publish this story right now");
+        if (window.NovaraSession && typeof window.NovaraSession.showToast === "function") {
+          window.NovaraSession.showToast("Unable to publish this story right now");
         }
       });
     return;
   }
 
-  if (window.NovelReadSession && typeof window.NovelReadSession.showToast === "function") {
-    window.NovelReadSession.showToast("This feature will be connected in the next writer tools release.");
+  if (window.NovaraSession && typeof window.NovaraSession.showToast === "function") {
+    window.NovaraSession.showToast("This feature will be connected in the next writer tools release.");
   }
 }
 
 async function fetchWriterDashboardData() {
-  const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/dashboard`, {
+  const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/dashboard`, {
     cache: "no-store",
     credentials: "include",
   });
@@ -526,8 +526,8 @@ function initializePageInteractions() {
 
   if (elements.writerSignOutBtn) {
     elements.writerSignOutBtn.addEventListener("click", async () => {
-      if (window.NovelReadSession && typeof window.NovelReadSession.signOut === "function") {
-        await window.NovelReadSession.signOut("./index.html");
+      if (window.NovaraSession && typeof window.NovaraSession.signOut === "function") {
+        await window.NovaraSession.signOut("./index.html");
         return;
       }
       window.location.href = "./index.html";
@@ -551,7 +551,7 @@ function renderPremiumDashboard(profile, data) {
   elements.writerSubtitle.textContent = "Manage your author profile, stories, and publishing flow while switching between reader and writer dashboards from one account.";
   elements.writerPenName.textContent = profile.penName;
   elements.writerBio.textContent = profile.bio || "Add a short author bio to build trust with your readers and highlight your writing voice.";
-  elements.authorAvatar.textContent = extractInitials(profile.penName || profile.name || "NovelRead");
+  elements.authorAvatar.textContent = extractInitials(profile.penName || profile.name || "Novara");
 
   renderGenres(profile.preferredGenres || []);
   renderStats(stats);
@@ -565,7 +565,7 @@ function renderPremiumDashboard(profile, data) {
 async function loadDashboard() {
   initializePageInteractions();
 
-  const user = window.NovelReadSession ? await window.NovelReadSession.fetchCurrentUser() : null;
+  const user = window.NovaraSession ? await window.NovaraSession.fetchCurrentUser() : null;
 
   if (!user) {
     elements.writerHeading.textContent = "Writer access requires a signed-in reader account.";
@@ -578,15 +578,15 @@ async function loadDashboard() {
     return;
   }
 
-  if (window.NovelReadSession) {
-    window.NovelReadSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
+  if (window.NovaraSession) {
+    window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
       currentDashboard: "writer",
       readerHref: appRoutes.readerDashboard,
       writerHref: appRoutes.writerDashboard,
     });
   }
 
-  if (!window.NovelReadSession.canUseWriter(user)) {
+  if (!window.NovaraSession.canUseWriter(user)) {
     elements.writerHeading.textContent = "Writer access has not been enabled yet.";
     elements.writerSubtitle.textContent = "Complete onboarding to unlock your writer dashboard without opening a second account.";
     renderAccessNotice(

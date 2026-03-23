@@ -1,48 +1,95 @@
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
-const PAGE_SIZE = 8;
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const SAVED_BOOKS_KEY = "novara.savedBooks";
+const LOCAL_PROGRESS_KEY = "novara.reader.progress";
 
 const elements = {
-  searchInput: document.getElementById("searchInput"),
-  genreFilter: document.getElementById("genreFilter"),
-  languageFilter: document.getElementById("languageFilter"),
-  typeFilter: document.getElementById("typeFilter"),
-  accessFilter: document.getElementById("accessFilter"),
-  discoveryFilter: document.getElementById("discoveryFilter"),
-  sortBy: document.getElementById("sortBy"),
-  booksContainer: document.getElementById("booksContainer"),
-  resultsMeta: document.getElementById("resultsMeta"),
-  pageMeta: document.getElementById("pageMeta"),
-  prevPageBtn: document.getElementById("prevPageBtn"),
-  nextPageBtn: document.getElementById("nextPageBtn"),
-  viewButtons: [...document.querySelectorAll(".view-btn")],
-};
-
-let books = [];
-let pagination = { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 };
-const genreOptions = new Set();
-const readingProgressCache = new Map();
-const readingProgressInFlight = new Map();
-const listeningProgressCache = new Map();
-const listeningProgressInFlight = new Map();
-let readingProgressEnabled = true;
-let listeningProgressEnabled = true;
-const authState = {
-  checked: false,
-  signedIn: false,
+  homeLinks: [...document.querySelectorAll("[data-home-link='true']")],
+  hubContinueRow: document.getElementById("hubContinueRow"),
+  yourLibraryRow: document.getElementById("yourLibraryRow"),
+  recommendedRow: document.getElementById("recommendedRow"),
+  becauseHeading: document.getElementById("becauseHeading"),
+  becauseReadRow: document.getElementById("becauseReadRow"),
+  favoritesPanel: document.getElementById("favoritesPanel"),
+  favoritesRow: document.getElementById("favoritesRow"),
+  hubSearchInput: document.getElementById("hubSearchInput"),
+  hubGenreFilter: document.getElementById("hubGenreFilter"),
+  hubDiscoverGrid: document.getElementById("hubDiscoverGrid"),
+  hubLoadMoreBtn: document.getElementById("hubLoadMoreBtn"),
+  statBooksInProgress: document.getElementById("statBooksInProgress"),
+  statChaptersRead: document.getElementById("statChaptersRead"),
+  statReadingTime: document.getElementById("statReadingTime"),
 };
 
 const state = {
-  query: "",
-  view: "grid",
-  genre: "all",
-  type: "all",
-  sortBy: "newest",
-  currentPage: 1,
+  books: [],
+  inProgress: [],
+  favorites: [],
+  yourBooks: [],
+  recommended: [],
+  becauseYouRead: [],
+  becauseAnchor: null,
+  savedBookIds: loadSavedBooks(),
+  discoverPage: 1,
+  discoverPageSize: 8,
+  discoverSearch: "",
+  discoverGenre: "all",
+  isSignedIn: false,
 };
 
+function loadSavedBooks() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SAVED_BOOKS_KEY) || "[]");
+    return new Set(Array.isArray(parsed) ? parsed : []);
+  } catch (error) {
+    return new Set();
+  }
+}
+
+function saveSavedBooks() {
+  localStorage.setItem(SAVED_BOOKS_KEY, JSON.stringify([...state.savedBookIds]));
+}
+
+function readLocalProgressMap() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_PROGRESS_KEY) || "{}");
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function clampPercent(value) {
+  const number = Number(value);
+  if (Number.isNaN(number)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(number)));
+}
+
 function createCoverSvg(title, genre) {
-  const safeTitle = title || "Book";
-  const initials = safeTitle
+  const initials = String(title || "Book")
     .split(" ")
     .map((word) => word[0])
     .slice(0, 2)
@@ -50,17 +97,17 @@ function createCoverSvg(title, genre) {
     .toUpperCase();
 
   const palette = {
-    mystery: ["#23323f", "#46667b"],
-    fantasy: ["#553458", "#9d6aa6"],
-    thriller: ["#3f2a1b", "#ab6a3a"],
-    romance: ["#6a3047", "#bf6e91"],
-    drama: ["#3f3348", "#8672a1"],
-    adventure: ["#2b4337", "#5f9267"],
+    Romance: ["#6a3047", "#bf6e91"],
+    Fantasy: ["#553458", "#9d6aa6"],
+    Mystery: ["#23323f", "#46667b"],
+    Thriller: ["#3f2a1b", "#ab6a3a"],
+    "Sci-Fi": ["#1f3d55", "#53a2d8"],
+    Historical: ["#4f412d", "#a58a5a"],
+    Drama: ["#3f3348", "#8672a1"],
     default: ["#2d3b3a", "#608982"],
   };
 
-  const key = String(genre || "").toLowerCase();
-  const [c1, c2] = palette[key] || palette.default;
+  const [c1, c2] = palette[genre] || palette.default;
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='400'>
     <defs>
       <linearGradient id='g' x1='0' x2='1' y1='0' y2='1'>
@@ -76,45 +123,44 @@ function createCoverSvg(title, genre) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-function normalizeBook(book) {
-  const resolvedCover = book.coverUrl
-    ? (book.coverUrl.startsWith("http") ? book.coverUrl : `${API_BASE_URL}${book.coverUrl}`)
-    : createCoverSvg(book.title, book.genre);
+function toAbsoluteCoverUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
 
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:")) {
+    return raw;
+  }
+
+  return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
+function normalizeBook(book, index = 0) {
   return {
-    id: book.id,
+    id: book.id || `book-${index + 1}`,
     title: book.title || "Untitled",
-    authorName: book.authorName || "Unknown Author",
-    description: book.description || "No description available.",
-    genre: book.genre || "Unknown",
-    coverUrl: resolvedCover,
-    isAudiobookAvailable: Boolean(book.isAudiobookAvailable),
+    authorName: book.authorName || book.author || "Unknown Author",
+    genre: book.genre || "General",
+    coverUrl: toAbsoluteCoverUrl(book.coverUrl) || createCoverSvg(book.title, book.genre),
   };
 }
 
-function mapSortOption(value) {
-  if (value === "title") {
-    return "title_asc";
-  }
-  if (value === "popularity") {
-    return "newest";
-  }
-  return "newest";
+function createEmptyState(message) {
+  const node = document.createElement("div");
+  node.className = "empty-state";
+  node.innerHTML = `<div><strong>Nothing here yet</strong><p>${message}</p></div>`;
+  return node;
 }
 
-function clampPercent(value) {
-  const number = Number(value);
-  if (Number.isNaN(number)) {
-    return 0;
-  }
-  return Math.max(0, Math.min(100, Math.round(number)));
+function syncHomeLinksForAuth(_isSignedIn) {
+  // Always route Home to the reader dashboard — it works for both signed-in and guest users.
+  elements.homeLinks.forEach((link) => {
+    link.setAttribute("href", "reader-dashboard.html");
+  });
 }
 
 async function ensureSignedInUser() {
-  if (authState.checked) {
-    return authState.signedIn;
-  }
-
   try {
     const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
       cache: "no-store",
@@ -122,442 +168,399 @@ async function ensureSignedInUser() {
     });
 
     if (!response.ok) {
-      authState.checked = true;
-      authState.signedIn = false;
-      readingProgressEnabled = false;
-      listeningProgressEnabled = false;
+      state.isSignedIn = false;
+      syncHomeLinksForAuth(false);
       return false;
     }
 
     const payload = await response.json();
-    authState.checked = true;
-    authState.signedIn = Boolean(payload.success && payload.user && payload.user.id);
-
-    if (!authState.signedIn) {
-      readingProgressEnabled = false;
-      listeningProgressEnabled = false;
-    }
-
-    return authState.signedIn;
+    state.isSignedIn = Boolean(payload.success && payload.user && payload.user.id);
+    syncHomeLinksForAuth(state.isSignedIn);
+    return state.isSignedIn;
   } catch (error) {
-    authState.checked = true;
-    authState.signedIn = false;
-    readingProgressEnabled = false;
-    listeningProgressEnabled = false;
+    state.isSignedIn = false;
+    syncHomeLinksForAuth(false);
     return false;
   }
 }
 
-async function fetchReadingProgress(bookId) {
-  if (!readingProgressEnabled) {
-    return null;
-  }
-
-  if (readingProgressCache.has(bookId)) {
-    return readingProgressCache.get(bookId);
-  }
-
-  if (readingProgressInFlight.has(bookId)) {
-    return readingProgressInFlight.get(bookId);
-  }
-
-  const request = (async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/progress/reading/${encodeURIComponent(bookId)}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-
-      if (response.status === 401) {
-        readingProgressEnabled = false;
-        return null;
-      }
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const payload = await response.json();
-      if (!payload.success || !payload.data) {
-        return null;
-      }
-
-      return payload.data;
-    } catch (error) {
-      return null;
-    }
-  })();
-
-  readingProgressInFlight.set(bookId, request);
-
-  const result = await request;
-  readingProgressCache.set(bookId, result);
-  readingProgressInFlight.delete(bookId);
-  return result;
-}
-
-async function fetchListeningProgress(bookId) {
-  if (!listeningProgressEnabled) {
-    return null;
-  }
-
-  if (listeningProgressCache.has(bookId)) {
-    return listeningProgressCache.get(bookId);
-  }
-
-  if (listeningProgressInFlight.has(bookId)) {
-    return listeningProgressInFlight.get(bookId);
-  }
-
-  const request = (async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/progress/listening/${encodeURIComponent(bookId)}`, {
-        cache: "no-store",
-        credentials: "include",
-      });
-
-      if (response.status === 401) {
-        listeningProgressEnabled = false;
-        return null;
-      }
-
-      if (!response.ok) {
-        return null;
-      }
-
-      const payload = await response.json();
-      if (!payload.success || !payload.data) {
-        return null;
-      }
-
-      return payload.data;
-    } catch (error) {
-      return null;
-    }
-  })();
-
-  listeningProgressInFlight.set(bookId, request);
-
-  const result = await request;
-  listeningProgressCache.set(bookId, result);
-  listeningProgressInFlight.delete(bookId);
-  return result;
-}
-
-async function hydrateReadingProgressForBooks(bookList) {
-  if (!readingProgressEnabled) {
-    return;
-  }
-
-  await Promise.all(bookList.map((book) => fetchReadingProgress(book.id)));
-}
-
-async function hydrateListeningProgressForBooks(bookList) {
-  if (!listeningProgressEnabled) {
-    return;
-  }
-
-  await Promise.all(bookList.map((book) => fetchListeningProgress(book.id)));
-}
-
-function updateGenreFilterOptions() {
-  const options = [`<option value="all">All Genres</option>`]
-    .concat(
-      [...genreOptions]
-        .sort((a, b) => a.localeCompare(b))
-        .map((genre) => `<option value="${genre}">${genre}</option>`)
-    );
-
-  const currentValue = elements.genreFilter.value || "all";
-  elements.genreFilter.innerHTML = options.join("");
-  elements.genreFilter.value = [...genreOptions].includes(currentValue) ? currentValue : "all";
-}
-
-function buildApiUrl() {
-  const params = new URLSearchParams();
-  params.set("page", String(state.currentPage));
-  params.set("limit", String(PAGE_SIZE));
-  params.set("sort", mapSortOption(state.sortBy));
-
-  if (state.query.trim()) {
-    params.set("search", state.query.trim());
-  }
-  if (state.genre !== "all") {
-    params.set("genre", state.genre);
-  }
-
-  if (state.type === "ebook") {
-    params.set("isAudiobookAvailable", "false");
-  } else if (state.type === "audiobook" || state.type === "both") {
-    params.set("isAudiobookAvailable", "true");
-  }
-
-  return `${API_BASE_URL}/api/books?${params.toString()}`;
-}
-
-function renderLoadingState() {
-  elements.booksContainer.innerHTML = `
-    <div class="empty-state">
-      <div>
-        <h3>Loading books...</h3>
-        <p>Please wait while we fetch the latest library from the server.</p>
-      </div>
-    </div>
-  `;
-  elements.resultsMeta.textContent = "Loading books...";
-  elements.pageMeta.textContent = "Loading...";
-  elements.prevPageBtn.disabled = true;
-  elements.nextPageBtn.disabled = true;
-}
-
-function renderErrorState(message) {
-  elements.booksContainer.innerHTML = `
-    <div class="empty-state">
-      <div>
-        <h3>Unable to load books</h3>
-        <p>${message}</p>
-      </div>
-    </div>
-  `;
-  elements.resultsMeta.textContent = "Failed to fetch books";
-  elements.pageMeta.textContent = "Page 0 of 0";
-  elements.prevPageBtn.disabled = true;
-  elements.nextPageBtn.disabled = true;
-}
-
-function renderEmptyState() {
-  elements.booksContainer.innerHTML = `
-    <div class="empty-state">
-      <div>
-        <h3>No books found</h3>
-        <p>Try changing your search text or filters.</p>
-      </div>
-    </div>
-  `;
-  elements.resultsMeta.textContent = "0 books found";
-  elements.pageMeta.textContent = "Page 0 of 0";
-  elements.prevPageBtn.disabled = true;
-  elements.nextPageBtn.disabled = true;
-}
-
-function createBookCard(book) {
-  const card = document.createElement("article");
-  card.className = "book-card";
-
-  const progress = readingProgressCache.get(book.id);
-  const hasProgress = Boolean(progress);
-  const progressPercent = hasProgress ? clampPercent(progress.progressPercent) : 0;
-
-  const hasChapterId =
-    hasProgress &&
-    typeof progress.chapterId === "string" &&
-    progress.chapterId.trim().length > 0;
-
-  const progressHref = hasChapterId
-    ? `reader.html?bookId=${encodeURIComponent(book.id)}&chapterId=${encodeURIComponent(progress.chapterId)}`
-    : `book.html?id=${encodeURIComponent(book.id)}`;
-
-  const progressMarkup = hasProgress
-    ? `
-      <div class="reading-progress" aria-label="Reading progress">
-        <a
-          href="${progressHref}"
-          class="progress-badge progress-badge-link"
-          title="Resume reading"
-          aria-label="Resume reading from ${progressPercent}%"
-        >${progressPercent}% complete</a>
-        <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progressPercent}">
-          <span style="width: ${progressPercent}%"></span>
-        </div>
-      </div>
-    `
-    : "";
-
-  const listeningProgress = listeningProgressCache.get(book.id);
-  const hasListeningProgress = Boolean(
-    listeningProgress &&
-    typeof listeningProgress.audioTrackId === "string" &&
-    listeningProgress.audioTrackId.trim().length > 0
-  );
-
-  const listeningActionMarkup = hasListeningProgress
-    ? `
-      <a
-        href="audiobook.html?bookId=${encodeURIComponent(book.id)}"
-        class="card-link-btn"
-        title="Last listened track available"
-        aria-label="Resume listening for ${book.title}"
-      >Resume Listening</a>
-    `
-    : `<button type="button" data-action="listen" data-id="${book.id}" ${book.isAudiobookAvailable ? "" : "disabled"}>Listen</button>`;
-
-  const listeningHintMarkup = hasListeningProgress
-    ? `<p class="book-author">Resume audio</p>`
-    : "";
-
-  const safeDescription = book.description.length > 150
-    ? `${book.description.slice(0, 147)}...`
-    : book.description;
-
-  card.innerHTML = `
-    <img class="cover" src="${book.coverUrl}" alt="${book.title} cover" loading="lazy" />
-    <div class="card-body">
-      <p class="book-title">${book.title}</p>
-      <p class="book-author">${book.authorName} • ${book.genre}</p>
-      ${progressMarkup}
-      ${listeningHintMarkup}
-      <p class="book-description">${safeDescription}</p>
-      <div class="card-actions">
-        <a href="book.html?id=${encodeURIComponent(book.id)}" class="card-link-btn">Open Details</a>
-        ${listeningActionMarkup}
-      </div>
-    </div>
-  `;
-
-  return card;
-}
-
-function renderBooks() {
-  if (!books.length) {
-    renderEmptyState();
-    return;
-  }
-
-  elements.booksContainer.classList.toggle("books-grid", state.view === "grid");
-  elements.booksContainer.classList.toggle("books-list", state.view === "list");
-
-  elements.booksContainer.innerHTML = "";
-  books.forEach((book) => {
-    elements.booksContainer.appendChild(createBookCard(book));
-  });
-
-  const from = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.limit + 1;
-  const to = Math.min(pagination.page * pagination.limit, pagination.total);
-
-  elements.resultsMeta.textContent = `Showing ${from}-${to} of ${pagination.total} books`;
-  elements.pageMeta.textContent = `Page ${pagination.page} of ${pagination.totalPages}`;
-  elements.prevPageBtn.disabled = pagination.page <= 1;
-  elements.nextPageBtn.disabled = pagination.page >= pagination.totalPages;
-}
-
-async function loadBooksFromApi() {
-  renderLoadingState();
-
+async function fetchBooks() {
   try {
-    const response = await fetch(buildApiUrl(), { cache: "no-store" });
+    const response = await fetch(`${API_BASE_URL}/api/books?page=1&limit=140&sort=newest`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
     if (!response.ok) {
-      throw new Error(`Server responded with HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}`);
     }
 
     const payload = await response.json();
     if (!payload.success || !Array.isArray(payload.data)) {
-      throw new Error("Unexpected API response format");
+      throw new Error("Invalid books payload");
     }
 
-    books = payload.data.map(normalizeBook);
-    pagination = payload.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 };
-
-    books.forEach((book) => {
-      if (book.genre && book.genre !== "Unknown") {
-        genreOptions.add(book.genre);
-      }
-    });
-    updateGenreFilterOptions();
-
-    const isSignedIn = await ensureSignedInUser();
-    if (isSignedIn) {
-      await Promise.all([
-        hydrateReadingProgressForBooks(books),
-        hydrateListeningProgressForBooks(books),
-      ]);
-    }
-
-    renderBooks();
+    return payload.data.map(normalizeBook);
   } catch (error) {
-    renderErrorState(error.message || `Please check that the backend is running on ${API_BASE_URL}`);
+    console.warn("Library could not load book catalog:", error);
+    return [];
   }
 }
 
-function setView(view) {
-  state.view = view;
-  elements.viewButtons.forEach((button) => {
-    const active = button.dataset.view === view;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  renderBooks();
+async function fetchReadingProgress(bookId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/reading/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = await response.json();
+    if (!payload.success || !payload.data) {
+      return null;
+    }
+
+    return payload.data;
+  } catch (error) {
+    return null;
+  }
 }
 
-function setupEvents() {
-  elements.languageFilter.innerHTML = "<option value='all'>Not available</option>";
-
-  elements.searchInput.addEventListener("input", () => {
-    state.query = elements.searchInput.value;
-    state.currentPage = 1;
-    loadBooksFromApi();
+async function buildInProgressBooks() {
+  // Build a map from bookId -> local progress entry for books the user has touched.
+  const localRaw = readLocalProgressMap();
+  const localMap = {};
+  Object.entries(localRaw).forEach(([key, entry]) => {
+    const bookId = String(key).replace(/^book:/, "");
+    const pct = Number(entry?.percent || 0);
+    if (pct > 0 && bookId) {
+      localMap[bookId] = entry;
+    }
   });
 
-  elements.genreFilter.addEventListener("change", () => {
-    state.genre = elements.genreFilter.value;
-    state.currentPage = 1;
-    loadBooksFromApi();
+  const sampled = state.books.slice(0, 48);
+  const progressByBook = await Promise.all(sampled.map((book) => fetchReadingProgress(book.id)));
+
+  const entries = [];
+  progressByBook.forEach((progress, index) => {
+    const book = sampled[index];
+    const apiPercent = progress ? clampPercent(progress.progressPercent) : 0;
+
+    if (apiPercent > 0) {
+      entries.push({
+        ...book,
+        progressPercent: apiPercent,
+        chapterId: progress.chapterId || "",
+        chapterNumber: Number(progress.chapterNumber || progress.chapterIndex + 1 || 1),
+        updatedAt: progress.updatedAt || "",
+      });
+    } else {
+      // Fall back to localStorage — covers guest reading and offline sessions.
+      const local = localMap[book.id];
+      if (local) {
+        const localPercent = clampPercent(local.percent);
+        if (localPercent > 0) {
+          entries.push({
+            ...book,
+            progressPercent: localPercent,
+            chapterId: "",
+            chapterNumber: Number(local.chapterIndex ?? 0) + 1,
+            updatedAt: "",
+          });
+        }
+      }
+    }
   });
 
-  // Keep legacy filter controls in UI but disable unsupported API filters.
-  elements.languageFilter.disabled = true;
-  elements.accessFilter.disabled = true;
-  elements.discoveryFilter.disabled = true;
+  entries.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  return entries;
+}
 
-  elements.typeFilter.addEventListener("change", () => {
-    state.type = elements.typeFilter.value;
-    state.currentPage = 1;
-    loadBooksFromApi();
+function createContinueCard(item) {
+  const chapterIdParam = item.chapterId ? `&chapterId=${encodeURIComponent(item.chapterId)}` : "";
+  const card = document.createElement("article");
+  card.className = "continue-card";
+  card.innerHTML = `
+    <img class="cover" src="${item.coverUrl}" alt="${item.title} cover" loading="lazy" />
+    <div>
+      <p class="title">${item.title}</p>
+      <p class="meta">${item.authorName}</p>
+      <p class="progress-text">Chapter ${item.chapterNumber} · ${item.progressPercent}%</p>
+      <div class="progress-track"><span style="width:${item.progressPercent}%"></span></div>
+      <div class="inline-actions">
+        <a class="solid" href="reader.html?bookId=${encodeURIComponent(item.id)}${chapterIdParam}">Resume</a>
+      </div>
+    </div>
+  `;
+  return card;
+}
+
+function createBookCard(book) {
+  const isSaved = state.savedBookIds.has(book.id);
+  const card = document.createElement("article");
+  card.className = "card";
+  card.innerHTML = `
+    <img class="cover" src="${book.coverUrl}" alt="${book.title} cover" loading="lazy" />
+    <p class="title">${book.title}</p>
+    <p class="meta">${book.authorName} · ${book.genre}</p>
+    <div class="inline-actions">
+      <a href="book.html?id=${encodeURIComponent(book.id)}">Details</a>
+      <a class="solid" href="reader.html?bookId=${encodeURIComponent(book.id)}">Read</a>
+      <button type="button" data-save-id="${book.id}">${isSaved ? "Saved" : "Save"}</button>
+    </div>
+  `;
+  return card;
+}
+
+function createRailCard(book, label) {
+  const card = createBookCard(book);
+  const badge = document.createElement("p");
+  badge.className = "meta";
+  badge.textContent = label;
+  card.querySelector(".meta")?.insertAdjacentElement("afterend", badge);
+  return card;
+}
+
+function renderContinueReading() {
+  elements.hubContinueRow.innerHTML = "";
+  const entries = getContinueReading().filter(e => e.userId === getCurrentUserId());
+  if (!entries.length) {
+    elements.hubContinueRow.appendChild(createEmptyState("Start any novel and your progress will appear here."));
+    return;
+  }
+  entries.slice(0, 10).forEach((entry) => {
+    const book = state.books.find(b => b.id === entry.bookId);
+    if (book) {
+      elements.hubContinueRow.appendChild(createContinueCard({
+        ...book,
+        chapterId: entry.currentChapter,
+        chapterNumber: entry.currentChapter ? (parseInt(entry.currentChapter.replace(/\D/g, "")) || 1) : 1,
+        progressPercent: entry.progress || 0
+      }));
+    }
+  });
+}
+
+function renderGrid(target, books, emptyMessage) {
+  target.innerHTML = "";
+  if (!books.length) {
+    target.appendChild(createEmptyState(emptyMessage));
+    return;
+  }
+  books.forEach((book) => {
+    target.appendChild(createBookCard(book));
+  });
+}
+
+function renderRail(target, books, emptyMessage, label) {
+  target.innerHTML = "";
+  if (!books.length) {
+    target.appendChild(createEmptyState(emptyMessage));
+    return;
+  }
+
+  books.forEach((book) => {
+    target.appendChild(createRailCard(book, label));
+  });
+}
+
+function buildPersonalizedSections() {
+  // Use unified helpers for library and continue reading
+  const userId = getCurrentUserId();
+  const continueEntries = getContinueReading().filter(e => e.userId === userId);
+  const libraryEntries = getLibrary().filter(e => e.userId === userId);
+
+  // YourBooks: all books in library or in progress
+  const inProgressIds = new Set(continueEntries.map(e => e.bookId));
+  const libraryIds = new Set(libraryEntries.map(e => e.bookId));
+  state.yourBooks = state.books.filter(book => inProgressIds.has(book.id) || libraryIds.has(book.id)).slice(0, 12);
+
+  // Favorites: all books in library
+  state.favorites = state.books.filter(book => libraryIds.has(book.id));
+
+  // Recommendations and because logic unchanged
+  const genreCount = new Map();
+  state.yourBooks.forEach((book) => {
+    genreCount.set(book.genre, (genreCount.get(book.genre) || 0) + 1);
+  });
+  state.favorites.forEach((book) => {
+    genreCount.set(book.genre, (genreCount.get(book.genre) || 0) + 1);
   });
 
-  elements.sortBy.addEventListener("change", () => {
-    state.sortBy = elements.sortBy.value;
-    state.currentPage = 1;
-    loadBooksFromApi();
-  });
+  const rankedGenres = [...genreCount.entries()].sort((a, b) => b[1] - a[1]).map((entry) => entry[0]);
+  if (!rankedGenres.length && state.books.length) {
+    rankedGenres.push(state.books[0].genre);
+  }
 
-  elements.viewButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      setView(button.dataset.view);
+  const recommended = [];
+  rankedGenres.forEach((genre) => {
+    state.books.forEach((book) => {
+      if (book.genre === genre && !inProgressIds.has(book.id) && !recommended.some((item) => item.id === book.id)) {
+        recommended.push(book);
+      }
     });
   });
+  state.recommended = recommended.slice(0, 16);
 
-  elements.prevPageBtn.addEventListener("click", () => {
-    if (state.currentPage > 1) {
-      state.currentPage -= 1;
-      loadBooksFromApi();
+  state.becauseAnchor = state.yourBooks[0] || null;
+  if (state.becauseAnchor) {
+    state.becauseYouRead = state.books
+      .filter((book) => book.id !== state.becauseAnchor.id && book.genre === state.becauseAnchor.genre)
+      .slice(0, 12);
+  } else {
+    state.becauseYouRead = [];
+  }
+}
+
+function renderBecauseSection() {
+  if (state.becauseAnchor) {
+    elements.becauseHeading.textContent = `Because you read ${state.becauseAnchor.title}`;
+  } else {
+    elements.becauseHeading.textContent = "Because You Read...";
+  }
+
+  renderRail(
+    elements.becauseReadRow,
+    state.becauseYouRead,
+    "Read a few books and we will personalize this section.",
+    "Similar pick"
+  );
+}
+
+function updateDiscoverGenreOptions() {
+  const genres = [...new Set(state.books.map((book) => book.genre).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const options = ["<option value='all'>All Genres</option>"]
+    .concat(genres.map((genre) => `<option value="${genre}">${genre}</option>`));
+
+  elements.hubGenreFilter.innerHTML = options.join("");
+  elements.hubGenreFilter.value = state.discoverGenre;
+}
+
+function getFilteredDiscoverBooks() {
+  const query = state.discoverSearch.trim().toLowerCase();
+
+  return state.books.filter((book) => {
+    const genreMatch = state.discoverGenre === "all" || book.genre === state.discoverGenre;
+    if (!genreMatch) {
+      return false;
     }
+
+    if (!query) {
+      return true;
+    }
+
+    const haystack = `${book.title} ${book.authorName} ${book.genre}`.toLowerCase();
+    return haystack.includes(query);
+  });
+}
+
+function renderDiscover() {
+  elements.hubDiscoverGrid.innerHTML = "";
+  const filtered = getFilteredDiscoverBooks();
+  if (!filtered.length) {
+    elements.hubDiscoverGrid.appendChild(createEmptyState("No books match this search yet."));
+    elements.hubLoadMoreBtn.hidden = true;
+    return;
+  }
+
+  const limit = state.discoverPage * state.discoverPageSize;
+  filtered.slice(0, limit).forEach((book) => {
+    elements.hubDiscoverGrid.appendChild(createBookCard(book));
   });
 
-  elements.nextPageBtn.addEventListener("click", () => {
-    if (state.currentPage < pagination.totalPages) {
-      state.currentPage += 1;
-      loadBooksFromApi();
-    }
-  });
+  elements.hubLoadMoreBtn.hidden = limit >= filtered.length;
+}
 
-  elements.booksContainer.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-action='listen']");
-    if (!button || button.disabled) {
+function renderStats() {
+  const inProgressCount = state.inProgress.length;
+  const localProgress = readLocalProgressMap();
+
+  let chapterUnits = 0;
+  Object.values(localProgress).forEach((entry) => {
+    if (!entry || typeof entry !== "object") {
       return;
     }
-    window.location.href = `audiobook.html?bookId=${encodeURIComponent(button.dataset.id)}`;
+    const chapterIndex = Number(entry.chapterIndex || 0);
+    const percent = Number(entry.percent || 0);
+    chapterUnits += Math.max(1, chapterIndex + percent / 100);
   });
+
+  if (chapterUnits === 0) {
+    chapterUnits = state.inProgress.reduce((sum, item) => sum + Math.max(1, item.progressPercent / 100), 0);
+  }
+
+  const chaptersRead = Math.round(chapterUnits);
+  const readingMinutes = Math.max(0, Math.round(chapterUnits * 18));
+
+  elements.statBooksInProgress.textContent = String(inProgressCount);
+  elements.statChaptersRead.textContent = String(chaptersRead);
+  elements.statReadingTime.textContent = `${readingMinutes} min`;
+}
+
+function bindEvents() {
+  elements.hubSearchInput.addEventListener("input", () => {
+    state.discoverSearch = elements.hubSearchInput.value || "";
+    state.discoverPage = 1;
+    renderDiscover();
+  });
+
+  elements.hubGenreFilter.addEventListener("change", () => {
+    state.discoverGenre = elements.hubGenreFilter.value;
+    state.discoverPage = 1;
+    renderDiscover();
+  });
+
+  elements.hubLoadMoreBtn.addEventListener("click", () => {
+    state.discoverPage += 1;
+    renderDiscover();
+  });
+
+  document.addEventListener("click", (event) => {
+    const saveButton = event.target.closest("button[data-save-id]");
+    if (!saveButton) {
+      return;
+    }
+
+    const bookId = saveButton.dataset.saveId;
+    if (state.savedBookIds.has(bookId)) {
+      state.savedBookIds.delete(bookId);
+      saveButton.textContent = "Save";
+    } else {
+      state.savedBookIds.add(bookId);
+      saveButton.textContent = "Saved";
+    }
+
+    saveSavedBooks();
+    buildPersonalizedSections();
+    renderGrid(elements.favoritesRow, state.favorites, "No saved books yet.");
+    elements.favoritesPanel.hidden = !state.favorites.length;
+  });
+}
+
+function renderAll() {
+  renderContinueReading();
+  renderGrid(elements.yourLibraryRow, state.yourBooks, "Open or save books to build your personal shelf.");
+  renderRail(elements.recommendedRow, state.recommended, "Recommendations will appear once we learn your taste.", "Recommended for you");
+  renderBecauseSection();
+  renderGrid(elements.favoritesRow, state.favorites, "No favorites yet.");
+  elements.favoritesPanel.hidden = !state.favorites.length;
+
+  updateDiscoverGenreOptions();
+  renderDiscover();
+  renderStats();
 }
 
 async function bootstrap() {
-  setupEvents();
-  state.view = "grid";
-  elements.viewButtons.forEach((button) => {
-    const active = button.dataset.view === "grid";
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-  });
-  await loadBooksFromApi();
+  await ensureSignedInUser();
+  state.books = await fetchBooks();
+  state.inProgress = await buildInProgressBooks();
+
+  buildPersonalizedSections();
+  bindEvents();
+  renderAll();
 }
 
 bootstrap();

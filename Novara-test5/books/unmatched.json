@@ -1,0 +1,12 @@
+[
+  {
+    "fileName": "text/gulliver-s-travels.txt",
+    "detectedTitle": "Gulliver's Travels",
+    "reason": "No mapping candidate scored above 0"
+  },
+  {
+    "fileName": "text/the-strange-case-of-dr-jekyll-and-mr-hyde.txt",
+    "detectedTitle": "The strange case of Dr. Jekyll and Mr. Hyde",
+    "reason": "Low confidence score (52)"
+  }
+]

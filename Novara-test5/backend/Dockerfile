@@ -9,6 +9,6 @@ COPY . .
 
 RUN npm run prisma:generate
 
-EXPOSE 5000
+EXPOSE 5001
 
 CMD ["npm", "run", "start:docker"]

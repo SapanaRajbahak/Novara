@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const { prisma } = require("../config/db");
 
 const demoAdminCredentials = {
-  email: "admin@novara.com",
+  email: "admin@Novara.com",
   password: "admin123",
 };
 

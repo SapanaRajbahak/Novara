@@ -543,6 +543,9 @@ textarea {
   display: flex;
   gap: 0.4rem;
   flex-wrap: wrap;
+  max-height: 170px;
+  overflow: auto;
+  padding-right: 0.2rem;
 }
 
 .chapter-chip {

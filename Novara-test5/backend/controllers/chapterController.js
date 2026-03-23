@@ -13,11 +13,16 @@ async function getBookChapters(req, res) {
     }
 
     const chapters = await chapterService.listPublishedChapters(req.params.bookId);
+    const isAuthenticated = Boolean(req.session && req.session.user);
+    const chapterPayload = chapters.map((chapter) => ({
+      ...chapter,
+      isLockedForGuest: !isAuthenticated && Number(chapter.chapterNumber) > 1,
+    }));
 
     return res.json({
       success: true,
       message: "Chapters fetched successfully",
-      data: chapters,
+      data: chapterPayload,
     });
   } catch (error) {
     console.error("getBookChapters error:", error);
@@ -35,6 +40,16 @@ async function getChapterById(req, res) {
     const chapter = await chapterService.getChapterById(req.params.id);
     if (!chapter) {
       return res.status(404).json({ success: false, error: "Chapter not found" });
+    }
+
+    const isAuthenticated = Boolean(req.session && req.session.user);
+    if (!isAuthenticated && Number(chapter.chapterNumber) > 1) {
+      return res.status(403).json({
+        success: false,
+        error: "Login is required to access this chapter",
+        code: "CHAPTER_LOCKED",
+        loginRequired: true,
+      });
     }
 
     return res.json({

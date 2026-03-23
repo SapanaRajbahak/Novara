@@ -1,17 +1,18 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: novara-postgres
+    container_name: Novara-postgres
+    restart: unless-stopped
     ports:
       - "5433:5432"
     environment:
-      POSTGRES_DB: novara
-      POSTGRES_USER: novara
-      POSTGRES_PASSWORD: novara_password
+      POSTGRES_DB: Novara
+      POSTGRES_USER: Novara
+      POSTGRES_PASSWORD: Novara_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U novara -d novara"]
+      test: ["CMD-SHELL", "pg_isready -U Novara -d Novara"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -19,17 +20,21 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: novara-backend
+    container_name: Novara-backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
     command: npm run start:docker
     ports:
       - "5001:5001"
+    volumes:
+      - ./books:/app/books
+    env_file:
+      - ./backend/.env
     environment:
       PORT: 5001
-      SESSION_SECRET: novara-session-secret
-      DATABASE_URL: postgresql://novara:novara_password@postgres:5432/novara
+      DATABASE_URL: postgresql://Novara:Novara_password@postgres:5432/Novara
 
 volumes:
   postgres_data:

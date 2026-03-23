@@ -1,8 +1,51 @@
-(function attachNovelReadSession(global) {
-  const apiHost = global.location && global.location.hostname ? global.location.hostname : "localhost";
-  const apiProtocol = global.location && global.location.protocol ? global.location.protocol : "http:";
-  const API_BASE_URL = `${apiProtocol}//${apiHost}:5001`;
-  const DASHBOARD_PREFERENCE_KEY = "novelread.preferredDashboard";
+(function attachNovaraSession(global) {
+  function resolveApiBaseUrl() {
+    const explicitBase = global.localStorage && global.localStorage.getItem("Novara.apiBaseUrl");
+    if (explicitBase) {
+      try {
+        const parsed = new URL(explicitBase);
+        const location = global.location || {};
+        const isLocalPage = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
+        const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+        if (!isLocalPage || isExplicitLocal) {
+          return explicitBase.replace(/\/$/, "");
+        }
+      } catch (error) {
+        // Ignore invalid override and fall back to local default.
+      }
+    }
+
+    const location = global.location || {};
+    const isFileProtocol = location.protocol === "file:";
+    const protocol = isFileProtocol ? "http:" : (location.protocol || "http:");
+    const host = !isFileProtocol && location.hostname ? location.hostname : "localhost";
+    return `${protocol}//${host}:5001`;
+  }
+
+  const API_BASE_URL = resolveApiBaseUrl();
+  const DASHBOARD_PREFERENCE_KEY = "novara.preferredDashboard";
+  const STORAGE_MIGRATION_MARKER_KEY = "novara.storageMigration.v1";
+  const LEGACY_STORAGE_KEY_PAIRS = [
+    ["novelread.bookmarks", "novara.bookmarks"],
+    ["novelread.continueReading", "novara.continueReading"],
+    ["novelread.reader.settings", "novara.reader.settings"],
+    ["novelread.reader.progress", "novara.reader.progress"],
+    ["novelread.reader.bookmarks", "novara.reader.bookmarks"],
+    ["novelread.reader.notes", "novara.reader.notes"],
+    ["novelread.reader.listenProgress", "novara.reader.listenProgress"],
+    ["novelread.tts.voice", "novara.tts.voice"],
+    ["novelread.postLoginRedirect", "novara.postLoginRedirect"],
+    ["novelread.userId", "novara.userId"],
+    ["novelread.savedBooks", "novara.savedBooks"],
+    ["novelread.preferredDashboard", "novara.preferredDashboard"],
+    ["novelread.admin.auth", "novara.admin.auth"],
+    ["novelread.admin.uploadedBooks", "novara.admin.uploadedBooks"],
+    ["novelread.admin.chapterDrafts", "novara.admin.chapterDrafts"],
+    ["novelread.admin.aiDrafts", "novara.admin.aiDrafts"],
+    ["novelread.admin.chapterEditorDrafts", "novara.admin.chapterEditorDrafts"],
+    ["novelread.admin.settings", "novara.admin.settings"],
+  ];
   const APP_ROUTES = {
     adminDashboard: "./admin.html",
     adminUpload: "./admin-upload.html",
@@ -17,7 +60,7 @@
   };
 
   function getInitials(name) {
-    const resolvedName = typeof name === "string" && name.trim() ? name.trim() : "NovelRead";
+    const resolvedName = typeof name === "string" && name.trim() ? name.trim() : "Novara";
     return resolvedName
       .split(/\s+/)
       .map((part) => part[0])
@@ -47,6 +90,24 @@
     const nextValue = value === "writer" ? "writer" : "reader";
     global.localStorage.setItem(DASHBOARD_PREFERENCE_KEY, nextValue);
     return nextValue;
+  }
+
+  function migrateLegacyLocalStorage() {
+    if (!global.localStorage) {
+      return;
+    }
+
+    if (global.localStorage.getItem(STORAGE_MIGRATION_MARKER_KEY)) {
+      return;
+    }
+
+    LEGACY_STORAGE_KEY_PAIRS.forEach(([oldKey, newKey]) => {
+      if (!global.localStorage.getItem(newKey) && global.localStorage.getItem(oldKey)) {
+        global.localStorage.setItem(newKey, global.localStorage.getItem(oldKey));
+      }
+    });
+
+    global.localStorage.setItem(STORAGE_MIGRATION_MARKER_KEY, "done");
   }
 
   async function fetchCurrentUser(force = false) {
@@ -114,7 +175,7 @@
 
     state.loaded = true;
     state.user = null;
-    global.localStorage.removeItem("novelread.admin.auth");
+    global.localStorage.removeItem("novara.admin.auth");
     global.localStorage.removeItem(DASHBOARD_PREFERENCE_KEY);
     global.location.href = redirectTo;
   }
@@ -213,7 +274,9 @@
     }, 1700);
   }
 
-  global.NovelReadSession = {
+  migrateLegacyLocalStorage();
+
+  global.NovaraSession = {
     API_BASE_URL,
     APP_ROUTES,
     fetchCurrentUser,

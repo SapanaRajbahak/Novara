@@ -1,6 +1,29 @@
-const SAVE_KEY = "novelread.savedBooks";
-const FAVORITE_KEY = "novelread.favoriteBooks";
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+const SAVE_KEY = "novara.savedBooks";
+const FAVORITE_KEY = "novara.favoriteBooks";
+const POST_LOGIN_REDIRECT_KEY = "novara.postLoginRedirect";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const elements = {
   coverImage: document.getElementById("coverImage"),
@@ -32,6 +55,7 @@ const elements = {
 
 let currentBook = null;
 let resumeChapterId = null;
+let currentUser = null;
 let savedBooks = loadSet(SAVE_KEY);
 let favoriteBooks = loadSet(FAVORITE_KEY);
 
@@ -131,6 +155,34 @@ function buildReaderUrl(bookId, chapterId) {
   return `reader.html?${params.toString()}`;
 }
 
+function buildLandingAuthUrl(nextUrl) {
+  const params = new URLSearchParams();
+  params.set("auth", "signup");
+  params.set("next", nextUrl);
+  return `index.html?${params.toString()}`;
+}
+
+function savePostLoginRedirect(url) {
+  try {
+    localStorage.setItem(POST_LOGIN_REDIRECT_KEY, url);
+  } catch (error) {
+    // Ignore storage failures in private mode.
+  }
+}
+
+function requestLoginForChapter(chapterId) {
+  if (!currentBook || !chapterId) {
+    return;
+  }
+
+  const readerUrl = buildReaderUrl(currentBook.id, chapterId);
+  savePostLoginRedirect(readerUrl);
+  showToast("Login required to read Chapter 2 and above");
+  window.setTimeout(() => {
+    window.location.href = buildLandingAuthUrl(readerUrl);
+  }, 180);
+}
+
 function toAbsoluteUrl(url) {
   if (!url) {
     return "";
@@ -192,7 +244,7 @@ function renderGenres(genres) {
   });
 }
 
-function renderChapterList(chapters) {
+function renderChapterList(chapters, user) {
   elements.chapterList.innerHTML = "";
 
   if (!chapters.length) {
@@ -200,12 +252,15 @@ function renderChapterList(chapters) {
     return;
   }
 
+  const isGuest = !user;
+
   chapters.forEach((chapter) => {
+    const isLocked = isGuest && Number(chapter.number) > 1;
     const li = document.createElement("li");
     li.innerHTML = `
-      <button class="chapter-item" type="button" data-chapter-id="${chapter.id}">
-        <span>Chapter ${chapter.number}</span>
-        ${chapter.title}
+      <button class="chapter-item ${isLocked ? "is-locked" : ""}" type="button" data-chapter-id="${chapter.id}" data-chapter-number="${chapter.number}" ${isLocked ? 'data-chapter-locked="true"' : ""}>
+        <span>Chapter ${chapter.number}${isLocked ? " • Locked" : ""}</span>
+        ${chapter.title}${isLocked ? " <strong class=\"lock-badge\">Login required</strong>" : ""}
       </button>
     `;
     elements.chapterList.appendChild(li);
@@ -267,7 +322,7 @@ function renderRelatedBooks(relatedBooks) {
 function renderBook(book) {
   currentBook = book;
   resumeChapterId = null;
-  document.title = `${book.title} | NovelRead`;
+  document.title = `${book.title} | Novara`;
 
   elements.coverImage.src = book.coverImage || createCoverSvg(book.title, book.genre);
   elements.coverImage.alt = `${book.title} cover`;
@@ -283,7 +338,7 @@ function renderBook(book) {
   elements.metaFormat.textContent = book.format;
   elements.metaAudio.textContent = book.hasAudiobook ? "Available" : "Not available";
 
-  renderChapterList(book.chapters);
+  renderChapterList(book.chapters, currentUser);
   renderAudioTracks(book);
   renderReviews(book.reviews || []);
   renderRelatedBooks(book.relatedBooks || []);
@@ -325,6 +380,27 @@ function setupTabEvents() {
 
 function openReader(chapterId) {
   window.location.href = buildReaderUrl(currentBook.id, chapterId);
+}
+
+async function fetchCurrentUser() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      currentUser = null;
+      return null;
+    }
+
+    const payload = await response.json();
+    currentUser = payload && payload.success ? payload.user || null : null;
+    return currentUser;
+  } catch (error) {
+    currentUser = null;
+    return null;
+  }
 }
 
 async function loadReadingProgress(bookId) {
@@ -400,6 +476,12 @@ function setupChapterEvents() {
     if (!button) {
       return;
     }
+
+    if (button.dataset.chapterLocked === "true") {
+      requestLoginForChapter(button.dataset.chapterId);
+      return;
+    }
+
     openReader(button.dataset.chapterId);
   });
 
@@ -480,7 +562,7 @@ function setupPrimaryActions() {
       try {
         await navigator.share({
           title: currentBook.title,
-          text: `Check out ${currentBook.title} on NovelRead`,
+          text: `Check out ${currentBook.title} on Novara`,
           url: shareUrl
         });
       } catch (error) {
@@ -608,6 +690,8 @@ async function bootstrap() {
     renderLoadError("Missing book id in URL. Open a book from the Library page.");
     return;
   }
+
+  await fetchCurrentUser();
 
   try {
     const book = await loadBookFromApi(bookId);

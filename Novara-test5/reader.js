@@ -1,33 +1,117 @@
-const SETTINGS_KEY = "novelread.reader.settings";
-const PROGRESS_KEY = "novelread.reader.progress";
-const BOOKMARK_KEY = "novelread.reader.bookmarks";
-const NOTES_KEY = "novelread.reader.notes";
-const LISTEN_PROGRESS_KEY = "novelread.reader.listenProgress";
-const TTS_VOICE_KEY = "novelread.tts.voice";
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+// --- Novara localStorage migration logic ---
+function migrateNovaraLocalStorage() {
+  const keyPairs = [
+    ["novelread.bookmarks", "novara.bookmarks"],
+    ["novelread.continueReading", "novara.continueReading"],
+    ["novelread.reader.settings", "novara.reader.settings"],
+    ["novelread.reader.progress", "novara.reader.progress"],
+    ["novelread.reader.bookmarks", "novara.reader.bookmarks"],
+    ["novelread.reader.notes", "novara.reader.notes"],
+    ["novelread.reader.listenProgress", "novara.reader.listenProgress"],
+    ["novelread.tts.voice", "novara.tts.voice"],
+    ["novelread.postLoginRedirect", "novara.postLoginRedirect"],
+    ["novelread.userId", "novara.userId"],
+    ["novelread.savedBooks", "novara.savedBooks"],
+    ["novelread.preferredDashboard", "novara.preferredDashboard"],
+    ["novelread.admin.auth", "novara.admin.auth"],
+    ["novelread.admin.uploadedBooks", "novara.admin.uploadedBooks"],
+    ["novelread.admin.chapterDrafts", "novara.admin.chapterDrafts"],
+    ["novelread.admin.aiDrafts", "novara.admin.aiDrafts"],
+    ["novelread.admin.chapterEditorDrafts", "novara.admin.chapterEditorDrafts"],
+    ["novelread.admin.settings", "novara.admin.settings"]
+  ];
+  keyPairs.forEach(([oldKey, newKey]) => {
+    if (!localStorage.getItem(newKey) && localStorage.getItem(oldKey)) {
+      localStorage.setItem(newKey, localStorage.getItem(oldKey));
+    }
+  });
+}
+
+migrateNovaraLocalStorage();
+
+function resolveApiBaseUrl() {
+  const explicitBase = localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isFilePage = window.location.protocol === "file:";
+      const isLocalPage = isFilePage || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to defaults.
+    }
+  }
+
+  if (window.NovaraSession && window.NovaraSession.API_BASE_URL) {
+    return String(window.NovaraSession.API_BASE_URL).replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : (window.location.protocol || "http:");
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const SETTINGS_KEY = "novara.reader.settings";
+const PROGRESS_KEY = "novara.reader.progress";
+const BOOKMARKS_KEY = "novara.reader.bookmarks";
+const NOTES_KEY = "novara.reader.notes";
+const LISTEN_PROGRESS_KEY = "novara.reader.listenProgress";
+const TTS_VOICE_KEY = "novara.tts.voice";
+const POST_LOGIN_REDIRECT_KEY = "novara.postLoginRedirect";
+// === Unified Data Persistence Utilities (imported from app.js if not present) ===
+
+// Move state and elements declarations to the top to avoid ReferenceError
+// ...existing code...
+
+// ...existing code...
+if (typeof getCurrentUserId !== 'function') {
+  function getCurrentUserId() {
+    return localStorage.getItem('novara.userId') || 'guest';
+  }
+}
+if (typeof addContinueReading !== 'function') {
+  function addContinueReading({ bookId, source, currentChapter, progress }) {
+    const userId = getCurrentUserId();
+    let entries = JSON.parse(localStorage.getItem('novara.continueReading') || '[]');
+    entries = entries.filter(e => !(e.userId === userId && e.bookId === bookId));
+    entries.unshift({ userId, bookId, source, currentChapter, progress });
+    localStorage.setItem('novara.continueReading', JSON.stringify(entries));
+  }
+}
+if (typeof addBookmark !== 'function') {
+  function addBookmark({ bookId, chapterId, note }) {
+    const userId = getCurrentUserId();
+    let entries = JSON.parse(localStorage.getItem('novara.bookmarks') || '[]');
+    entries.unshift({ userId, bookId, chapterId, note });
+    localStorage.setItem('novara.bookmarks', JSON.stringify(entries));
+  }
+}
 
 const state = {
   currentBook: null,
+  currentUser: null,
   chapterCache: {},
   currentChapter: null,
   currentChapterIndex: 0,
   progressApiEnabled: true,
   progressApiAuthMissingNotified: false,
   resumeApplied: false,
+  showListen: true,
   settings: {
-    fontSize: 19,
-    fontFamily: "Fraunces, serif",
-    lineHeight: 1.75,
+    fontSize: 18,
+    fontFamily: "serif",
+    lineHeight: 1.6,
     theme: "light",
-    pageWidth: 760,
+    pageWidth: 700,
     readingMode: "scroll",
     contentFormat: "structured"
   },
-  activeSelection: null,
-  localFileUrl: null,
   listen: {
-    mode: "idle",
-    audioByChapterId: {},
     audioElement: null,
     isPlaying: false,
     speed: 1,
@@ -47,6 +131,27 @@ const state = {
     ttsSelectedVoiceName: ""
   }
 };
+
+
+// Improved DOMContentLoaded handler for robust event binding and overlays
+document.addEventListener('DOMContentLoaded', () => {
+  // Remove overlays or modals that could block pointer events
+  if (elements.settingsModal && elements.settingsModal.classList.contains('show')) {
+    elements.settingsModal.classList.remove('show');
+    elements.settingsModal.setAttribute('aria-hidden', 'true');
+  }
+  if (elements.selectionTools) {
+    elements.selectionTools.style.display = 'none';
+  }
+  if (elements.chapterDrawer && !elements.chapterDrawer.classList.contains('hidden')) {
+    elements.chapterDrawer.classList.add('hidden');
+  }
+  if (elements.notesPanel && !elements.notesPanel.classList.contains('hidden')) {
+    elements.notesPanel.classList.add('hidden');
+  }
+  // Always bind events after DOM and elements are ready
+  bindEvents();
+});
 
 const elements = {
   root: document.documentElement,
@@ -124,6 +229,57 @@ function getParams() {
     chapter: Number.isFinite(chapterFromQuery) ? chapterFromQuery : 1,
     mode: params.get("mode") || "read"
   };
+}
+
+function buildReaderUrl(bookId, chapterId, mode) {
+  const params = new URLSearchParams();
+  params.set("bookId", bookId);
+  if (chapterId) {
+    params.set("chapterId", chapterId);
+  }
+  if (mode) {
+    params.set("mode", mode);
+  }
+  return `reader.html?${params.toString()}`;
+}
+
+function buildLandingAuthUrl(nextUrl) {
+  const params = new URLSearchParams();
+  params.set("auth", "signup");
+  params.set("next", nextUrl);
+  return `index.html?${params.toString()}`;
+}
+
+function savePostLoginRedirect(url) {
+  try {
+    localStorage.setItem(POST_LOGIN_REDIRECT_KEY, url);
+  } catch (error) {
+    // Ignore storage write errors.
+  }
+}
+
+function isChapterLockedForGuest(chapterMeta) {
+  if (!chapterMeta) {
+    return false;
+  }
+  if (state.currentUser) {
+    return false;
+  }
+  return Boolean(chapterMeta.isLockedForGuest) || Number(chapterMeta.number) > 1;
+}
+
+function requestLoginForChapterAccess(chapterMeta) {
+  if (!state.currentBook || !chapterMeta) {
+    return;
+  }
+
+  const params = getParams();
+  const intendedUrl = buildReaderUrl(state.currentBook.id, chapterMeta.id, params.mode === "audio" ? "audio" : "");
+  savePostLoginRedirect(intendedUrl);
+  showToast("Login required to read Chapter 2 and above");
+  window.setTimeout(() => {
+    window.location.href = buildLandingAuthUrl(intendedUrl);
+  }, 180);
 }
 
 function loadJsonStorage(key, fallback) {
@@ -220,7 +376,29 @@ async function fetchChapterList(bookId) {
     id: chapter.id,
     number: chapter.chapterNumber,
     title: chapter.title,
+    isLockedForGuest: Boolean(chapter.isLockedForGuest),
   }));
+}
+
+async function fetchCurrentUser() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      state.currentUser = null;
+      return null;
+    }
+
+    const payload = await response.json();
+    state.currentUser = payload && payload.success ? payload.user || null : null;
+    return state.currentUser;
+  } catch (error) {
+    state.currentUser = null;
+    return null;
+  }
 }
 
 async function fetchBookAudioTracks(bookId) {
@@ -250,7 +428,18 @@ async function fetchChapterById(chapterId) {
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch chapter content (HTTP ${response.status})`);
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      payload = null;
+    }
+
+    const requestError = new Error(payload?.error || `Failed to fetch chapter content (HTTP ${response.status})`);
+    requestError.status = response.status;
+    requestError.code = payload?.code || "";
+    requestError.loginRequired = Boolean(payload?.loginRequired);
+    throw requestError;
   }
 
   const payload = await response.json();
@@ -1073,9 +1262,11 @@ function addNote(note) {
 function getChapterScrollRatio() {
   const max = elements.readingViewport.scrollHeight - elements.readingViewport.clientHeight;
   if (max <= 0) {
-    return 1;
+    // Chapters should open at 0% even before layout settles.
+    return 0;
   }
-  return Math.min(1, Math.max(0, elements.readingViewport.scrollTop / max));
+  const ratio = elements.readingViewport.scrollTop / max;
+  return Math.min(1, Math.max(0, ratio));
 }
 
 function updateProgressUi() {
@@ -1085,9 +1276,12 @@ function updateProgressUi() {
 
   const chapterCount = state.currentBook.chapters.length || 1;
   const chapterProgress = getChapterScrollRatio();
-  const totalPercent = ((state.currentChapterIndex + chapterProgress) / chapterCount) * 100;
-  elements.progressSlider.value = String(Math.round(totalPercent));
-  elements.progressText.textContent = `${Math.round(totalPercent)}%`;
+  const chapterPercent = Math.round(chapterProgress * 100);
+  const currentChapterNumber = state.currentChapter?.number || state.currentChapterIndex + 1;
+  const currentChapterTitle = state.currentChapter?.title || `Chapter ${currentChapterNumber}`;
+
+  elements.progressSlider.value = String(chapterPercent);
+  elements.progressText.textContent = `Ch ${currentChapterNumber} of ${chapterCount}: ${currentChapterTitle} ${chapterPercent}%`;
 }
 
 function escapeHtml(text) {
@@ -1123,10 +1317,23 @@ function createParagraphMarkup(paragraph, startIndex) {
   };
 }
 
+function renderChapterEndNavigation() {
+  const maxIndex = (state.currentBook?.chapters.length || 1) - 1;
+  const isAtStart = state.currentChapterIndex <= 0;
+  const isAtEnd = state.currentChapterIndex >= maxIndex;
+
+  return `
+    <div class="chapter-end-nav" aria-label="Chapter navigation">
+      <button type="button" class="icon-btn" data-chapter-end-nav="prev" ${isAtStart ? "disabled" : ""}>Prev</button>
+      <button type="button" class="icon-btn" data-chapter-end-nav="next" ${isAtEnd ? "disabled" : ""}>Next</button>
+    </div>
+  `;
+}
+
 function renderStructuredChapter(chapter) {
   const text = String(chapter.content || "").trim();
   if (!text) {
-    elements.readerContent.innerHTML = "<p>No chapter content available.</p>";
+    elements.readerContent.innerHTML = `<p>No chapter content available.</p>${renderChapterEndNavigation()}`;
     state.listen.ttsSentences = [];
     state.listen.ttsSentenceNodes = [];
     return;
@@ -1145,7 +1352,7 @@ function renderStructuredChapter(chapter) {
     index += result.count;
   });
 
-  elements.readerContent.innerHTML = htmlParts.join("");
+  elements.readerContent.innerHTML = `${htmlParts.join("")}${renderChapterEndNavigation()}`;
   state.listen.ttsSentences = splitIntoSentences(text);
   state.listen.ttsSentenceNodes = [
     ...elements.readerContent.querySelectorAll(".sentence[data-sentence-index]"),
@@ -1162,6 +1369,7 @@ function renderPdfShell() {
       <p>${url ? "PDF loaded below." : "No PDF loaded. Use settings to open a local PDF file."}</p>
       ${url ? `<iframe class="pdf-frame" src="${url}" title="PDF Reader"></iframe>` : ""}
     </div>
+    ${renderChapterEndNavigation()}
   `;
 }
 
@@ -1172,6 +1380,7 @@ function renderEpubShell() {
       <p>EPUB container is ready. Browser-native EPUB rendering is limited; integrate epub.js for production pagination and TOC.</p>
       <p>You can still open structured chapters in this reader and preserve notes, progress, and bookmarks.</p>
     </div>
+    ${renderChapterEndNavigation()}
   `;
 }
 
@@ -1186,7 +1395,14 @@ function renderCurrentChapter() {
   elements.toolbarChapterTitle.textContent = `Chapter ${chapter.number}: ${chapter.title}`;
   document.title = `${state.currentBook.title} - Chapter ${chapter.number}`;
 
-  if (state.settings.contentFormat === "pdf") {
+  const hasPdfSource = Boolean(state.localFileUrl || state.currentBook.pdfUrl);
+  const hasEpubSource = Boolean(state.localFileUrl && /\.epub(\?|#|$)/i.test(state.localFileUrl));
+
+  if (state.settings.contentFormat === "pdf" && !hasPdfSource) {
+    renderStructuredChapter(chapter);
+  } else if (state.settings.contentFormat === "epub" && !hasEpubSource) {
+    renderStructuredChapter(chapter);
+  } else if (state.settings.contentFormat === "pdf") {
     renderPdfShell();
   } else if (state.settings.contentFormat === "epub") {
     renderEpubShell();
@@ -1197,6 +1413,7 @@ function renderCurrentChapter() {
   updateChapterNavUi();
   elements.readingViewport.scrollTop = 0;
   updateProgressUi();
+  window.requestAnimationFrame(updateProgressUi);
 }
 
 function updateChapterNavUi() {
@@ -1207,8 +1424,21 @@ function updateChapterNavUi() {
   });
 
   const maxIndex = (state.currentBook?.chapters.length || 1) - 1;
-  elements.prevBtn.disabled = state.currentChapterIndex <= 0;
-  elements.nextBtn.disabled = state.currentChapterIndex >= maxIndex;
+  if (elements.prevBtn) {
+    elements.prevBtn.disabled = state.currentChapterIndex <= 0;
+  }
+  if (elements.nextBtn) {
+    elements.nextBtn.disabled = state.currentChapterIndex >= maxIndex;
+  }
+
+  const chapterPrevBtn = elements.readerContent.querySelector('button[data-chapter-end-nav="prev"]');
+  const chapterNextBtn = elements.readerContent.querySelector('button[data-chapter-end-nav="next"]');
+  if (chapterPrevBtn) {
+    chapterPrevBtn.disabled = state.currentChapterIndex <= 0;
+  }
+  if (chapterNextBtn) {
+    chapterNextBtn.disabled = state.currentChapterIndex >= maxIndex;
+  }
 }
 
 function renderChapterDrawer() {
@@ -1218,11 +1448,12 @@ function renderChapterDrawer() {
   }
 
   state.currentBook.chapters.forEach((chapter, idx) => {
+    const isLocked = isChapterLockedForGuest(chapter);
     const li = document.createElement("li");
     li.innerHTML = `
-      <button type="button" class="chapter-btn ${idx === state.currentChapterIndex ? "active" : ""}" data-chapter-index="${idx}">
-        <small>Chapter ${chapter.number}</small>
-        ${chapter.title}
+      <button type="button" class="chapter-btn ${idx === state.currentChapterIndex ? "active" : ""} ${isLocked ? "is-locked" : ""}" data-chapter-index="${idx}" ${isLocked ? 'data-chapter-locked="true"' : ""}>
+        <small>Chapter ${chapter.number}${isLocked ? " • Locked" : ""}</small>
+        ${chapter.title}${isLocked ? " <strong class=\"lock-badge\">Login required</strong>" : ""}
       </button>
     `;
     elements.chapterList.appendChild(li);
@@ -1325,6 +1556,11 @@ async function loadAndRenderChapterByIndex(index) {
     return;
   }
 
+  if (isChapterLockedForGuest(chapterMeta)) {
+    requestLoginForChapterAccess(chapterMeta);
+    return;
+  }
+
   elements.readerContent.innerHTML = "<p>Loading chapter...</p>";
 
   const chapter = await fetchChapterById(chapterMeta.id);
@@ -1346,13 +1582,40 @@ function jumpToChapter(index) {
     return;
   }
 
+  // Prevent navigation if already loading
+  if (state._chapterLoading) return;
+  state._chapterLoading = true;
+
+  // Disable navigation buttons during load
+  if (elements.prevBtn) elements.prevBtn.disabled = true;
+  if (elements.nextBtn) elements.nextBtn.disabled = true;
+
   stopPlayback();
   const chapterMax = state.currentBook.chapters.length - 1;
-  state.currentChapterIndex = Math.min(chapterMax, Math.max(0, index));
+  const nextChapterIndex = Math.min(chapterMax, Math.max(0, index));
+  const nextChapterMeta = state.currentBook.chapters[nextChapterIndex];
+  if (isChapterLockedForGuest(nextChapterMeta)) {
+    requestLoginForChapterAccess(nextChapterMeta);
+    state._chapterLoading = false;
+    updateChapterNavUi();
+    return;
+  }
+
+  state.currentChapterIndex = nextChapterIndex;
   loadAndRenderChapterByIndex(state.currentChapterIndex)
-    .then(saveProgress)
+    .then(() => {
+      saveProgress();
+      state._chapterLoading = false;
+      updateChapterNavUi();
+    })
     .catch((error) => {
+      state._chapterLoading = false;
+      updateChapterNavUi();
       console.error("Failed to load chapter:", error);
+      if (error && (error.code === "CHAPTER_LOCKED" || error.status === 403 || error.loginRequired)) {
+        requestLoginForChapterAccess(nextChapterMeta);
+        return;
+      }
       elements.readerContent.innerHTML = "<p>Unable to load this chapter.</p>";
       showToast("Unable to load chapter");
     });
@@ -1474,7 +1737,13 @@ function moveByPage(direction) {
     return;
   }
 
-  jumpToChapter(state.currentChapterIndex + direction);
+  // Prevent out-of-bounds navigation
+  const nextIdx = state.currentChapterIndex + direction;
+  if (!state.currentBook || nextIdx < 0 || nextIdx >= state.currentBook.chapters.length) {
+    updateChapterNavUi();
+    return;
+  }
+  jumpToChapter(nextIdx);
 }
 
 function setContentFormat(format) {
@@ -1544,17 +1813,28 @@ function bindEvents() {
     }
   });
 
-  elements.prevBtn.addEventListener("click", () => moveByPage(-1));
-  elements.nextBtn.addEventListener("click", () => moveByPage(1));
+  if (elements.prevBtn) {
+    elements.prevBtn.addEventListener("click", () => {
+      if (state._chapterLoading) return;
+      moveByPage(-1);
+    });
+  }
+  if (elements.nextBtn) {
+    elements.nextBtn.addEventListener("click", () => {
+      if (state._chapterLoading) return;
+      moveByPage(1);
+    });
+  }
 
   elements.progressSlider.addEventListener("input", () => {
-    if (!state.currentBook) {
+    if (!state.currentBook || !state.currentChapter) {
       return;
     }
-    const chapterCount = state.currentBook.chapters.length;
-    const raw = Number(elements.progressSlider.value) / 100;
-    const targetIndex = Math.floor(raw * chapterCount);
-    jumpToChapter(Math.min(chapterCount - 1, targetIndex));
+
+    const raw = Math.max(0, Math.min(100, Number(elements.progressSlider.value) || 0)) / 100;
+    const maxScrollTop = Math.max(0, elements.readingViewport.scrollHeight - elements.readingViewport.clientHeight);
+    elements.readingViewport.scrollTop = raw * maxScrollTop;
+    updateProgressUi();
   });
 
   let progressTimer = null;
@@ -1571,6 +1851,13 @@ function bindEvents() {
     if (!button) {
       return;
     }
+
+    if (button.dataset.chapterLocked === "true") {
+      const chapterMeta = state.currentBook?.chapters?.[Number(button.dataset.chapterIndex)];
+      requestLoginForChapterAccess(chapterMeta);
+      return;
+    }
+
     jumpToChapter(Number(button.dataset.chapterIndex));
   });
 
@@ -1658,6 +1945,13 @@ function bindEvents() {
   });
 
   elements.readerContent.addEventListener("click", (event) => {
+    const endNavButton = event.target.closest("button[data-chapter-end-nav]");
+    if (endNavButton) {
+      const direction = endNavButton.dataset.chapterEndNav === "prev" ? -1 : 1;
+      moveByPage(direction);
+      return;
+    }
+
     const sentence = event.target.closest(".sentence[data-sentence-index]");
     if (!sentence || !state.currentChapter) {
       return;
@@ -1757,88 +2051,288 @@ function renderErrorState(message) {
   elements.toolbarBookTitle.textContent = "Unable to load book";
   elements.toolbarChapterTitle.textContent = "";
   elements.chapterList.innerHTML = "";
-  elements.prevBtn.disabled = true;
-  elements.nextBtn.disabled = true;
+  if (elements.prevBtn) {
+    elements.prevBtn.disabled = true;
+  }
+  if (elements.nextBtn) {
+    elements.nextBtn.disabled = true;
+  }
 }
 
 function renderEmptyState() {
   elements.readerContent.innerHTML = "<p>No published chapters available for this book.</p>";
   elements.toolbarChapterTitle.textContent = "No chapters";
   elements.chapterList.innerHTML = "";
-  elements.prevBtn.disabled = true;
-  elements.nextBtn.disabled = true;
+  if (elements.prevBtn) {
+    elements.prevBtn.disabled = true;
+  }
+  if (elements.nextBtn) {
+    elements.nextBtn.disabled = true;
+  }
 }
 
 async function bootstrap() {
-  initListenSystem();
-  loadSettings();
-  loadTtsVoicePrefs();
-  applySettings();
-  elements.miniSpeedSelect.value = String(state.listen.speed);
-  bindEvents();
-  updateMiniPlayerUi();
-
-  const { bookId, chapterId, chapter, mode } = getParams();
-  if (!bookId) {
-    renderErrorState("Missing bookId in URL.");
-    return;
-  }
-
-  renderLoadingState("Loading chapters...");
-  setupBackLink(bookId);
-
+  console.debug('[reader] reader init started');
   try {
-    const [bookMeta, chapters, audioTracks] = await Promise.all([
-      fetchBookMetadata(bookId),
-      fetchChapterList(bookId),
-      fetchBookAudioTracks(bookId).catch(() => []),
-    ]);
+    // Defensive DOM checks
+    const requiredSelectors = [
+      ['toolbarBookTitle', elements.toolbarBookTitle],
+      ['toolbarChapterTitle', elements.toolbarChapterTitle],
+      ['chapterList', elements.chapterList],
+      ['readerContent', elements.readerContent],
+      ['bookmarkBtn', elements.bookmarkBtn],
+    ];
+    let domOk = true;
+    for (const [name, el] of requiredSelectors) {
+      if (!el) {
+        console.error(`[reader] MISSING DOM element: #${name}`);
+        domOk = false;
+      } else {
+        console.debug(`[reader] Found DOM element: #${name}`);
+      }
+    }
+    if (!domOk) {
+      throw new Error('Missing required DOM elements. See console for details.');
+    }
 
-    hydrateAudioMap(audioTracks);
+    const { bookId, chapterId, chapter, mode } = getParams();
+    console.debug('[reader] Parsed URL params:', { bookId, chapterId, chapter, mode });
+    if (!bookId) {
+      renderErrorState("Missing bookId in URL.");
+      console.error('[reader] No bookId in URL params');
+      clearLoadingState();
+      return;
+    }
 
-    const chapterIndexById = new Map(chapters.map((item, index) => [item.id, index]));
-    const audiobookTracks = audioTracks
-      .filter((track) => track && track.chapter && track.chapter.id)
-      .map((track, index) => ({
-        number: Number(track.order || index + 1),
-        title: track.title || `Track ${index + 1}`,
-        chapterIndex: chapterIndexById.has(track.chapter.id) ? chapterIndexById.get(track.chapter.id) : -1,
-      }))
-      .filter((track) => track.chapterIndex >= 0);
+    // Initialize auth state before lock checks so chapter gating is accurate.
+    await fetchCurrentUser();
 
-    state.currentBook = {
-      ...bookMeta,
-      chapters,
-      audiobookTracks,
-      hasAudiobook: Boolean(audiobookTracks.length),
-    };
-  } catch (error) {
-    console.error("Failed to initialize reader:", error);
-    renderErrorState("Unable to load this book. Return to library and try again.");
-    return;
+    renderLoadingState("Loading chapters...");
+    setupBackLink(bookId);
+
+    // Helper: Normalize book object
+    function normalizeBookObj(raw, index = 0) {
+      if (!raw) return null;
+      return {
+        id: raw.id || raw.bookId || `book-${index + 1}`,
+        title: raw.title || raw.name || 'Untitled',
+        author: raw.authorName || raw.author || 'Unknown Author',
+        chapters: Array.isArray(raw.chapters) ? raw.chapters : [],
+        coverUrl: raw.coverUrl || '',
+        genre: raw.genre || '',
+        audiobookTracks: raw.audiobookTracks || [],
+        hasAudiobook: !!(raw.audiobookTracks && raw.audiobookTracks.length),
+        ...raw
+      };
+    }
+
+    // Helper: Normalize chapter object
+    function normalizeChapterObj(raw, idx = 0) {
+      if (!raw) return null;
+      return {
+        id: raw.id || raw.chapterId || raw.slug || String(idx + 1),
+        number: raw.number || raw.chapterNumber || idx + 1,
+        title: raw.title || `Chapter ${idx + 1}`,
+        content: raw.content || raw.text || raw.body || '',
+        ...raw
+      };
+    }
+
+    // Try all sources for book data
+    let book = null;
+    let chapters = [];
+    let audioTracks = [];
+    let bookSource = 'api';
+    try {
+      // 1. Try API
+      const [bookMeta, apiChapters, apiAudioTracks] = await Promise.all([
+        fetchBookMetadata(bookId),
+        fetchChapterList(bookId),
+        fetchBookAudioTracks(bookId).catch(() => []),
+      ]);
+      book = normalizeBookObj(bookMeta);
+      chapters = Array.isArray(apiChapters) ? apiChapters.map(normalizeChapterObj) : [];
+      audioTracks = Array.isArray(apiAudioTracks) ? apiAudioTracks : [];
+      bookSource = 'api';
+      if (!book || !chapters.length) throw new Error('API book/chapters missing');
+    } catch (apiErr) {
+      console.warn('[reader] API book/chapters failed:', apiErr);
+      // 2. Try local app dataset (window.allBooks or window.books)
+      let localBooks = window.allBooks || window.books || [];
+      if (!Array.isArray(localBooks)) localBooks = [];
+      book = normalizeBookObj(localBooks.find(b => (b.id || b.bookId) == bookId));
+      if (book && Array.isArray(book.chapters) && book.chapters.length) {
+        chapters = book.chapters.map(normalizeChapterObj);
+        bookSource = 'localApp';
+      } else {
+        // 3. Try localStorage continue-reading/library
+        try {
+          const cr = JSON.parse(localStorage.getItem('novara.continueReading') || '[]');
+          const lib = JSON.parse(localStorage.getItem('novara.savedBooks') || '[]');
+          const all = [...cr, ...lib];
+          const found = all.find(e => (e.bookId || e.id) == bookId);
+          if (found) {
+            book = normalizeBookObj(found);
+            if (Array.isArray(book.chapters) && book.chapters.length) {
+              chapters = book.chapters.map(normalizeChapterObj);
+              bookSource = 'localStorage';
+            }
+          }
+        } catch (lsErr) {
+          console.error('[reader] localStorage parse error:', lsErr);
+        }
+      }
+    }
+
+    // Defensive: fallback to empty
+    if (!book) {
+      renderErrorState("Book not found. Return to library and try again.");
+      console.error('[reader] Book not found after all sources', { bookId });
+      clearLoadingState();
+      return;
+    }
+    if (!Array.isArray(chapters)) chapters = [];
+    book.chapters = chapters;
+    // Attach audioTracks if available
+    if (Array.isArray(audioTracks) && audioTracks.length) {
+      book.audiobookTracks = audioTracks;
+      book.hasAudiobook = true;
+    }
+
+    // Debug logs
+    console.debug('[reader] Book resolved:', book);
+    console.debug('[reader] Chapter count:', chapters.length);
+
+    // Normalize chapters array
+    if (!Array.isArray(book.chapters) || !book.chapters.length) {
+      renderErrorState("No chapters available for this book.");
+      clearLoadingState();
+      console.error('[reader] Book has no chapters', { book });
+      return;
+    }
+
+    // Find chapter index by id, string, or fallback
+    function findChapterIndex(chapters, chapterId, chapterNum) {
+      if (!Array.isArray(chapters) || !chapters.length) return 0;
+      if (chapterId) {
+        // Try exact id match
+        let idx = chapters.findIndex(c => c.id == chapterId);
+        if (idx >= 0) return idx;
+        // Try string match
+        idx = chapters.findIndex(c => String(c.id).toLowerCase() === String(chapterId).toLowerCase());
+        if (idx >= 0) return idx;
+        // Try slug match
+        idx = chapters.findIndex(c => c.slug && c.slug == chapterId);
+        if (idx >= 0) return idx;
+      }
+      // Fallback to chapter number (1-based)
+      if (chapterNum && chapters[chapterNum - 1]) return chapterNum - 1;
+      // Fallback to first
+      return 0;
+    }
+
+    let chapterIdx = findChapterIndex(book.chapters, chapterId, chapter);
+    let resolvedChapter = book.chapters[chapterIdx];
+    if (!resolvedChapter) {
+      // fallback to first valid chapter
+      chapterIdx = 0;
+      resolvedChapter = book.chapters[0];
+      console.warn('[reader] Requested chapter not found, loading first chapter.');
+    }
+    state.currentBook = book;
+    state.currentChapterIndex = chapterIdx;
+    // Debug log
+    console.debug('[reader] Chapter resolved:', resolvedChapter);
+
+    // Hydrate audio map if needed
+    if (Array.isArray(book.audiobookTracks)) hydrateAudioMap(book.audiobookTracks);
+
+
+    // Render sidebar/chapters list (unchanged)
+    function renderChaptersList() {
+      elements.chapterList.innerHTML = '';
+      if (!state.currentBook || !Array.isArray(state.currentBook.chapters)) return;
+      state.currentBook.chapters.forEach((chapter, idx) => {
+        const li = document.createElement('li');
+        li.innerHTML = `<button type=\"button\" class=\"chapter-btn${idx === state.currentChapterIndex ? ' active' : ''}\" data-chapter-index=\"${idx}\"><small>Chapter ${chapter.number}</small> ${chapter.title}</button>`;
+        elements.chapterList.appendChild(li);
+      });
+      console.debug('[reader] renderChaptersList completed');
+    }
+
+    // Render main chapter content (now expects chapterWithContent)
+    function renderChapter(chapter) {
+      console.debug('[reader] render started');
+      if (!chapter) {
+        elements.readerContent.innerHTML = '<p>Chapter content unavailable.</p>';
+        clearLoadingState();
+        console.debug('[reader] render completed');
+        return;
+      }
+      // Book/chapter titles
+      elements.toolbarBookTitle.textContent = state.currentBook.title;
+      elements.toolbarChapterTitle.textContent = `Chapter ${chapter.number}: ${chapter.title}`;
+      // Main content
+      let content = chapter.content || chapter.text || chapter.body || '';
+      if (!content.trim()) {
+        elements.readerContent.innerHTML = '<p>Chapter content unavailable.</p>';
+        clearLoadingState();
+        console.debug('[reader] render completed');
+        return;
+      }
+      // Simple paragraph split
+      const paragraphs = content.split(/\n\s*\n/).map(p => p.trim()).filter(Boolean);
+      elements.readerContent.innerHTML = paragraphs.map(p => `<p>${p}</p>`).join('');
+      clearLoadingState();
+      console.debug('[reader] render completed');
+    }
+
+    renderChaptersList();
+
+    // Fetch full chapter content before rendering
+    try {
+      console.debug('[reader] fetching chapter content for id:', resolvedChapter.id);
+      const fullChapter = await fetchChapterById(resolvedChapter.id);
+      console.debug('[reader] fetch success for chapter id:', resolvedChapter.id);
+      const chapterWithContent = {
+        ...resolvedChapter,
+        content: fullChapter.content || ''
+      };
+      renderChapter(chapterWithContent);
+    } catch (err) {
+      console.error('[reader] Failed to load chapter:', err);
+      elements.readerContent.innerHTML = '<p>Failed to load chapter.</p>';
+      clearLoadingState();
+    }
+
+    renderNotes && renderNotes();
+    if (state.currentUser && typeof resumeProgress === 'function') {
+      await resumeProgress();
+    }
+    applyIncomingMode && applyIncomingMode(mode);
+    // Update continue-reading progress after successful load
+    try {
+      if (typeof addContinueReading === 'function') {
+        addContinueReading({
+          bookId: book.id,
+          source: bookSource,
+          currentChapter: resolvedChapter?.id,
+          progress: chapterIdx
+        });
+      }
+    } catch (err) {
+      console.error('[reader] Failed to update continue-reading:', err);
+    }
+  } catch (err) {
+    renderErrorState('Unable to load book or chapter.');
+    clearLoadingState();
+    console.error('[reader] reader init error:', err);
   }
-
-  if (!state.currentBook.chapters.length) {
-    renderEmptyState();
-    return;
-  }
-
-  const chapterIndexFromId = state.currentBook.chapters.findIndex((item) => item.id === chapterId);
-  const fallbackIndex = Math.min(state.currentBook.chapters.length - 1, Math.max(0, chapter - 1));
-  state.currentChapterIndex = chapterIndexFromId >= 0 ? chapterIndexFromId : fallbackIndex;
-
-  renderChapterDrawer();
-  try {
-    await loadAndRenderChapterByIndex(state.currentChapterIndex);
-  } catch (error) {
-    console.error("Failed to load initial chapter:", error);
-    renderErrorState("Unable to load chapter content.");
-    return;
-  }
-
-  renderNotes();
-  await resumeProgress();
-  applyIncomingMode(mode);
 }
 
+function clearLoadingState() {
+  if (elements.toolbarBookTitle) elements.toolbarBookTitle.textContent = '';
+  if (elements.toolbarChapterTitle) elements.toolbarChapterTitle.textContent = '';
+}
+    
 bootstrap();

@@ -32,33 +32,33 @@ function showError(message) {
 }
 
 async function guardAccess() {
-  if (!window.NovelReadSession) {
+  if (!window.NovaraSession) {
     return false;
   }
 
-  const user = await window.NovelReadSession.fetchCurrentUser();
+  const user = await window.NovaraSession.fetchCurrentUser();
   if (!user) {
     window.location.href = "./index.html";
     return false;
   }
 
-  const allowed = window.NovelReadSession.canUseWriter(user) || user.role === "ADMIN";
+  const allowed = window.NovaraSession.canUseWriter(user) || user.role === "ADMIN";
   if (!allowed) {
     window.location.href = "./writer-onboarding.html";
     return false;
   }
 
-  window.NovelReadSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
+  window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
     currentDashboard: "writer",
-    readerHref: window.NovelReadSession.APP_ROUTES.readerDashboard,
-    writerHref: window.NovelReadSession.APP_ROUTES.writerDashboard,
+    readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
+    writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
   });
 
   return true;
 }
 
 async function fetchStory() {
-  const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/stories/${storyId}`, {
+  const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/stories/${storyId}`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -73,7 +73,7 @@ async function fetchStory() {
 }
 
 async function fetchChapters() {
-  const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/stories/${storyId}/chapters`, {
+  const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/stories/${storyId}/chapters`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -160,7 +160,7 @@ function bindChapterForm() {
     }
 
     try {
-      const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/stories/${storyId}/chapters`, {
+      const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/stories/${storyId}/chapters`, {
         method: "POST",
         credentials: "include",
         headers: {
@@ -182,7 +182,7 @@ function bindChapterForm() {
 
       resetForm();
       await reloadAll();
-      window.NovelReadSession.showToast("Chapter saved");
+      window.NovaraSession.showToast("Chapter saved");
     } catch (error) {
       showError("Unable to save chapter right now.");
     }
@@ -204,13 +204,13 @@ function bindChapterActions() {
     const chapterId = row.dataset.chapterId;
 
     if (button.dataset.action === "delete") {
-      const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/chapters/${chapterId}`, {
+      const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/chapters/${chapterId}`, {
         method: "DELETE",
         credentials: "include",
       });
       if (response.ok) {
         await reloadAll();
-        window.NovelReadSession.showToast("Chapter deleted");
+        window.NovaraSession.showToast("Chapter deleted");
       }
       return;
     }
@@ -220,7 +220,7 @@ function bindChapterActions() {
       if (!nextTitle) {
         return;
       }
-      const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/chapters/${chapterId}`, {
+      const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/chapters/${chapterId}`, {
         method: "PUT",
         credentials: "include",
         headers: {
@@ -230,7 +230,7 @@ function bindChapterActions() {
       });
       if (response.ok) {
         await reloadAll();
-        window.NovelReadSession.showToast("Chapter updated");
+        window.NovaraSession.showToast("Chapter updated");
       }
     }
   });
@@ -242,7 +242,7 @@ function bindStoryActions() {
   });
 
   elements.publishBtn.addEventListener("click", async () => {
-    const response = await fetch(`${window.NovelReadSession.API_BASE_URL}/api/writer/stories/${storyId}/publish`, {
+    const response = await fetch(`${window.NovaraSession.API_BASE_URL}/api/writer/stories/${storyId}/publish`, {
       method: "POST",
       credentials: "include",
     });
@@ -254,14 +254,14 @@ function bindStoryActions() {
     }
 
     await reloadAll();
-    window.NovelReadSession.showToast("Story published");
+    window.NovaraSession.showToast("Story published");
   });
 }
 
 async function bootstrap() {
   storyId = getStoryIdFromPath();
   if (!storyId) {
-    window.location.href = window.NovelReadSession.APP_ROUTES.writerDashboard;
+    window.location.href = window.NovaraSession.APP_ROUTES.writerDashboard;
     return;
   }
 
@@ -272,8 +272,8 @@ async function bootstrap() {
 
   if (elements.writerSignOutBtn) {
     elements.writerSignOutBtn.addEventListener("click", async () => {
-      if (window.NovelReadSession && typeof window.NovelReadSession.signOut === "function") {
-        await window.NovelReadSession.signOut("./index.html");
+      if (window.NovaraSession && typeof window.NovaraSession.signOut === "function") {
+        await window.NovaraSession.signOut("./index.html");
         return;
       }
       window.location.href = "./index.html";

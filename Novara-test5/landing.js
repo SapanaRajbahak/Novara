@@ -9,7 +9,30 @@ const genres = [
   "Action",
 ];
 
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const POST_LOGIN_REDIRECT_KEY = "novara.postLoginRedirect";
 
 const elements = {
   featuredStoriesGrid: document.getElementById("featuredStoriesGrid"),
@@ -35,10 +58,11 @@ let currentUser = null;
 let featuredStories = [];
 let featuredSource = "empty";
 const previewCache = new Map();
+let activePreviewState = null;
 
 function getLocalUploadedBooks() {
   try {
-    const parsed = JSON.parse(localStorage.getItem("novelread.admin.uploadedBooks") || "[]");
+    const parsed = JSON.parse(localStorage.getItem("novara.admin.uploadedBooks") || "[]");
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
     return [];
@@ -98,6 +122,19 @@ function createCoverSvg(title, genre) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+function toAbsoluteCoverUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:")) {
+    return raw;
+  }
+
+  return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
 function setAuthMessage(message, tone) {
   elements.authMessage.textContent = message;
   elements.authMessage.className = `auth-message${tone ? ` ${tone}` : ""}`;
@@ -133,6 +170,36 @@ function openAuthModal(mode, redirectTo) {
   openModal(elements.authModal);
 }
 
+function sanitizeRedirectPath(rawValue) {
+  const value = String(rawValue || "").trim();
+  if (!value) {
+    return "";
+  }
+  if (/^https?:\/\//i.test(value) || value.startsWith("//")) {
+    return "";
+  }
+  return value.startsWith("/") ? value.slice(1) : value;
+}
+
+function resolveInitialAuthIntent() {
+  const params = new URLSearchParams(window.location.search);
+  const queryNext = sanitizeRedirectPath(params.get("next") || "");
+  const queryAuth = params.get("auth") === "signup" ? "signup" : "signin";
+
+  if (queryNext) {
+    pendingRedirect = queryNext;
+    return { shouldOpenAuth: true, mode: queryAuth };
+  }
+
+  const storedNext = sanitizeRedirectPath(localStorage.getItem(POST_LOGIN_REDIRECT_KEY) || "");
+  if (storedNext) {
+    pendingRedirect = storedNext;
+    return { shouldOpenAuth: true, mode: "signin" };
+  }
+
+  return { shouldOpenAuth: false, mode: "signin" };
+}
+
 function extractPreviewText(content, fallback) {
   if (!content || typeof content !== "string") {
     return fallback || "Preview unavailable for this story right now.";
@@ -154,6 +221,160 @@ function extractPreviewText(content, fallback) {
   return `${normalized.slice(0, 900).trim()}...`;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function normalizePreviewChapters(chapters) {
+  return chapters
+    .filter((chapter) => chapter && chapter.id)
+    .map((chapter, index) => ({
+      id: chapter.id,
+      chapterNumber: Number(chapter.chapterNumber || index + 1),
+      title: chapter.title || `Chapter ${index + 1}`,
+    }))
+    .sort((a, b) => a.chapterNumber - b.chapterNumber)
+    .map((chapter) => ({
+      ...chapter,
+      isLockedForGuest: chapter.chapterNumber > 1,
+    }));
+}
+
+async function fetchPreviewChapterContent(chapterId, fallbackText) {
+  if (!chapterId) {
+    return {
+      content: extractPreviewText("", fallbackText),
+      isLocked: false,
+    };
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/chapters/${encodeURIComponent(chapterId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (response.status === 403) {
+      return {
+        content: "🔒 Unlock this chapter by logging in or signing up.",
+        isLocked: true,
+      };
+    }
+
+    if (!response.ok) {
+      return {
+        content: extractPreviewText("", fallbackText),
+        isLocked: false,
+      };
+    }
+
+    const payload = await response.json();
+    const content = payload && payload.data ? payload.data.content : "";
+    return {
+      content: extractPreviewText(content, fallbackText),
+      isLocked: false,
+    };
+  } catch (error) {
+    return {
+      content: extractPreviewText("", fallbackText),
+      isLocked: false,
+    };
+  }
+}
+
+function renderPreviewChapterControls(preview, activeChapterId) {
+  const controls = elements.chapterPreviewModal.querySelector(".chapter-controls");
+  if (!controls) {
+    return;
+  }
+
+  controls.innerHTML = preview.chapters
+    .map((chapter) => {
+      const isActive = chapter.id === activeChapterId;
+      const isLocked = chapter.isLockedForGuest;
+      const label = `Chapter ${chapter.chapterNumber}: ${chapter.title}`;
+      const displayLabel = isLocked
+        ? `🔒 Unlock Chapter ${chapter.chapterNumber}`
+        : label;
+      const safeLabel = escapeHtml(label);
+      const safeDisplayLabel = escapeHtml(displayLabel);
+
+      return `
+        <button
+          type="button"
+          class="chapter-chip ${isActive ? "active" : ""} ${isLocked ? "locked" : ""}"
+          data-preview-chapter-id="${chapter.id}"
+          ${isLocked ? 'data-preview-chapter-locked="true"' : ""}
+          title="${safeLabel}"
+        >
+          ${safeDisplayLabel}
+        </button>
+      `;
+    })
+    .join("");
+}
+
+function setActivePreviewState(story, preview, activeChapterId) {
+  activePreviewState = {
+    story,
+    preview,
+    activeChapterId,
+  };
+
+  renderPreviewChapterControls(preview, activeChapterId);
+}
+
+async function showPreviewChapterContent(chapter) {
+  if (!activePreviewState || !chapter) {
+    return;
+  }
+
+  setActivePreviewState(activePreviewState.story, activePreviewState.preview, chapter.id);
+  elements.chapterPreviewBody.textContent = "Loading chapter preview...";
+  elements.lockedChapterPrompt.hidden = true;
+
+  const hasCached = activePreviewState.preview.chapterPreviews[chapter.id];
+  const previewContent = hasCached
+    ? activePreviewState.preview.chapterPreviews[chapter.id]
+    : await fetchPreviewChapterContent(chapter.id, activePreviewState.story.description);
+
+  activePreviewState.preview.chapterPreviews[chapter.id] = previewContent;
+  elements.chapterPreviewTitle.textContent = `${activePreviewState.story.title} · Chapter ${chapter.chapterNumber} Preview`;
+
+  if (previewContent.isLocked) {
+    elements.chapterPreviewBody.textContent = "🔒 Unlock this chapter by logging in or signing up.";
+    elements.lockedChapterPrompt.hidden = false;
+    return;
+  }
+
+  elements.chapterPreviewBody.textContent = previewContent.content;
+}
+
+async function openStoryInReader(story) {
+  if (!story || !story.id) {
+    return;
+  }
+
+  try {
+    const preview = await loadPreviewForStory(story);
+    const firstChapter = preview.chapters.find((chapter) => Number(chapter.chapterNumber) === 1) || preview.chapters[0];
+
+    if (firstChapter && firstChapter.id) {
+      window.location.href = `reader.html?bookId=${encodeURIComponent(story.id)}&chapterId=${encodeURIComponent(firstChapter.id)}`;
+      return;
+    }
+  } catch (error) {
+    // Fallback to the book detail page if chapter lookup fails.
+  }
+
+  window.location.href = `book.html?id=${encodeURIComponent(story.id)}`;
+}
+
 async function fetchLiveStories() {
   function normalizeStories(books) {
     return books.map((book, index) => ({
@@ -162,6 +383,7 @@ async function fetchLiveStories() {
       author: book.authorName || book.author || "Unknown Author",
       genre: book.genre || "General",
       description: book.description || "No description available yet.",
+      coverUrl: toAbsoluteCoverUrl(book.coverUrl),
     }));
   }
 
@@ -183,18 +405,6 @@ async function fetchLiveStories() {
   const localUploadedBooks = getLocalUploadedBooks();
   if (localUploadedBooks.length > 0) {
     return { stories: normalizeStories(localUploadedBooks), source: "local-storage" };
-  }
-
-  try {
-    const libraryResponse = await fetch("./data/library.json", { cache: "no-store" });
-    if (libraryResponse.ok) {
-      const libraryPayload = await libraryResponse.json();
-      if (libraryPayload && Array.isArray(libraryPayload.books) && libraryPayload.books.length > 0) {
-        return { stories: normalizeStories(libraryPayload.books), source: "library-json" };
-      }
-    }
-  } catch (error) {
-    // Fall through to empty state.
   }
 
   return { stories: [], source: "empty" };
@@ -238,19 +448,32 @@ function renderFeaturedStories() {
   elements.featuredStoriesGrid.innerHTML = featuredStories
     .map((story) => `
       <article class="story-card">
-        <img class="story-cover" src="${createCoverSvg(story.title, story.genre)}" alt="${story.title} cover" loading="lazy" />
+        <img class="story-cover" src="${story.coverUrl || createCoverSvg(story.title, story.genre)}" alt="${story.title} cover" loading="lazy" data-fallback-cover="${createCoverSvg(story.title, story.genre)}" data-open-story="${story.id}" />
         <div class="story-content">
-          <h3>${story.title}</h3>
+          <h3 data-open-story="${story.id}">${story.title}</h3>
           <p class="story-meta">${story.author} · ${story.genre}</p>
           <p class="story-description">${story.description}</p>
           <div class="story-actions">
-            <button type="button" class="preview-btn" data-preview-story="${story.id}">Preview Chapter 1</button>
-            <button type="button" data-locked-preview="true">Locked Chapters</button>
+            <button type="button" class="preview-btn" data-preview-story="${story.id}">Read Chapter 1 Free</button>
+            <button type="button" data-locked-preview="true" data-preview-story="${story.id}">View Chapters</button>
           </div>
         </div>
       </article>
     `)
     .join("");
+
+  elements.featuredStoriesGrid.querySelectorAll("img.story-cover[data-fallback-cover]").forEach((img) => {
+    img.addEventListener(
+      "error",
+      () => {
+        const fallbackCover = img.getAttribute("data-fallback-cover");
+        if (fallbackCover && img.src !== fallbackCover) {
+          img.src = fallbackCover;
+        }
+      },
+      { once: true }
+    );
+  });
 }
 
 async function restoreLocalBooksToBackend() {
@@ -323,6 +546,9 @@ async function loadPreviewForStory(story) {
   const result = {
     chapter1: extractPreviewText(story.description, "Preview unavailable for this story right now."),
     chapterTitle: "Chapter 1",
+    chapters: [],
+    chapterPreviews: {},
+    activeChapterId: "",
     hasLockedChapters: true,
   };
 
@@ -338,35 +564,44 @@ async function loadPreviewForStory(story) {
 
     const chaptersPayload = await chaptersResponse.json();
     const chapters = Array.isArray(chaptersPayload.data) ? chaptersPayload.data : [];
+    result.chapters = normalizePreviewChapters(chapters);
 
     if (!chapters.length) {
       result.hasLockedChapters = false;
+      result.chapters = [];
       previewCache.set(story.id, result);
       return result;
     }
 
-    const firstChapter = chapters.slice().sort((a, b) => (a.chapterNumber || 0) - (b.chapterNumber || 0))[0];
+    const firstChapter = result.chapters[0] || null;
     if (!firstChapter || !firstChapter.id) {
       previewCache.set(story.id, result);
       return result;
     }
 
     result.chapterTitle = firstChapter.title || "Chapter 1";
-    result.hasLockedChapters = chapters.length > 1;
+    result.activeChapterId = firstChapter.id;
+    result.hasLockedChapters = result.chapters.some((chapter) => chapter.isLockedForGuest);
 
-    const chapterResponse = await fetch(`${API_BASE_URL}/api/chapters/${encodeURIComponent(firstChapter.id)}`, {
-      cache: "no-store",
-    });
-
-    if (chapterResponse.ok) {
-      const chapterPayload = await chapterResponse.json();
-      result.chapter1 = extractPreviewText(
-        chapterPayload && chapterPayload.data ? chapterPayload.data.content : "",
-        extractPreviewText(story.description, "Preview unavailable for this story right now.")
-      );
-    }
+    const firstChapterPreview = await fetchPreviewChapterContent(
+      firstChapter.id,
+      extractPreviewText(story.description, "Preview unavailable for this story right now.")
+    );
+    result.chapter1 = firstChapterPreview.content;
+    result.chapterPreviews[firstChapter.id] = firstChapterPreview;
   } catch (error) {
     // Keep fallback preview from description.
+  }
+
+  if (!result.chapters.length) {
+    result.chapters = [
+      {
+        id: "",
+        chapterNumber: 1,
+        title: "Chapter 1",
+        isLockedForGuest: false,
+      },
+    ];
   }
 
   previewCache.set(story.id, result);
@@ -374,45 +609,24 @@ async function loadPreviewForStory(story) {
 }
 
 async function showChapterPreview(story) {
-  elements.chapterPreviewTitle.textContent = `${story.title} · Chapter 1 Preview`;
+  elements.chapterPreviewTitle.textContent = `${story.title} · Chapter Preview`;
   elements.chapterPreviewMeta.textContent = `${story.author} · ${story.genre}`;
   elements.chapterPreviewBody.textContent = "Loading preview...";
   elements.lockedChapterPrompt.hidden = true;
 
-  elements.chapterPreviewModal.querySelectorAll(".chapter-chip").forEach((chip) => {
-    chip.classList.toggle("active", chip.dataset.chapter === "1");
-    chip.hidden = false;
-  });
-
   openModal(elements.chapterPreviewModal);
 
   const preview = await loadPreviewForStory(story);
-  elements.chapterPreviewBody.textContent = preview.chapter1;
-
-  const chips = elements.chapterPreviewModal.querySelectorAll(".chapter-chip");
-  chips.forEach((chip, index) => {
-    if (index === 0) {
-      chip.textContent = preview.chapterTitle || "Chapter 1";
-      chip.classList.add("active");
-      chip.classList.remove("locked");
-      return;
-    }
-
-    if (preview.hasLockedChapters) {
-      chip.hidden = false;
-      chip.classList.add("locked");
-      chip.classList.remove("active");
-    } else {
-      chip.hidden = true;
-    }
-  });
+  const activeChapter = preview.chapters.find((chapter) => chapter.id === preview.activeChapterId) || preview.chapters[0];
+  setActivePreviewState(story, preview, activeChapter.id);
+  await showPreviewChapterContent(activeChapter);
 }
 
 async function fetchCurrentUser() {
-  if (!window.NovelReadSession) {
+  if (!window.NovaraSession) {
     return null;
   }
-  currentUser = await window.NovelReadSession.fetchCurrentUser();
+  currentUser = await window.NovaraSession.fetchCurrentUser();
   return currentUser;
 }
 
@@ -429,8 +643,9 @@ async function handleWriterJourneyIntent() {
     return;
   }
 
-  if (window.NovelReadSession.canUseWriter(user)) {
-    window.NovelReadSession.setPreferredDashboard("writer");
+  if (window.NovaraSession.canUseWriter(user)) {
+    window.NovaraSession.setPreferredDashboard("writer");
+    window.NovaraSession.setPreferredDashboard("writer");
     window.location.href = "writer-dashboard.html";
     return;
   }
@@ -457,8 +672,8 @@ async function submitSigninWithCredentials(email, password) {
     throw new Error(payload.error || "Unable to sign in");
   }
 
-  if (window.NovelReadSession) {
-    await window.NovelReadSession.fetchCurrentUser(true);
+  if (window.NovaraSession) {
+    await window.NovaraSession.fetchCurrentUser(true);
   }
 
   return payload;
@@ -499,18 +714,50 @@ async function submitSignup(formData) {
 
 function bindEvents() {
   document.addEventListener("click", (event) => {
+    const openStoryTrigger = event.target.closest("[data-open-story]");
+    if (openStoryTrigger) {
+      const story = featuredStories.find((item) => item.id === openStoryTrigger.dataset.openStory);
+      if (story) {
+        openStoryInReader(story);
+      }
+      return;
+    }
+
     const previewTrigger = event.target.closest("[data-preview-story]");
     if (previewTrigger) {
       const story = featuredStories.find((item) => item.id === previewTrigger.dataset.previewStory);
       if (story) {
-        showChapterPreview(story);
+        openStoryInReader(story);
       }
+      return;
+    }
+
+    const previewChapterTrigger = event.target.closest("[data-preview-chapter-id]");
+    if (previewChapterTrigger && activePreviewState) {
+      const chapterId = previewChapterTrigger.dataset.previewChapterId;
+      const chapter = activePreviewState.preview.chapters.find((item) => item.id === chapterId);
+      if (!chapter) {
+        return;
+      }
+
+      const isLockedForGuest = previewChapterTrigger.dataset.previewChapterLocked === "true";
+      if (isLockedForGuest && !currentUser) {
+        elements.lockedChapterPrompt.hidden = false;
+        const targetUrl = `reader.html?bookId=${encodeURIComponent(activePreviewState.story.id)}&chapterId=${encodeURIComponent(chapter.id)}`;
+        openAuthModal("signin", targetUrl);
+        return;
+      }
+
+      showPreviewChapterContent(chapter);
       return;
     }
 
     const lockedPreviewTrigger = event.target.closest("[data-locked-preview]");
     if (lockedPreviewTrigger) {
-      openAuthModal("signin", "reader-dashboard.html");
+      const story = featuredStories.find((item) => item.id === lockedPreviewTrigger.dataset.previewStory);
+      if (story) {
+        openStoryInReader(story);
+      }
       return;
     }
 
@@ -566,6 +813,7 @@ function bindEvents() {
     try {
       await submitSignin(new FormData(elements.signinForm));
       setAuthMessage("Login successful. Redirecting...", "success");
+      localStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
       window.setTimeout(() => {
         window.location.href = pendingRedirect || "reader-dashboard.html";
       }, 260);
@@ -581,6 +829,7 @@ function bindEvents() {
     try {
       await submitSignup(new FormData(elements.signupForm));
       setAuthMessage("Account created. Redirecting...", "success");
+      localStorage.removeItem(POST_LOGIN_REDIRECT_KEY);
       window.setTimeout(() => {
         window.location.href = pendingRedirect || "reader-dashboard.html";
       }, 260);
@@ -602,6 +851,7 @@ function bindEvents() {
 }
 
 async function bootstrap() {
+  const authIntent = resolveInitialAuthIntent();
   renderGenres();
   bindEvents();
   await fetchCurrentUser();
@@ -616,6 +866,10 @@ async function bootstrap() {
   }
 
   renderFeaturedStories();
+
+  if (authIntent.shouldOpenAuth && !currentUser) {
+    openAuthModal(authIntent.mode, pendingRedirect);
+  }
 }
 
 bootstrap();

@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const cors = require("cors");
 const session = require("express-session");
@@ -38,10 +40,12 @@ app.use(
 
 app.use(express.json({ limit: "5mb" }));
 app.use(express.static(path.join(__dirname, "..")));
+app.use("/books", express.static(path.join(__dirname, "..", "books")));
+app.use("/books", express.static(path.join(__dirname, "books")));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "novara-session-secret",
+    secret: process.env.SESSION_SECRET || "Novara-session-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {

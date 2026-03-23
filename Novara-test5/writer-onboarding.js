@@ -21,7 +21,7 @@ function normalizeGenres(value) {
 }
 
 async function loadUserState() {
-  const user = window.NovelReadSession ? await window.NovelReadSession.fetchCurrentUser() : null;
+  const user = window.NovaraSession ? await window.NovaraSession.fetchCurrentUser() : null;
 
   if (!user) {
     setMessage("Sign in with your reader account to enable writer access.", "error");
@@ -35,8 +35,8 @@ async function loadUserState() {
     return;
   }
 
-  if (window.NovelReadSession.canUseWriter(user)) {
-    window.NovelReadSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
+  if (window.NovaraSession.canUseWriter(user)) {
+    window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
       currentDashboard: "writer",
       readerHref: "reader-dashboard.html",
       writerHref: "writer-dashboard.html",
@@ -70,7 +70,7 @@ async function handleSubmit(event) {
   setMessage("Enabling writer access...", "success");
 
   try {
-    await window.NovelReadSession.enableWriterAccess(payload);
+    await window.NovaraSession.enableWriterAccess(payload);
     setMessage("Writer access enabled. Redirecting to your dashboard...", "success");
     window.setTimeout(() => {
       window.location.href = "writer-dashboard.html";

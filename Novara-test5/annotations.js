@@ -1,4 +1,16 @@
-const API_BASE_URL = `${window.location.protocol}//${window.location.hostname || "localhost"}:5001`;
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5001`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const elements = {
   bookFilter: document.getElementById("bookFilter"),
@@ -118,17 +130,18 @@ function findSourceItem(type, id) {
   return list.find((item) => item.id === id) || null;
 }
 
-async function loadAnnotationsData() {
-  const payload = await apiRequest("/api/profile/annotations");
-  const data = payload.data || {};
-  state.bookmarks = Array.isArray(data.bookmarks) ? data.bookmarks : [];
-  state.highlights = Array.isArray(data.highlights) ? data.highlights : [];
-  state.notes = Array.isArray(data.notes) ? data.notes : [];
+// Use localStorage fallback for bookmarks if backend is not ready
+function loadAnnotationsData() {
+  // Only bookmarks for now; highlights/notes can be added similarly
+  state.bookmarks = (getBookmarks && typeof getBookmarks === 'function')
+    ? getBookmarks().filter(e => e.userId === (getCurrentUserId && getCurrentUserId() || 'guest'))
+    : [];
+  // Optionally: state.highlights = ...; state.notes = ...;
 }
 
-async function reloadAndRender() {
+function reloadAndRender() {
   const previousFilter = state.selectedBook;
-  await loadAnnotationsData();
+  loadAnnotationsData();
   populateBookFilter();
   const selectedStillExists = elements.bookFilter.querySelector(`option[value="${previousFilter}"]`);
   state.selectedBook = selectedStillExists ? previousFilter : "all";
@@ -136,80 +149,47 @@ async function reloadAndRender() {
   renderAll();
 }
 
-async function updateAnnotation(type, item, value) {
-  if (!item || !item.id) {
-    return;
+function updateAnnotation(type, item, value) {
+  if (!item || !item.bookId) return;
+  if (type === 'bookmarks') {
+    // Update note/label if needed
+    let entries = getBookmarks();
+    entries = entries.map(e => (e.bookId === item.bookId ? { ...e, note: value } : e));
+    setBookmarks(entries);
+    reloadAndRender();
   }
-
-  const endpointByType = {
-    bookmarks: `/api/profile/annotations/bookmarks/${encodeURIComponent(item.id)}`,
-    highlights: `/api/profile/annotations/highlights/${encodeURIComponent(item.id)}`,
-    notes: `/api/profile/annotations/notes/${encodeURIComponent(item.id)}`,
-  };
-
-  const bodyByType = {
-    bookmarks: { label: value || null },
-    highlights: { note: value || null },
-    notes: { content: value || "" },
-  };
-
-  await apiRequest(endpointByType[type], {
-    method: "PATCH",
-    body: JSON.stringify(bodyByType[type]),
-  });
 }
 
-async function deleteAnnotation(type, item) {
-  if (!item || !item.id) {
-    return;
+function deleteAnnotation(type, item) {
+  if (!item || !item.bookId) return;
+  if (type === 'bookmarks') {
+    let entries = getBookmarks();
+    entries = entries.filter(e => e.bookId !== item.bookId);
+    setBookmarks(entries);
+    reloadAndRender();
   }
-
-  const endpointByType = {
-    bookmarks: `/api/profile/annotations/bookmarks/${encodeURIComponent(item.id)}`,
-    highlights: `/api/profile/annotations/highlights/${encodeURIComponent(item.id)}`,
-    notes: `/api/profile/annotations/notes/${encodeURIComponent(item.id)}`,
-  };
-
-  await apiRequest(endpointByType[type], { method: "DELETE" });
 }
 
-async function handleItemAction(type, action, id) {
+function handleItemAction(type, action, id) {
   const item = findSourceItem(type, id);
-  if (!item) {
-    return;
-  }
-
-  try {
-    if (action === "edit") {
-      const promptLabel = type === "bookmarks" ? "Update bookmark label:" : "Update note:";
-      const currentValue = type === "bookmarks" ? item.snippet : item.note;
-      const input = window.prompt(promptLabel, currentValue === "-" ? "" : currentValue);
-      if (input === null) {
-        return;
-      }
-
-      const nextValue = input.trim();
-      if (type === "notes" && !nextValue) {
-        window.alert("Note content cannot be empty.");
-        return;
-      }
-
-      await updateAnnotation(type, item, nextValue);
-      await reloadAndRender();
+  if (!item) return;
+  if (action === "edit") {
+    const promptLabel = type === "bookmarks" ? "Update bookmark label:" : "Update note:";
+    const currentValue = type === "bookmarks" ? item.snippet : item.note;
+    const input = window.prompt(promptLabel, currentValue === "-" ? "" : currentValue);
+    if (input === null) return;
+    const nextValue = input.trim();
+    if (type === "notes" && !nextValue) {
+      window.alert("Note content cannot be empty.");
       return;
     }
-
-    if (action === "remove") {
-      const confirmed = window.confirm(`Are you sure you want to ${ACTION_LABELS[type].remove.toLowerCase()}?`);
-      if (!confirmed) {
-        return;
-      }
-
-      await deleteAnnotation(type, item);
-      await reloadAndRender();
-    }
-  } catch (error) {
-    window.alert("Unable to update this annotation right now. Please try again.");
+    updateAnnotation(type, item, nextValue);
+    return;
+  }
+  if (action === "remove") {
+    const confirmed = window.confirm(`Are you sure you want to ${ACTION_LABELS[type].remove.toLowerCase()}?`);
+    if (!confirmed) return;
+    deleteAnnotation(type, item);
   }
 }
 
@@ -347,15 +327,14 @@ function bindEvents() {
   });
 }
 
-async function bootstrap() {
+function bootstrap() {
   try {
-    await loadAnnotationsData();
+    loadAnnotationsData();
   } catch (error) {
     state.bookmarks = [];
     state.highlights = [];
     state.notes = [];
   }
-
   populateBookFilter();
   bindEvents();
   renderAll();
