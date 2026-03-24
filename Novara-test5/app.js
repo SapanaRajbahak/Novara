@@ -230,7 +230,8 @@ async function fetchBooksCatalog() {
 
   for (const apiBase of getApiBaseCandidates()) {
     try {
-      const response = await fetch(`${apiBase}/api/books?page=1&limit=120&sort=newest`, {
+      // Backend only allows limit 1-100
+      const response = await fetch(`${apiBase}/api/books?page=1&limit=100&sort=newest`, {
         cache: "no-store",
         credentials: "include",
       });
@@ -337,13 +338,17 @@ function createBrowseCard(book) {
   const card = document.createElement("article");
   card.className = "browse-card";
   card.innerHTML = `
-    <img class="cover" src="${book.coverUrl}" alt="${book.title} cover" loading="lazy" />
-    <p class="title">${book.title}</p>
-    <p class="meta">${book.authorName} · ${book.genre}</p>
-    <div class="inline-actions">
-      <a href="book.html?id=${encodeURIComponent(book.id)}">Details</a>
-      <a href="reader.html?bookId=${encodeURIComponent(book.id)}">Read</a>
-      <button type="button" data-save-book-id="${book.id}">${saved ? "Saved" : "Save"}</button>
+    <div class="browse-card__imgwrap">
+      <img class="cover" src="${book.coverUrl}" alt="${book.title} cover" loading="lazy" />
+    </div>
+    <div class="browse-card__body">
+      <p class="title">${book.title}</p>
+      <p class="meta">${book.authorName} · ${book.genre}</p>
+      <div class="inline-actions compact">
+        <a href="book.html?id=${encodeURIComponent(book.id)}">Details</a>
+        <a href="reader.html?bookId=${encodeURIComponent(book.id)}">Read</a>
+        <button type="button" data-save-book-id="${book.id}">${saved ? "Saved" : "Save"}</button>
+      </div>
     </div>
   `;
   return card;
@@ -351,8 +356,15 @@ function createBrowseCard(book) {
 
 function renderContinueReading() {
   elements.continueReadingRow.innerHTML = "";
-  // Use unified continue reading data
-  const entries = getContinueReading().filter(e => e.userId === getCurrentUserId());
+  // Use unified continue reading data, sorted by updatedAt descending
+  let entries = getContinueReading().filter(e => e.userId === getCurrentUserId());
+  entries = entries
+    .filter(e => e.bookId)
+    .sort((a, b) => {
+      const aTime = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const bTime = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return bTime - aTime;
+    });
   if (!entries.length) {
     elements.continueReadingRow.appendChild(createEmptyState("Start reading any book to see it here."));
     return;
@@ -576,7 +588,6 @@ async function bootstrap() {
   await syncSessionUi();
 
   state.allBooks = await fetchBooksCatalog();
-  state.inProgress = await buildInProgress(state.allBooks);
   buildRecommendations();
 
   renderContinueReading();

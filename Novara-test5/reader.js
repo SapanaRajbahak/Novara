@@ -74,14 +74,23 @@ if (typeof getCurrentUserId !== 'function') {
     return localStorage.getItem('novara.userId') || 'guest';
   }
 }
-if (typeof addContinueReading !== 'function') {
-  function addContinueReading({ bookId, source, currentChapter, progress }) {
-    const userId = getCurrentUserId();
-    let entries = JSON.parse(localStorage.getItem('novara.continueReading') || '[]');
-    entries = entries.filter(e => !(e.userId === userId && e.bookId === bookId));
-    entries.unshift({ userId, bookId, source, currentChapter, progress });
-    localStorage.setItem('novara.continueReading', JSON.stringify(entries));
-  }
+// Unified continue reading persistence
+function addContinueReading({ bookId, source, currentChapter, progress }) {
+  const userId = getCurrentUserId();
+  let entries = JSON.parse(localStorage.getItem('novara.continueReading') || '[]');
+  // Remove any existing for this user/book
+  entries = entries.filter(e => !(e.userId === userId && e.bookId === bookId));
+  entries.unshift({
+    userId,
+    bookId,
+    source,
+    currentChapter,
+    progress,
+    updatedAt: new Date().toISOString()
+  });
+  // Limit to 30 most recent
+  entries = entries.slice(0, 30);
+  localStorage.setItem('novara.continueReading', JSON.stringify(entries));
 }
 if (typeof addBookmark !== 'function') {
   function addBookmark({ bookId, chapterId, note }) {
@@ -1835,6 +1844,15 @@ function bindEvents() {
     const maxScrollTop = Math.max(0, elements.readingViewport.scrollHeight - elements.readingViewport.clientHeight);
     elements.readingViewport.scrollTop = raw * maxScrollTop;
     updateProgressUi();
+    // Update continue reading on slider move
+    try {
+      addContinueReading({
+        bookId: state.currentBook.id,
+        source: 'reader',
+        currentChapter: state.currentBook.chapters[state.currentChapterIndex]?.id,
+        progress: Math.round(raw * 100)
+      });
+    } catch (err) {}
   });
 
   let progressTimer = null;
@@ -1843,7 +1861,18 @@ function bindEvents() {
     if (progressTimer) {
       clearTimeout(progressTimer);
     }
-    progressTimer = window.setTimeout(saveProgress, 180);
+    progressTimer = window.setTimeout(() => {
+      saveProgress();
+      // Periodically update continue reading on scroll
+      try {
+        addContinueReading({
+          bookId: state.currentBook.id,
+          source: 'reader',
+          currentChapter: state.currentBook.chapters[state.currentChapterIndex]?.id,
+          progress: Math.round(getChapterScrollRatio() * 100)
+        });
+      } catch (err) {}
+    }, 180);
   });
 
   elements.chapterList.addEventListener("click", (event) => {
@@ -1859,6 +1888,15 @@ function bindEvents() {
     }
 
     jumpToChapter(Number(button.dataset.chapterIndex));
+    // Also update continue reading on manual chapter jump
+    try {
+      addContinueReading({
+        bookId: state.currentBook.id,
+        source: 'reader',
+        currentChapter: state.currentBook.chapters[Number(button.dataset.chapterIndex)]?.id,
+        progress: Number(button.dataset.chapterIndex)
+      });
+    } catch (err) {}
   });
 
   elements.trackList.addEventListener("click", (event) => {
@@ -2312,14 +2350,12 @@ async function bootstrap() {
     applyIncomingMode && applyIncomingMode(mode);
     // Update continue-reading progress after successful load
     try {
-      if (typeof addContinueReading === 'function') {
-        addContinueReading({
-          bookId: book.id,
-          source: bookSource,
-          currentChapter: resolvedChapter?.id,
-          progress: chapterIdx
-        });
-      }
+      addContinueReading({
+        bookId: book.id,
+        source: bookSource,
+        currentChapter: resolvedChapter?.id,
+        progress: chapterIdx
+      });
     } catch (err) {
       console.error('[reader] Failed to update continue-reading:', err);
     }
