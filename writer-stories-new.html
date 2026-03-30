@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novara Writer Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="writer-stories-new.css" />
+</head>
+<body>
+  <main class="studio-shell">
+    <section class="studio-page">
+      <header class="studio-hero card">
+        <div>
+          <p class="eyebrow">Writer Studio</p>
+          <h1>Create Your Story</h1>
+          <p class="subcopy">Craft your story in a writer-first workspace. Start with your concept, create a draft, and move directly to chapter building.</p>
+        </div>
+        <div class="switcher-wrap">
+          <div id="dashboardSwitcher" class="dashboard-switcher-slot" aria-live="polite"></div>
+          <button type="button" class="back-btn" id="writerSignOutBtn">Sign Out</button>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="studioFormHeading">
+        <div class="section-head">
+          <h2 id="studioFormHeading">Story Details</h2>
+          <a class="back-btn" href="./writer-dashboard.html">Back to Writer Dashboard</a>
+        </div>
+
+        <form id="storyForm" class="studio-form" novalidate>
+          <div class="field-grid two-col">
+            <label class="field" for="title">
+              <span>Title</span>
+              <input id="title" name="title" type="text" maxlength="140" required />
+            </label>
+            <label class="field" for="genre">
+              <span>Genre</span>
+              <select id="genre" name="genre" required>
+                <option value="">Select genre</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Romance">Romance</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Drama">Drama</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Historical">Historical</option>
+                <option value="Thriller">Thriller</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field" for="description">
+            <span>Description</span>
+            <textarea id="description" name="description" rows="5" maxlength="2200" required></textarea>
+          </label>
+
+          <div class="field-grid three-col">
+            <label class="field" for="tags">
+              <span>Tags</span>
+              <input id="tags" name="tags" type="text" placeholder="magic, kingdom, betrayal" />
+            </label>
+
+            <label class="field" for="status">
+              <span>Story Status</span>
+              <select id="status" name="status" required>
+                <option value="DRAFT">Draft</option>
+                <option value="PUBLISHED">Published</option>
+              </select>
+            </label>
+
+            <label class="field" for="bookType">
+              <span>Book Type</span>
+              <select id="bookType" name="bookType" required>
+                <option value="TXT">Text Chapters</option>
+                <option value="EPUB">EPUB</option>
+                <option value="PDF">PDF</option>
+              </select>
+            </label>
+          </div>
+
+          <label class="field" for="coverUpload">
+            <span>Cover Upload</span>
+            <input id="coverUpload" name="coverUpload" type="file" accept="image/*" />
+            <small id="coverName" class="hint">No cover selected yet.</small>
+          </label>
+
+          <div class="actions">
+            <p id="formError" class="error" aria-live="polite"></p>
+            <button class="btn" type="submit">Create Book</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <script src="novara-session.js"></script>
+  <script src="writer-stories-new.js"></script>
+</body>
+</html>

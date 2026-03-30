@@ -1,0 +1,667 @@
+[
+  {
+    "title": "A Midsummer Night's Dream",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/a-midsummer-night-s-dream.txt"
+  },
+  {
+    "title": "A Princess of Mars",
+    "author": "Burroughs, Edgar Rice",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/a-princess-of-mars.txt"
+  },
+  {
+    "title": "A Tale of Two Cities",
+    "author": "Dickens, Charles",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/a-tale-of-two-cities.txt"
+  },
+  {
+    "title": "Anna Karenina",
+    "author": "Tolstoy, Leo, graf",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/anna-karenina.txt"
+  },
+  {
+    "title": "Anne of Green Gables",
+    "author": "Montgomery, L. M. (Lucy Maud)",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/anne-of-green-gables.txt"
+  },
+  {
+    "title": "Around the World in Eighty Days",
+    "author": "Verne, Jules",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/around-the-world-in-eighty-days.txt"
+  },
+  {
+    "title": "At the Earth's Core",
+    "author": "Burroughs, Edgar Rice",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/at-the-earth-s-core.txt"
+  },
+  {
+    "title": "Bartleby, the Scrivener",
+    "author": "Melville, Herman",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/bartleby-the-scrivener.txt"
+  },
+  {
+    "title": "Bleak House",
+    "author": "Dickens, Charles",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/bleak-house.txt"
+  },
+  {
+    "title": "Candide",
+    "author": "Voltaire",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/candide.txt"
+  },
+  {
+    "title": "Carmilla",
+    "author": "Le Fanu, Joseph Sheridan",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/carmilla.txt"
+  },
+  {
+    "title": "Crime and Punishment",
+    "author": "Dostoyevsky, Fyodor",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/crime-and-punishment.txt"
+  },
+  {
+    "title": "David Copperfield",
+    "author": "Dickens, Charles",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/david-copperfield.txt"
+  },
+  {
+    "title": "Don Quixote",
+    "author": "Cervantes Saavedra, Miguel de",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/don-quixote.txt"
+  },
+  {
+    "title": "Dracula",
+    "author": "Stoker, Bram",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/dracula.txt"
+  },
+  {
+    "title": "Emma",
+    "author": "Austen, Jane",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/emma.txt"
+  },
+  {
+    "title": "Erewhon",
+    "author": "Butler, Samuel",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/erewhon.txt"
+  },
+  {
+    "title": "Ethan Frome",
+    "author": "Wharton, Edith",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/ethan-frome.txt"
+  },
+  {
+    "title": "Faust",
+    "author": "Goethe, Johann Wolfgang von",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/faust.txt"
+  },
+  {
+    "title": "Flatland",
+    "author": "Abbott, Edwin Abbott",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/flatland.txt"
+  },
+  {
+    "title": "Frankenstein",
+    "author": "Shelley, Mary Wollstonecraft",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/frankenstein.txt"
+  },
+  {
+    "title": "From the Earth to the Moon",
+    "author": "Verne, Jules",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/from-the-earth-to-the-moon.txt"
+  },
+  {
+    "title": "Ghost Stories of an Antiquary",
+    "author": "James, M. R. (Montague Rhodes)",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/ghost-stories-of-an-antiquary.txt"
+  },
+  {
+    "title": "Great Expectations",
+    "author": "Dickens, Charles",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/great-expectations.txt"
+  },
+  {
+    "title": "Hamlet",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/hamlet.txt"
+  },
+  {
+    "title": "Heart of Darkness",
+    "author": "Conrad, Joseph",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/heart-of-darkness.txt"
+  },
+  {
+    "title": "Jane Eyre",
+    "author": "Brontë, Charlotte",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/jane-eyre.txt"
+  },
+  {
+    "title": "Journey to the Center of the Earth",
+    "author": "Verne, Jules",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/journey-to-the-center-of-the-earth.txt"
+  },
+  {
+    "title": "Julius Caesar",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/julius-caesar.txt"
+  },
+  {
+    "title": "Kidnapped",
+    "author": "Stevenson, Robert Louis",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/kidnapped.txt"
+  },
+  {
+    "title": "King Lear",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/king-lear.txt"
+  },
+  {
+    "title": "King Solomon's Mines",
+    "author": "Haggard, H. Rider (Henry Rider)",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/king-solomon-s-mines.txt"
+  },
+  {
+    "title": "Les Misérables",
+    "author": "Hugo, Victor",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/les-miserables.txt"
+  },
+  {
+    "title": "Little Women",
+    "author": "Alcott, Louisa May",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/little-women.txt"
+  },
+  {
+    "title": "Lord Jim",
+    "author": "Conrad, Joseph",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/lord-jim.txt"
+  },
+  {
+    "title": "Macbeth",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/macbeth.txt"
+  },
+  {
+    "title": "Madame Bovary",
+    "author": "Flaubert, Gustave",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/madame-bovary.txt"
+  },
+  {
+    "title": "Mansfield Park",
+    "author": "Austen, Jane",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/mansfield-park.txt"
+  },
+  {
+    "title": "Melmoth the Wanderer",
+    "author": "Maturin, Charles Robert",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/melmoth-the-wanderer.txt"
+  },
+  {
+    "title": "Moby-Dick",
+    "author": "Melville, Herman",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/moby-dick.txt"
+  },
+  {
+    "title": "Much Ado About Nothing",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/much-ado-about-nothing.txt"
+  },
+  {
+    "title": "Northanger Abbey",
+    "author": "Austen, Jane",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/northanger-abbey.txt"
+  },
+  {
+    "title": "Oliver Twist",
+    "author": "Dickens, Charles",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/oliver-twist.txt"
+  },
+  {
+    "title": "Othello",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/othello.txt"
+  },
+  {
+    "title": "Pride and Prejudice",
+    "author": "Austen, Jane",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/pride-and-prejudice.txt"
+  },
+  {
+    "title": "Robinson Crusoe",
+    "author": "Defoe, Daniel",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/robinson-crusoe.txt"
+  },
+  {
+    "title": "Romeo and Juliet",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/romeo-and-juliet.txt"
+  },
+  {
+    "title": "Sense and Sensibility",
+    "author": "Austen, Jane",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/sense-and-sensibility.txt"
+  },
+  {
+    "title": "She",
+    "author": "Goldsmith, Oliver",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/she.txt"
+  },
+  {
+    "title": "Siddhartha",
+    "author": "Hesse, Hermann",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/siddhartha.txt"
+  },
+  {
+    "title": "The Adventures of Sherlock Holmes",
+    "author": "Doyle, Arthur Conan",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-adventures-of-sherlock-holmes.txt"
+  },
+  {
+    "title": "The Age of Innocence",
+    "author": "Wharton, Edith",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-age-of-innocence.txt"
+  },
+  {
+    "title": "The Awakening",
+    "author": "Chopin, Kate",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-awakening.txt"
+  },
+  {
+    "title": "The Brothers Karamazov",
+    "author": "Dostoyevsky, Fyodor",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-brothers-karamazov.txt"
+  },
+  {
+    "title": "The Call of the Wild",
+    "author": "London, Jack",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-call-of-the-wild.txt"
+  },
+  {
+    "title": "The Castle of Otranto",
+    "author": "Walpole, Horace",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-castle-of-otranto.txt"
+  },
+  {
+    "title": "The Circular Staircase",
+    "author": "Rinehart, Mary Roberts",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-circular-staircase.txt"
+  },
+  {
+    "title": "The Count of Monte Cristo",
+    "author": "Dumas, Alexandre",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-count-of-monte-cristo.txt"
+  },
+  {
+    "title": "The Decameron",
+    "author": "Boccaccio, Giovanni",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-decameron.txt"
+  },
+  {
+    "title": "The Divine Comedy",
+    "author": "Dante Alighieri",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-divine-comedy.txt"
+  },
+  {
+    "title": "The First Men in the Moon",
+    "author": "Wells, H. G. (Herbert George)",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-first-men-in-the-moon.txt"
+  },
+  {
+    "title": "The Gods of Mars",
+    "author": "Burroughs, Edgar Rice",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-gods-of-mars.txt"
+  },
+  {
+    "title": "The Hound of the Baskervilles",
+    "author": "Doyle, Arthur Conan",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-hound-of-the-baskervilles.txt"
+  },
+  {
+    "title": "The House of the Seven Gables",
+    "author": "Hawthorne, Nathaniel",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-house-of-the-seven-gables.txt"
+  },
+  {
+    "title": "The Idiot",
+    "author": "Dostoyevsky, Fyodor",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-idiot.txt"
+  },
+  {
+    "title": "The Invisible Man",
+    "author": "Wells, H. G. (Herbert George)",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-invisible-man.txt"
+  },
+  {
+    "title": "The Island of Doctor Moreau",
+    "author": "Wells, H. G. (Herbert George)",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-island-of-doctor-moreau.txt"
+  },
+  {
+    "title": "The King in Yellow",
+    "author": "Chambers, Robert W. (Robert William)",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-king-in-yellow.txt"
+  },
+  {
+    "title": "The Lost World",
+    "author": "Doyle, Arthur Conan",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-lost-world.txt"
+  },
+  {
+    "title": "The Memoirs of Sherlock Holmes",
+    "author": "Doyle, Arthur Conan",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-memoirs-of-sherlock-holmes.txt"
+  },
+  {
+    "title": "The Metamorphosis",
+    "author": "Kafka, Franz",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-metamorphosis.txt"
+  },
+  {
+    "title": "The Moonstone",
+    "author": "Collins, Wilkie",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-moonstone.txt"
+  },
+  {
+    "title": "The Mystery of the Yellow Room",
+    "author": "Leroux, Gaston",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-mystery-of-the-yellow-room.txt"
+  },
+  {
+    "title": "The Phantom of the Opera",
+    "author": "Leroux, Gaston",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-phantom-of-the-opera.txt"
+  },
+  {
+    "title": "The Picture of Dorian Gray",
+    "author": "Wilde, Oscar",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-picture-of-dorian-gray.txt"
+  },
+  {
+    "title": "The Prince",
+    "author": "Machiavelli, Niccolò",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-prince.txt"
+  },
+  {
+    "title": "The Scarlet Letter",
+    "author": "Hawthorne, Nathaniel",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-scarlet-letter.txt"
+  },
+  {
+    "title": "The Sign of the Four",
+    "author": "Doyle, Arthur Conan",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-sign-of-the-four.txt"
+  },
+  {
+    "title": "The Sorrows of Young Werther",
+    "author": "Goethe, Johann Wolfgang von",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-sorrows-of-young-werther.txt"
+  },
+  {
+    "title": "The Swiss Family Robinson",
+    "author": "Wyss, Johann David",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-swiss-family-robinson.txt"
+  },
+  {
+    "title": "The Tempest",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-tempest.txt"
+  },
+  {
+    "title": "The Thirty-Nine Steps",
+    "author": "Buchan, John",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-thirty-nine-steps.txt"
+  },
+  {
+    "title": "The Three Musketeers",
+    "author": "Dumas, Alexandre",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-three-musketeers.txt"
+  },
+  {
+    "title": "The Time Machine",
+    "author": "Wells, H. G. (Herbert George)",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-time-machine.txt"
+  },
+  {
+    "title": "The Trial",
+    "author": "Kafka, Franz",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-trial.txt"
+  },
+  {
+    "title": "The Turn of the Screw",
+    "author": "James, Henry",
+    "genre": "Horror / Gothic",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-turn-of-the-screw.txt"
+  },
+  {
+    "title": "The War of the Worlds",
+    "author": "Wells, H. G. (Herbert George)",
+    "genre": "Science Fiction",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-war-of-the-worlds.txt"
+  },
+  {
+    "title": "The Woman in White",
+    "author": "Collins, Wilkie",
+    "genre": "Mystery / Detective",
+    "source": "Project Gutenberg",
+    "fileName": "text/the-woman-in-white.txt"
+  },
+  {
+    "title": "Treasure Island",
+    "author": "Stevenson, Robert Louis",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/treasure-island.txt"
+  },
+  {
+    "title": "Twelfth Night",
+    "author": "Shakespeare, William",
+    "genre": "Shakespeare",
+    "source": "Project Gutenberg",
+    "fileName": "text/twelfth-night.txt"
+  },
+  {
+    "title": "Twenty Thousand Leagues Under the Sea",
+    "author": "Verne, Jules",
+    "genre": "Adventure / Action",
+    "source": "Project Gutenberg",
+    "fileName": "text/twenty-thousand-leagues-under-the-sea.txt"
+  },
+  {
+    "title": "Utopia",
+    "author": "More, Thomas, Saint",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/utopia.txt"
+  },
+  {
+    "title": "War and Peace",
+    "author": "Tolstoy, Leo, graf",
+    "genre": "World Classics",
+    "source": "Project Gutenberg",
+    "fileName": "text/war-and-peace.txt"
+  },
+  {
+    "title": "White Fang",
+    "author": "London, Jack",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/white-fang.txt"
+  },
+  {
+    "title": "Wuthering Heights",
+    "author": "Brontë, Emily",
+    "genre": "Classic Literature",
+    "source": "Project Gutenberg",
+    "fileName": "text/wuthering-heights.txt"
+  }
+]

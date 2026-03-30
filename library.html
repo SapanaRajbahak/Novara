@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novara Reader Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="library.css" />
+</head>
+<body>
+  <header class="hub-topbar">
+    <a href="reader-dashboard.html" class="brand" data-home-link="true">
+      <span class="brand-dot" aria-hidden="true"></span>
+      <span>Novara</span>
+    </a>
+    <h1>Reader Hub</h1>
+    <div class="topbar-actions">
+      <a href="reader-dashboard.html" class="ghost-link" data-home-link="true">Home</a>
+      <a href="discover.html" class="ghost-link">Discover</a>
+      <a href="annotations.html" class="ghost-link">Bookmarks</a>
+      <a href="profile.html" class="ghost-link">Profile</a>
+    </div>
+  </header>
+
+  <main class="hub-main">
+    <section class="panel hero-panel" aria-labelledby="hubHeroHeading">
+      <p class="hero-kicker">YOUR PERSONAL LIBRARY</p>
+      <h2 id="hubHeroHeading">Pick up where you left off</h2>
+      <p>Your reading activity, saved books, and recommendations are all in one warm, distraction-free hub.</p>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h3>Continue Reading</h3>
+        <a href="reader-dashboard.html">Go to Home</a>
+      </div>
+      <div class="rail" id="hubContinueRow" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h3>Your Library</h3>
+      </div>
+      <div class="book-grid" id="yourLibraryRow" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h3>Recommended For You</h3>
+      </div>
+      <div class="rail" id="recommendedRow" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <div class="section-head">
+        <h3 id="becauseHeading">Because You Read...</h3>
+      </div>
+      <div class="rail" id="becauseReadRow" aria-live="polite"></div>
+    </section>
+
+    <section class="panel" id="favoritesPanel">
+      <div class="section-head">
+        <h3>Favorites / Saved</h3>
+      </div>
+      <div class="book-grid" id="favoritesRow" aria-live="polite"></div>
+    </section>
+
+    <section class="panel discover-panel">
+      <div class="section-head">
+        <h3>Discover More</h3>
+      </div>
+      <div class="discover-controls">
+        <label class="search-wrap" for="hubSearchInput">
+          <span>Search</span>
+          <input id="hubSearchInput" type="search" placeholder="Search by title, author, or genre" />
+        </label>
+        <label class="genre-wrap" for="hubGenreFilter">
+          <span>Genre</span>
+          <select id="hubGenreFilter"></select>
+        </label>
+      </div>
+      <div class="book-grid" id="hubDiscoverGrid" aria-live="polite"></div>
+      <div class="section-actions">
+        <button type="button" id="hubLoadMoreBtn" class="ghost-btn">Load more</button>
+      </div>
+    </section>
+
+    <section class="panel stats-panel">
+      <div class="section-head">
+        <h3>Reading Stats</h3>
+      </div>
+      <div class="stats-grid">
+        <article class="stat-card">
+          <p>Books in Progress</p>
+          <strong id="statBooksInProgress">0</strong>
+        </article>
+        <article class="stat-card">
+          <p>Chapters Read</p>
+          <strong id="statChaptersRead">0</strong>
+        </article>
+        <article class="stat-card">
+          <p>Estimated Reading Time</p>
+          <strong id="statReadingTime">0 min</strong>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="library.js?v=20260322b"></script>
+</body>
+</html>

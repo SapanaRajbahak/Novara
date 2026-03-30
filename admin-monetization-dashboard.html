@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Monetization Dashboard – Novara</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700&family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="admin-monetization-dashboard.css" />
+</head>
+<body>
+  <div class="admin-monetization-shell">
+    <header class="dashboard-header">
+      <h1>Monetization Dashboard</h1>
+      <p class="subtitle">Full overview of platform revenue, payouts, and monetization performance.</p>
+    </header>
+
+    <main class="dashboard-main">
+      <!-- Top Stat Cards -->
+      <section class="stat-cards">
+        <div class="card stat-card">
+          <div class="label">Total Revenue</div>
+          <div class="stat-value" id="totalRevenue">$42,500</div>
+        </div>
+        <div class="card stat-card">
+          <div class="label">Revenue This Month</div>
+          <div class="stat-value" id="monthRevenue">$3,200</div>
+        </div>
+        <div class="card stat-card">
+          <div class="label">Total Payouts to Writers</div>
+          <div class="stat-value" id="totalPayouts">$28,000</div>
+        </div>
+        <div class="card stat-card">
+          <div class="label">Net Profit</div>
+          <div class="stat-value" id="netProfit">$14,500</div>
+        </div>
+      </section>
+
+      <!-- Revenue Breakdown & Chart -->
+      <section class="dashboard-row">
+        <div class="card breakdown-card">
+          <h2 class="card-title">Revenue Breakdown</h2>
+          <ul class="breakdown-list">
+            <li><span>Coin Purchases</span><span id="coinRevenue">$18,000</span></li>
+            <li><span>Subscriptions</span><span id="subRevenue">$16,000</span></li>
+            <li><span>AI Credit Sales</span><span id="aiRevenue">$6,500</span></li>
+            <li><span>Other Revenue</span><span id="otherRevenue">$2,000</span></li>
+          </ul>
+        </div>
+        <div class="card chart-card">
+          <h2 class="card-title">Revenue Over Time</h2>
+          <canvas id="revenueChart" width="400" height="180"></canvas>
+        </div>
+      </section>
+
+      <!-- Top Performance -->
+      <section class="dashboard-row">
+        <div class="card top-books-card">
+          <h2 class="card-title">Top Earning Books</h2>
+          <table class="mini-table">
+            <thead>
+              <tr><th>Book</th><th>Revenue</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>The Golden Path</td><td>$4,200</td></tr>
+              <tr><td>Moonlit Shadows</td><td>$3,800</td></tr>
+              <tr><td>Whispers of Dawn</td><td>$2,900</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card top-writers-card">
+          <h2 class="card-title">Top Earning Writers</h2>
+          <table class="mini-table">
+            <thead>
+              <tr><th>Writer</th><th>Revenue</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Jane Smith</td><td>$7,500</td></tr>
+              <tr><td>Alex Lee</td><td>$6,900</td></tr>
+              <tr><td>Chris Park</td><td>$5,800</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Writer Payouts -->
+      <section class="card payouts-card">
+        <h2 class="card-title">Writer Payout Requests</h2>
+        <table class="payouts-table">
+          <thead>
+            <tr>
+              <th>Writer</th>
+              <th>Amount</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="payoutsTableBody">
+            <tr>
+              <td>Jane Smith</td>
+              <td>$500</td>
+              <td>Mar 20, 2026</td>
+              <td><span class="badge badge-pending">Pending</span></td>
+              <td>
+                <button class="btn btn-approve">Approve</button>
+                <button class="btn btn-reject">Reject</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Alex Lee</td>
+              <td>$300</td>
+              <td>Mar 18, 2026</td>
+              <td><span class="badge badge-approved">Approved</span></td>
+              <td>
+                <button class="btn btn-approve" disabled>Approve</button>
+                <button class="btn btn-reject" disabled>Reject</button>
+              </td>
+            </tr>
+            <tr>
+              <td>Chris Park</td>
+              <td>$400</td>
+              <td>Mar 17, 2026</td>
+              <td><span class="badge badge-rejected">Rejected</span></td>
+              <td>
+                <button class="btn btn-approve" disabled>Approve</button>
+                <button class="btn btn-reject" disabled>Reject</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Monetization Settings -->
+      <section class="card settings-card">
+        <h2 class="card-title">Monetization Settings</h2>
+        <form class="settings-form" id="settingsForm" autocomplete="off">
+          <div class="settings-row">
+            <label for="coinPrice">Coin Price (per 100):</label>
+            <input type="number" id="coinPrice" value="0.99" step="0.01" min="0" />
+          </div>
+          <div class="settings-row">
+            <label for="subPrice">Subscription Price (monthly):</label>
+            <input type="number" id="subPrice" value="4.99" step="0.01" min="0" />
+          </div>
+          <div class="settings-row">
+            <label for="writerSplit">Writer Revenue Split (%):</label>
+            <input type="number" id="writerSplit" value="70" step="1" min="0" max="100" />
+          </div>
+          <div class="settings-row">
+            <label for="aiCreditPrice">AI Credit Price (per 100):</label>
+            <input type="number" id="aiCreditPrice" value="1.99" step="0.01" min="0" />
+          </div>
+          <button class="btn btn-primary" type="submit">Save Settings</button>
+        </form>
+      </section>
+    </main>
+  </div>
+  <script src="admin-monetization-dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novara — Wallet & Rewards</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="reader-monetization.css">
+</head>
+<body>
+
+<!-- ─── Toast Host ─────────────────────────────────────────────────────────── -->
+<div class="toast-host" id="toastHost"></div>
+
+<!-- ─── Ad Modal ──────────────────────────────────────────────────────────── -->
+<div class="overlay" id="adOverlay">
+  <div class="modal">
+    <div class="modal-icon">📺</div>
+    <div class="modal-title">Watching ad…</div>
+    <div class="modal-sub">Stay on this page — your coins are almost ready.</div>
+    <div class="ring-wrap">
+      <svg width="110" height="110" viewBox="0 0 110 110">
+        <circle class="ring-track" cx="55" cy="55" r="50"/>
+        <circle class="ring-fill"  cx="55" cy="55" r="50" id="ringFill"/>
+      </svg>
+      <div class="ring-num" id="ringNum">15</div>
+    </div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:22px;" id="adSimText">15 seconds remaining</p>
+    <button class="btn btn-ghost btn-sm" onclick="cancelAd()">Cancel (no coins)</button>
+  </div>
+</div>
+
+<!-- ─── Book Completion Modal ─────────────────────────────────────────────── -->
+<div class="overlay" id="bookOverlay">
+  <div class="modal">
+    <div class="modal-icon">🎉</div>
+    <div class="modal-title">Book finished!</div>
+    <div class="modal-sub">You completed <em id="completedBookTitle">Wuthering Heights</em>. That's a real achievement.</div>
+    <div class="modal-reward-box">
+      <div class="modal-reward-amount">+10 coins</div>
+      <div class="modal-reward-label">completion reward added to your wallet</div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-forest btn-md" onclick="closeBookModal(); startNextBook()">Start next book</button>
+      <button class="btn btn-outline-forest btn-md" onclick="closeBookModal(); addToFavorites()">Add to favorites</button>
+      <button class="btn btn-gold btn-md" onclick="closeBookModal(); watchBonusAd()">Watch ad for +5 extra coins</button>
+      <button class="btn btn-ghost btn-sm" onclick="closeBookModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PAGE ──────────────────────────────────────────────────────────────── -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="fade-up">
+    <div class="page-eyebrow">Novara · Wallet</div>
+    <div class="page-title">Your Wallet</div>
+  </div>
+
+  <!-- ── Balance Hero ── -->
+  <div class="section fade-up fade-up-1">
+    <div class="hero">
+      <div class="hero-label">Available Balance</div>
+      <div class="hero-balance">
+        <div class="hero-coin">🪙</div>
+        <div class="hero-amount" id="heroAmount">0</div>
+        <div class="hero-unit">coins</div>
+      </div>
+      <div class="hero-sub" id="heroSub">Earn coins every day by reading and checking in</div>
+
+      <div class="hero-earnings" id="heroEarnings">
+        <!-- rendered by JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 1. Daily Check-in ── -->
+  <div class="section fade-up fade-up-2">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-title-row">
+            <div class="card-icon ci-green">📅</div>
+            <div class="card-title">Daily Check-in</div>
+          </div>
+          <div class="card-sub">Open Novara each day — claim your reward before midnight</div>
+        </div>
+        <div class="card-badge cb-green" id="checkinBadge">Day 1</div>
+      </div>
+      <div class="card-body">
+        <div id="missedWarning" style="display:none;" class="checkin-warning">
+          ⚠️ <span>You missed yesterday — streak reset to Day 1</span>
+        </div>
+        <div class="day-grid" id="dayGrid"></div>
+        <div class="checkin-row">
+          <div class="checkin-info" id="checkinInfo"></div>
+          <div id="checkinAction"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. Reading Streak ── -->
+  <div class="section fade-up fade-up-3">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-title-row">
+            <div class="card-icon ci-gold">🔥</div>
+            <div class="card-title">Reading Streak</div>
+          </div>
+          <div class="card-sub">Read at least one chapter a day to keep your streak alive</div>
+        </div>
+        <div class="card-badge cb-gold" id="streakBadge">0 days</div>
+      </div>
+      <div class="card-body">
+        <div class="streak-hero">
+          <div class="streak-fire-wrap">
+            <span class="streak-fire" id="streakFire">🔥</span>
+          </div>
+          <div>
+            <div class="streak-count" id="streakNum">0 <sup>days</sup></div>
+            <div class="streak-label" id="streakLabel">Start reading today</div>
+            <div class="freeze-badge" id="freezeBadge">❄️ 1 freeze available</div>
+          </div>
+        </div>
+
+        <div class="milestones" id="milestones"></div>
+
+        <div class="prog-track">
+          <div class="prog-fill" id="streakProg" style="width:0%"></div>
+        </div>
+        <div class="prog-labels" id="streakProgLabel">
+          <span>0 days</span><span>Next: 3 days →</span>
+        </div>
+
+        <div class="streak-actions">
+          <div class="streak-read-status" id="streakReadStatus">Have you read today?</div>
+          <div id="streakAction"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. Watch Ad ── -->
+  <div class="section fade-up fade-up-4">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-title-row">
+            <div class="card-icon ci-terra">📺</div>
+            <div class="card-title">Watch & Earn</div>
+          </div>
+          <div class="card-sub">Optional — a small bonus, never forced</div>
+        </div>
+        <div class="card-badge cb-terra" id="adBadge">3 left today</div>
+      </div>
+      <div class="card-body">
+        <div class="ad-row">
+          <div class="ad-thumb">▶️</div>
+          <div class="ad-info">
+            <div class="ad-title">+5 coins per ad</div>
+            <div class="ad-desc">15-second ad · up to 3 per day · 2-minute cooldown between ads</div>
+            <div class="ad-slots" id="adSlots">
+              <div class="ad-dot" id="adDot0"></div>
+              <div class="ad-dot" id="adDot1"></div>
+              <div class="ad-dot" id="adDot2"></div>
+            </div>
+            <div class="cooldown-bar-wrap" id="cooldownWrap">
+              <div class="cooldown-bar-track">
+                <div class="cooldown-bar-fill" id="cooldownFill" style="width:100%"></div>
+              </div>
+              <div class="cooldown-label" id="cooldownLabel">Cooldown: 2:00</div>
+            </div>
+          </div>
+          <div id="adAction"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. Book Completion ── -->
+  <div class="section fade-up fade-up-5">
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-left">
+          <div class="card-title-row">
+            <div class="card-icon ci-ruby">📖</div>
+            <div class="card-title">Book Completion</div>
+          </div>
+          <div class="card-sub">Finish a book, earn +10 coins automatically</div>
+        </div>
+        <div class="card-badge cb-muted" id="completionBadge">Demo</div>
+      </div>
+      <div class="card-body">
+        <div class="completion-reward">
+          <div class="completion-reward-icon">🏆</div>
+          <div>
+            Finishing any book automatically awards <strong>+10 coins</strong>.
+            An optional ad can add <strong>+5 more</strong>.
+          </div>
+        </div>
+        <div class="book-complete-inner">
+          <div class="book-cover-mock">📚</div>
+          <div class="book-info">
+            <div class="book-complete-title">Wuthering Heights</div>
+            <div class="book-complete-author">Emily Brontë · 347 pages</div>
+            <div class="book-stats">
+              <div class="book-stat">
+                <div class="bs-val">34</div>
+                <div class="bs-lbl">Chapters</div>
+              </div>
+              <div class="book-stat">
+                <div class="bs-val">12h</div>
+                <div class="bs-lbl">Read time</div>
+              </div>
+              <div class="book-stat">
+                <div class="bs-val">4.8 ★</div>
+                <div class="bs-lbl">Avg rating</div>
+              </div>
+            </div>
+            <div class="book-actions">
+              <button class="btn btn-forest btn-sm" onclick="simulateBookComplete()">🎉 Simulate Finish</button>
+              <button class="btn btn-ghost btn-sm" onclick="startNextBook()">Next book →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script src="reader-monetization.js"></script>
+</body>
+</html>

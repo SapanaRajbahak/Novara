@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Upload Book</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="admin-upload.css" />
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin Navigation">
+      <a href="admin.html" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>Novara Admin</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        <a href="admin.html">Dashboard</a>
+        <a href="admin-books.html">Books</a>
+        <a href="admin-upload.html" class="active">Upload Book</a>
+        <a href="admin-chapters.html">Chapters</a>
+        <a href="admin-audiobooks.html">Audiobooks</a>
+        <a href="admin-ai.html">AI Generator</a>
+        <a href="admin-users.html">Users</a>
+        <a href="admin-analytics.html">Analytics</a>
+        <a href="admin-settings.html">Settings</a>
+      </nav>
+
+      <button type="button" id="logoutBtn" class="logout-btn">Logout</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="main-topbar">
+        <div>
+          <p class="eyebrow">Admin Panel</p>
+          <h1>Upload Book</h1>
+        </div>
+          <a href="admin.html" class="text-btn">Back to Dashboard</a>
+      </header>
+
+      <section class="panel">
+        <form id="uploadForm" novalidate>
+          <div class="form-grid two-col">
+            <label class="field" for="title">
+              <span>Title</span>
+              <input id="title" name="title" type="text" required maxlength="140" />
+            </label>
+
+            <label class="field" for="author">
+              <span>Author</span>
+              <input id="author" name="author" type="text" required maxlength="100" />
+            </label>
+          </div>
+
+          <label class="field" for="description">
+            <span>Description</span>
+            <textarea id="description" name="description" rows="4" maxlength="1500" required></textarea>
+          </label>
+
+          <div class="form-grid three-col">
+            <label class="field" for="genre">
+              <span>Genre</span>
+              <select id="genre" name="genre" required>
+                <option value="">Select genre</option>
+                <option value="Fantasy">Fantasy</option>
+                <option value="Mystery">Mystery</option>
+                <option value="Romance">Romance</option>
+                <option value="Sci-Fi">Sci-Fi</option>
+                <option value="Drama">Drama</option>
+                <option value="Adventure">Adventure</option>
+                <option value="Historical">Historical</option>
+                <option value="Thriller">Thriller</option>
+              </select>
+            </label>
+
+            <label class="field" for="tags">
+              <span>Tags (comma-separated)</span>
+              <input id="tags" name="tags" type="text" placeholder="magic, mystery, coastal" />
+            </label>
+
+            <label class="field" for="status">
+              <span>Status</span>
+              <select id="status" name="status" required>
+                <option value="draft">Draft</option>
+                <option value="published">Published</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="form-grid three-col">
+            <label class="field" for="bookType">
+              <span>Book Type</span>
+              <select id="bookType" name="bookType" required>
+                <option value="chapters">Text chapters</option>
+                <option value="epub">EPUB</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </label>
+
+            <div class="field">
+              <span>Cover Image Upload</span>
+              <div class="dropzone" data-target="coverInput" id="coverDropzone">
+                <input id="coverInput" type="file" accept="image/*" hidden />
+                <p>Drag and drop cover image here, or click to browse</p>
+                <small id="coverFileName">No file selected</small>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Upload Main File</span>
+              <div class="dropzone" data-target="mainFileInput" id="mainDropzone">
+                <input id="mainFileInput" type="file" hidden />
+                <p id="mainFileHint">Main file required for EPUB/PDF</p>
+                <small id="mainFileName">No file selected</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="optional-upload-grid">
+            <div class="field">
+              <span>Optional Audiobook Upload</span>
+              <div class="dropzone" data-target="audiobookInput" id="audiobookDropzone">
+                <input id="audiobookInput" type="file" accept="audio/*" hidden />
+                <p>Drag and drop audiobook file (optional)</p>
+                <small id="audiobookFileName">No file selected</small>
+              </div>
+            </div>
+
+            <div class="field">
+              <span>Optional Sample Audio Upload</span>
+              <div class="dropzone" data-target="sampleAudioInput" id="sampleAudioDropzone">
+                <input id="sampleAudioInput" type="file" accept="audio/*" hidden />
+                <p>Drag and drop sample audio (optional)</p>
+                <small id="sampleAudioFileName">No file selected</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="actions">
+            <span id="formError" class="error" aria-live="polite"></span>
+            <button type="submit" class="btn">Save Basic Info</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="chapterBuilder" class="panel hidden" aria-labelledby="chapterBuilderHeading">
+        <div class="panel-head">
+          <h2 id="chapterBuilderHeading">Add Chapters Manually</h2>
+        </div>
+
+        <form id="chapterForm" novalidate>
+          <div class="form-grid two-col">
+            <label class="field" for="chapterTitle">
+              <span>Chapter Title</span>
+              <input id="chapterTitle" type="text" maxlength="140" required />
+            </label>
+            <label class="field" for="chapterNumber">
+              <span>Chapter Number</span>
+              <input id="chapterNumber" type="number" min="1" step="1" required />
+            </label>
+          </div>
+
+          <label class="field" for="chapterContent">
+            <span>Chapter Content</span>
+            <textarea id="chapterContent" rows="6" maxlength="12000" required></textarea>
+          </label>
+
+          <div class="actions">
+            <span id="chapterError" class="error" aria-live="polite"></span>
+            <button type="submit" class="btn">Add Chapter</button>
+          </div>
+        </form>
+
+        <div class="chapter-list-wrap">
+          <h3>Saved Chapters</h3>
+          <ul id="chapterList" class="chapter-list"></ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="admin-upload.js"></script>
+</body>
+</html>
