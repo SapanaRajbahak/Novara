@@ -1,26 +1,40 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const USERS_STORE_KEY = "novelread.admin.users";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const state = {
   users: [],
   search: "",
   role: "all",
-  status: "all",
+  sort: "newest",
   page: 1,
-  pageSize: 8
+  pageSize: 8,
+  totalPages: 1,
+  totalUsers: 0,
 };
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
   searchInput: document.getElementById("searchInput"),
   roleFilter: document.getElementById("roleFilter"),
-  statusFilter: document.getElementById("statusFilter"),
+  sortFilter: document.getElementById("sortFilter"),
   usersTableBody: document.getElementById("usersTableBody"),
   summary: document.getElementById("summary"),
   pageInfo: document.getElementById("pageInfo"),
   prevPageBtn: document.getElementById("prevPageBtn"),
   nextPageBtn: document.getElementById("nextPageBtn"),
-  message: document.getElementById("message")
+  message: document.getElementById("message"),
 };
 
 function requireAuth() {
@@ -56,81 +70,87 @@ function formatDate(value) {
   return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
 }
 
-function readUsersStore() {
-  try {
-    const raw = localStorage.getItem(USERS_STORE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return parsed;
-      }
-    }
-  } catch (error) {
-    return [];
-  }
-  return [];
+function createStatusPill(value, label) {
+  return `<span class="status-pill ${value}">${label}</span>`;
 }
 
-function saveUsersStore() {
-  localStorage.setItem(USERS_STORE_KEY, JSON.stringify(state.users));
+function formatDisplayRole(user) {
+  if (user.displayRole === "admin") {
+    return "Admin";
+  }
+  if (user.displayRole === "writer") {
+    return "Writer";
+  }
+  return "Reader";
+}
+
+function formatAccountStatus(user) {
+  if (!user.accountStatus) {
+    return createStatusPill("na", "Not available");
+  }
+  return createStatusPill(user.accountStatus === "active" ? "active" : "suspended", user.accountStatus);
+}
+
+async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    cache: "no-store",
+    ...options,
+  });
+
+  const payload = await response.json().catch(() => ({ success: false }));
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem(ADMIN_AUTH_KEY);
+    const next = encodeURIComponent("admin-users.html");
+    window.location.href = `admin-login.html?next=${next}`;
+    throw new Error("Authentication required");
+  }
+
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || `HTTP ${response.status}`);
+  }
+
+  return payload;
+}
+
+function buildQueryString() {
+  const params = new URLSearchParams({
+    page: String(state.page),
+    limit: String(state.pageSize),
+    sort: state.sort,
+  });
+
+  if (state.search) {
+    params.set("search", state.search);
+  }
+  if (state.role !== "all") {
+    params.set("role", state.role);
+  }
+
+  return params.toString();
 }
 
 async function loadUsers() {
-  const localUsers = readUsersStore();
-  if (localUsers.length) {
-    state.users = localUsers;
-    return;
-  }
-
-  try {
-    const response = await fetch("data/admin-users.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error("Unable to load users data");
-    }
-    const payload = await response.json();
-    state.users = Array.isArray(payload.users) ? payload.users : [];
-  } catch (error) {
-    state.users = [
-      { id: "u-101", name: "Ari Monroe", email: "ari@novelread.app", role: "reader", joinedAt: "2025-04-10", booksRead: 18, status: "active" },
-      { id: "u-102", name: "Nadia Wells", email: "nadia@novelread.app", role: "editor", joinedAt: "2025-05-18", booksRead: 24, status: "active" },
-      { id: "u-103", name: "Cal Reed", email: "cal@novelread.app", role: "reader", joinedAt: "2025-07-03", booksRead: 4, status: "suspended" }
-    ];
-  }
-
-  saveUsersStore();
-}
-
-function getFilteredUsers() {
-  const query = state.search.toLowerCase();
-
-  return state.users.filter((user) => {
-    const matchesSearch = !query
-      || user.name.toLowerCase().includes(query)
-      || user.email.toLowerCase().includes(query);
-
-    const matchesRole = state.role === "all" || user.role === state.role;
-    const matchesStatus = state.status === "all" || user.status === state.status;
-
-    return matchesSearch && matchesRole && matchesStatus;
-  });
+  const payload = await apiFetch(`/api/admin/users?${buildQueryString()}`);
+  state.users = Array.isArray(payload.data) ? payload.data : [];
+  state.totalUsers = payload.pagination && typeof payload.pagination.total === "number"
+    ? payload.pagination.total
+    : state.users.length;
+  state.totalPages = payload.pagination && typeof payload.pagination.totalPages === "number"
+    ? payload.pagination.totalPages
+    : 1;
 }
 
 function render() {
-  const filtered = getFilteredUsers();
-  const totalPages = Math.max(1, Math.ceil(filtered.length / state.pageSize));
-  state.page = Math.min(Math.max(1, state.page), totalPages);
-
-  const start = (state.page - 1) * state.pageSize;
-  const pageRows = filtered.slice(start, start + state.pageSize);
-
   elements.usersTableBody.innerHTML = "";
 
-  if (!pageRows.length) {
+  if (!state.users.length) {
     const tr = document.createElement("tr");
-    tr.innerHTML = '<td colspan="6" class="hint">No users found for current filters.</td>';
+    tr.innerHTML = '<td colspan="9" class="hint">No real users found for current filters.</td>';
     elements.usersTableBody.appendChild(tr);
   } else {
-    pageRows.forEach((user) => {
+    state.users.forEach((user) => {
       const tr = document.createElement("tr");
       tr.innerHTML = `
         <td>
@@ -140,20 +160,26 @@ function render() {
           </div>
         </td>
         <td>
-          <select class="role-select" data-action="role" data-id="${user.id}">
-            <option value="reader" ${user.role === "reader" ? "selected" : ""}>Reader</option>
-            <option value="editor" ${user.role === "editor" ? "selected" : ""}>Editor</option>
-            <option value="admin" ${user.role === "admin" ? "selected" : ""}>Admin</option>
-          </select>
+          <div class="user-cell">
+            <span class="user-name">${formatDisplayRole(user)}</span>
+            <select class="role-select" data-role-select="${user.id}">
+              <option value="USER" ${user.role === "USER" ? "selected" : ""}>Reader Base</option>
+              <option value="ADMIN" ${user.role === "ADMIN" ? "selected" : ""}>Admin</option>
+            </select>
+          </div>
         </td>
+        <td>${createStatusPill(user.isWriter ? "yes" : "no", user.isWriter ? "Enabled" : "Disabled")}</td>
+        <td>${createStatusPill(user.isAdmin ? "yes" : "no", user.isAdmin ? "Yes" : "No")}</td>
+        <td>${formatAccountStatus(user)}</td>
         <td>${formatDate(user.joinedAt)}</td>
-        <td>${Number(user.booksRead) || 0}</td>
-        <td><span class="status-pill ${user.status}">${user.status === "active" ? "Active" : "Suspended"}</span></td>
+        <td>${Number(user.booksCount) || 0}</td>
+        <td>${Number(user.publishedBooksCount) || 0}</td>
         <td>
           <div class="row-actions">
-            <button type="button" class="text-btn" data-action="view" data-id="${user.id}">View Profile</button>
-            <button type="button" class="text-btn" data-action="save-role" data-id="${user.id}">Change Role</button>
-            <button type="button" class="text-btn" data-action="suspend" data-id="${user.id}">Suspend Placeholder</button>
+            <button type="button" class="text-btn" data-action="view" data-id="${user.id}">View Details</button>
+            <button type="button" class="text-btn" data-action="save-role" data-id="${user.id}">Save Role</button>
+            <button type="button" class="text-btn" data-action="toggle-writer" data-id="${user.id}">${user.isWriter ? "Disable Writer" : "Enable Writer"}</button>
+            <button type="button" class="text-btn" data-action="delete" data-id="${user.id}">Delete</button>
           </div>
         </td>
       `;
@@ -161,17 +187,25 @@ function render() {
     });
   }
 
-  elements.summary.textContent = `${filtered.length} users`;
-  elements.pageInfo.textContent = `Page ${state.page} of ${totalPages}`;
+  elements.summary.textContent = `${state.totalUsers} users`;
+  elements.pageInfo.textContent = `Page ${state.page} of ${state.totalPages}`;
   elements.prevPageBtn.disabled = state.page <= 1;
-  elements.nextPageBtn.disabled = state.page >= totalPages;
+  elements.nextPageBtn.disabled = state.page >= state.totalPages;
 }
 
 function findUserById(userId) {
   return state.users.find((user) => user.id === userId) || null;
 }
 
-function handleTableClick(event) {
+async function refreshAndRender(successMessage = "") {
+  await loadUsers();
+  render();
+  if (successMessage) {
+    setMessage(successMessage);
+  }
+}
+
+async function handleTableClick(event) {
   const button = event.target.closest("button[data-action][data-id]");
   if (!button) {
     return;
@@ -186,72 +220,115 @@ function handleTableClick(event) {
     return;
   }
 
-  if (action === "view") {
-    const summary = `${user.name} (${user.email}) | role: ${user.role}, status: ${user.status}, books read: ${Number(user.booksRead) || 0}`;
-    setMessage(summary);
-    showToast("Profile preview loaded");
-    return;
-  }
-
-  if (action === "save-role") {
-    const roleSelect = elements.usersTableBody.querySelector(`select[data-action='role'][data-id='${userId}']`);
-    if (!roleSelect) {
-      setMessage("Role selector missing.");
+  try {
+    if (action === "view") {
+      const payload = await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`);
+      const detail = payload.data;
+      const summary = [
+        `${detail.name} (${detail.email})`,
+        `role: ${formatDisplayRole(detail)}`,
+        `writer: ${detail.isWriter ? "enabled" : "disabled"}`,
+        `books: ${detail.booksCount}`,
+        `published: ${detail.publishedBooksCount}`,
+        `genres: ${Array.isArray(detail.preferredGenres) && detail.preferredGenres.length ? detail.preferredGenres.join(", ") : "Not available"}`,
+      ].join(" | ");
+      setMessage(summary);
+      showToast("User details loaded");
       return;
     }
 
-    user.role = roleSelect.value;
-    saveUsersStore();
-    render();
-    setMessage(`Role updated for ${user.name}.`);
-    showToast("Role changed");
-    return;
-  }
+    if (action === "save-role") {
+      const roleSelect = elements.usersTableBody.querySelector(`[data-role-select='${userId}']`);
+      if (!roleSelect) {
+        setMessage("Role selector missing.");
+        return;
+      }
 
-  if (action === "suspend") {
-    user.status = user.status === "active" ? "suspended" : "active";
-    saveUsersStore();
-    render();
-    setMessage(`Suspend placeholder action toggled status for ${user.name}.`);
-    showToast(user.status === "suspended" ? "User suspended" : "User reactivated");
+      await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ role: roleSelect.value }),
+      });
+      await refreshAndRender(`Role updated for ${user.name}.`);
+      showToast("Role changed");
+      return;
+    }
+
+    if (action === "toggle-writer") {
+      await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isWriter: !user.isWriter }),
+      });
+      await refreshAndRender(`Writer access updated for ${user.name}.`);
+      showToast(user.isWriter ? "Writer access removed" : "Writer access enabled");
+      return;
+    }
+
+    if (action === "delete") {
+      if (!window.confirm(`Delete ${user.name}? This removes the account and related records.`)) {
+        return;
+      }
+
+      await apiFetch(`/api/admin/users/${encodeURIComponent(userId)}`, {
+        method: "DELETE",
+      });
+      await refreshAndRender(`Deleted ${user.name}.`);
+      showToast("User deleted");
+    }
+  } catch (error) {
+    setMessage(error.message || "Unable to process user action.");
+    showToast(error.message || "User action failed");
   }
 }
 
 function bindEvents() {
   elements.logoutBtn.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);
-    window.location.href = "admin-login.html";
+    window.location.href = "index.html";
   });
 
-  elements.searchInput.addEventListener("input", () => {
+  elements.searchInput.addEventListener("input", async () => {
     state.search = elements.searchInput.value.trim();
     state.page = 1;
-    render();
+    await refreshAndRender();
   });
 
-  elements.roleFilter.addEventListener("change", () => {
+  elements.roleFilter.addEventListener("change", async () => {
     state.role = elements.roleFilter.value;
     state.page = 1;
-    render();
+    await refreshAndRender();
   });
 
-  elements.statusFilter.addEventListener("change", () => {
-    state.status = elements.statusFilter.value;
+  elements.sortFilter.addEventListener("change", async () => {
+    state.sort = elements.sortFilter.value;
     state.page = 1;
-    render();
+    await refreshAndRender();
   });
 
-  elements.prevPageBtn.addEventListener("click", () => {
+  elements.prevPageBtn.addEventListener("click", async () => {
+    if (state.page <= 1) {
+      return;
+    }
     state.page -= 1;
-    render();
+    await refreshAndRender();
   });
 
-  elements.nextPageBtn.addEventListener("click", () => {
+  elements.nextPageBtn.addEventListener("click", async () => {
+    if (state.page >= state.totalPages) {
+      return;
+    }
     state.page += 1;
-    render();
+    await refreshAndRender();
   });
 
-  elements.usersTableBody.addEventListener("click", handleTableClick);
+  elements.usersTableBody.addEventListener("click", (event) => {
+    handleTableClick(event);
+  });
 }
 
 async function bootstrap() {
@@ -259,10 +336,19 @@ async function bootstrap() {
     return;
   }
 
-  await loadUsers();
   bindEvents();
-  render();
-  setMessage("Users ready.");
+  try {
+    await loadUsers();
+    render();
+    setMessage("Real users loaded.");
+  } catch (error) {
+    state.users = [];
+    state.totalUsers = 0;
+    state.totalPages = 1;
+    render();
+    setMessage(error.message || "Unable to load real users.");
+  }
 }
 
 bootstrap();
+

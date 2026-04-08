@@ -236,6 +236,7 @@ a {
   align-items: center;
   gap: 0.5rem;
   margin-top: 0.1rem;
+  flex-wrap: wrap;
 }
 
 .date {
@@ -251,6 +252,38 @@ a {
   text-decoration: none;
   padding: 0.42rem 0.56rem;
   font-size: 0.78rem;
+}
+
+.item-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.secondary-btn,
+.danger-btn {
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.42rem 0.56rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.secondary-btn:hover {
+  background: color-mix(in oklab, var(--primary) 10%, var(--surface));
+}
+
+.danger-btn {
+  border-color: color-mix(in oklab, var(--accent) 36%, var(--border));
+  color: color-mix(in oklab, var(--accent) 70%, var(--text));
+}
+
+.danger-btn:hover {
+  background: color-mix(in oklab, var(--accent) 12%, var(--surface));
 }
 
 .empty {

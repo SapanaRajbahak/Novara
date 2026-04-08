@@ -311,6 +311,18 @@ a {
   margin-bottom: 0.2rem;
 }
 
+.chapter-item.is-locked {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+.chapter-item.is-locked .lock-badge {
+  display: inline-block;
+  margin-top: 0.35rem;
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+
 .audio-tracks {
   margin-top: 0.9rem;
 }

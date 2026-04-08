@@ -1,0 +1,83 @@
+This audio reading of Robinson Crusoe is read by
+
+Denny Sayers
+
+Contents
+
+    * Chapter 1 - Start in Life - 00:39:07
+
+    * Chapter 2 - Slavery and Escape - 00:34:59
+
+    * Chapter 3 - Wrecked on a Desert Island - 00:48:32
+
+    * Chapter 4 - First Weeks on the Island - 00:58:40
+
+    * Chapter 5 - Builds a House - The Journal - 00:38:15
+
+    * Chapter 6 - Ill and Conscience Stricken - 00:42:53
+
+    * Chapter 7 - Agricultural Experience - 00:27:20
+
+    * Chapter 8 - Surveys his Position - 00:30:38
+
+    * Chapter 9 - A Boat - 00:48:42
+
+    * Chapter 10 - Tames Goats - 00:32:36
+
+    * Chapter 11 - Finds Print of Mans Foot on the Sand - 00:38:02
+
+    * Chapter 12 - The Cave Retreat - 00:47:32
+
+    * Chapter 13 - Wreck of a Spanish Ship - 00:38:08
+
+    * Chapter 14 - A Dream Realised - 00:45:59
+
+    * Chapter 15 - Friday’s Education - 00:44:17
+
+    * Chapter 16 - Rescue of Prisoners from Cannibals - 00:47:21
+
+    * Chapter 17 - Visit of Mutineers - 00:43:44
+
+    * Chapter 18 - The Ship Recovered - 00:48:04
+
+    * Chapter 19 - Return to England - 00:45:11
+
+    * Chapter 20 - Fight Between Friday and a Bear - 00:35:06
+
+Librivox Audio Recording Public Domain Certification:
+
+The person or persons who have associated work with this document (the
+"Dedicator" or "Certifier") hereby either (a) certifies that, to the
+best of his knowledge, the work of authorship identified is in the
+public domain of the country from which the work is published, or (b)
+hereby dedicates whatever copyright the dedicators holds in the work of
+authorship identified below (the "Work") to the public domain. A
+certifier, moreover, dedicates any copyright interest he may have in the
+associated work, and for these purposes, is described as a "dedicator"
+below.
+
+A certifier has taken reasonable steps to verify the copyright status of
+this work. Certifier recognizes that his good faith efforts may not
+shield him from liability if in fact the work certified is not in the
+public domain.
+
+Dedicator makes this dedication for the benefit of the public at large
+and to the detriment of the Dedicator's heirs and successors. Dedicator
+intends this dedication to be an overt act of relinquishment in
+perpetuity of all present and future rights under copyright law, whether
+vested or contingent, in the Work. Dedicator understands that such
+relinquishment of all rights includes the relinquishment of all rights
+to enforce (by lawsuit or otherwise) those copyrights in the Work.
+
+Dedicator recognizes that, once placed in the public domain, the Work
+may be freely reproduced, distributed, transmitted, used, modified,
+built upon, or otherwise exploited by anyone for any purpose, commercial
+or non-commercial, and in any way, including by methods that have not
+yet been invented or conceived.
+
+Audio formats available:
+
+128kbit MP3 - MP3 subfolder
+64kbit Ogg Vorbis (variable bit rate) - OGG subfolder
+Apple AAC audiobook (16kbit mono) - M4B subfolder
+Speex - SPX subfolder

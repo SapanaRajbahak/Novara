@@ -1,15 +1,28 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const form = document.getElementById("loginForm");
 const emailInput = document.getElementById("adminEmail");
 const passInput = document.getElementById("adminPass");
 
 function getNextPath() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get("next") || "admin.html";
+  // Always land on admin dashboard for admin login
+  return "admin.html";
 }
 
-form.addEventListener("submit", (event) => {
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
 
   const email = emailInput.value.trim();
@@ -20,6 +33,26 @@ form.addEventListener("submit", (event) => {
     return;
   }
 
-  localStorage.setItem(ADMIN_AUTH_KEY, "1");
-  window.location.href = getNextPath();
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/signin`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password: pass }),
+    });
+
+    const payload = await response.json().catch(() => ({ success: false }));
+    if (!response.ok || !payload.success || !payload.user || payload.user.role !== "ADMIN") {
+      window.alert("Admin credentials are invalid.");
+      return;
+    }
+
+    localStorage.setItem(ADMIN_AUTH_KEY, "1");
+    window.location.href = getNextPath();
+  } catch (error) {
+    window.alert("Unable to sign in right now.");
+  }
 });
+

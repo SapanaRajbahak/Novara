@@ -15,6 +15,10 @@
   --radius-sm: 12px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #171614;
@@ -127,8 +131,23 @@ a {
   gap: 0.75rem;
 }
 
+.eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
 .search-hero h1 {
   font-size: clamp(1.5rem, 3vw, 2.2rem);
+}
+
+.hero-copy {
+  margin: 0;
+  max-width: 72ch;
+  color: var(--muted);
 }
 
 .search-box {
@@ -162,6 +181,20 @@ a {
 .panel h2 {
   font-size: 1.05rem;
   margin-bottom: 0.55rem;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+
+.hint-badge {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
 }
 
 .chip-row {
@@ -242,6 +275,19 @@ a {
   color: var(--muted);
 }
 
+.filter-note {
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--surface) 78%, var(--surface-2));
+  color: var(--muted);
+  padding: 0.7rem;
+  font-size: 0.82rem;
+}
+
+.filter-note p {
+  margin: 0;
+}
+
 .results-area {
   display: grid;
   gap: 0.9rem;
@@ -285,14 +331,13 @@ a {
   gap: 0.65rem;
 }
 
-.authors-grid {
+.mini-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 0.65rem;
 }
 
-.card,
-.author-card {
+.card {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -311,9 +356,73 @@ a {
 }
 
 .card h3,
-.author-card h3 {
+.story-strip-card h3 {
   font-size: 1rem;
   margin: 0;
+}
+
+.book-card {
+  grid-template-rows: auto 1fr;
+}
+
+.story-strip-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in oklab, var(--surface) 90%, var(--surface-2));
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.story-strip-card .cover {
+  aspect-ratio: 5 / 3;
+}
+
+.card-top {
+  position: relative;
+}
+
+.label-row {
+  position: absolute;
+  left: 0.55rem;
+  right: 0.55rem;
+  bottom: 0.55rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pill {
+  border-radius: 999px;
+  background: rgba(18, 16, 13, 0.72);
+  color: #fff8ef;
+  padding: 0.32rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.card-body {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.card-summary {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.stat-row span {
+  white-space: nowrap;
 }
 
 .muted {
@@ -337,6 +446,13 @@ a {
   padding: 0.4rem 0.55rem;
   font-size: 0.77rem;
   cursor: pointer;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
 }
 
 .empty {

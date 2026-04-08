@@ -1,7 +1,7 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const BOOKS_STORE_KEY = "novelread.admin.uploadedBooks";
-const CHAPTERS_STORE_KEY = "novelread.admin.chapterDrafts";
-const AUTOSAVE_KEY = "novelread.admin.chapterEditorDrafts";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+const BOOKS_STORE_KEY = "novara.admin.uploadedBooks";
+const CHAPTERS_STORE_KEY = "novara.admin.chapterDrafts";
+const AUTOSAVE_KEY = "novara.admin.chapterEditorDrafts";
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
@@ -437,7 +437,7 @@ function handleChapterListClick(event) {
 function bindEvents() {
   elements.logoutBtn.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);
-    window.location.href = "admin-login.html";
+    window.location.href = "index.html";
   });
 
   elements.bookSelect.addEventListener("change", () => {
@@ -485,3 +485,4 @@ function bootstrap() {
 }
 
 bootstrap();
+

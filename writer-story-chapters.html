@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novara Writer Chapters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="writer-story-chapters.css" />
+</head>
+<body>
+  <main class="chapters-shell">
+    <section class="chapters-page">
+      <header class="card page-head">
+        <div>
+          <p class="eyebrow">Writer Studio</p>
+          <h1 id="storyTitle">Story Chapters</h1>
+          <p id="storyMeta" class="subcopy">Manage chapter flow, preview your story, and publish when ready.</p>
+        </div>
+        <div class="switcher-wrap">
+          <div id="dashboardSwitcher" class="dashboard-switcher-slot" aria-live="polite"></div>
+          <button type="button" class="back-btn" id="writerSignOutBtn">Sign Out</button>
+        </div>
+        <div class="head-actions">
+          <a class="back-btn" href="./writer-dashboard.html">Back to Writer Dashboard</a>
+          <button class="btn soft" id="previewBtn" type="button">Preview Story</button>
+          <button class="btn" id="publishBtn" type="button">Publish Story</button>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="chapterFormHeading">
+        <h2 id="chapterFormHeading">Add Chapter</h2>
+        <p class="subcopy form-subcopy">Draft new chapters here, then open the full editor when you want to refine structure and prose.</p>
+        <form id="chapterForm" class="chapter-form" novalidate>
+          <div class="grid two-col">
+            <label class="field" for="chapterNumber">
+              <span>Chapter Number</span>
+              <input id="chapterNumber" type="number" min="1" step="1" required />
+            </label>
+            <label class="field" for="chapterTitle">
+              <span>Chapter Title</span>
+              <input id="chapterTitle" type="text" maxlength="180" required />
+            </label>
+          </div>
+
+          <label class="field" for="chapterContent">
+            <span>Chapter Content</span>
+            <textarea id="chapterContent" rows="8" maxlength="40000" required></textarea>
+          </label>
+
+          <label class="checkbox">
+            <input id="isPublished" type="checkbox" />
+            <span>Mark chapter as published</span>
+          </label>
+
+          <div class="actions">
+            <p id="formError" class="error" aria-live="polite"></p>
+            <button class="btn" type="submit">Save Chapter</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="card" aria-labelledby="chapterListHeading">
+        <h2 id="chapterListHeading">Saved Chapters</h2>
+        <div id="chapterList" class="chapter-list" aria-live="polite"></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="chapter-editor-modal" id="chapterEditorModal" hidden>
+    <div class="chapter-editor-backdrop" data-close-editor="true"></div>
+    <section class="chapter-editor-panel" role="dialog" aria-modal="true" aria-labelledby="chapterEditorHeading">
+      <header class="chapter-editor-header">
+        <div>
+          <p class="eyebrow">Edit Chapter</p>
+          <h2 id="chapterEditorHeading">Refine chapter details</h2>
+          <p class="subcopy" id="chapterEditorMeta">Loading chapter details...</p>
+        </div>
+        <button type="button" class="editor-close-btn" id="closeChapterEditorBtn" aria-label="Close edit chapter dialog">Close</button>
+      </header>
+
+      <form id="chapterEditorForm" class="chapter-editor-form" novalidate>
+        <div class="chapter-editor-layout">
+          <section class="editor-main-column" aria-label="Chapter editor">
+            <div class="editor-top-grid">
+              <label class="field" for="editChapterNumber">
+                <span>Chapter Number</span>
+                <input id="editChapterNumber" type="number" min="1" step="1" required />
+              </label>
+              <label class="field" for="editChapterTitle">
+                <span>Chapter Title</span>
+                <input id="editChapterTitle" type="text" maxlength="180" required />
+              </label>
+            </div>
+
+            <label class="field editor-content-field" for="editChapterContent">
+              <span>Chapter Content</span>
+              <textarea id="editChapterContent" rows="18" maxlength="40000" required></textarea>
+            </label>
+
+            <div class="editor-meta-row">
+              <label class="checkbox">
+                <input id="editIsPublished" type="checkbox" />
+                <span>Mark chapter as published</span>
+              </label>
+              <p class="selection-status" id="editorSelectionStatus">Select text in the chapter editor to unlock rewrite, dialogue, and expansion tools.</p>
+            </div>
+
+            <div class="editor-footer">
+              <p id="chapterEditorMessage" class="editor-message" aria-live="polite"></p>
+              <div class="editor-actions">
+                <button type="button" class="btn soft" id="cancelChapterEditBtn">Cancel</button>
+                <button type="submit" class="btn" id="saveChapterChangesBtn">Save Changes</button>
+              </div>
+            </div>
+          </section>
+
+          <aside class="ai-assistant-panel" aria-labelledby="aiAssistantHeading">
+            <div class="ai-panel-header">
+              <div>
+                <p class="eyebrow">AI Assistant</p>
+                <h3 id="aiAssistantHeading">Chapter Copilot</h3>
+              </div>
+              <span class="ai-panel-badge">Connected</span>
+            </div>
+
+            <div class="ai-tool-grid" id="aiToolGrid" role="group" aria-label="AI writing tools">
+              <button type="button" class="ai-tool-btn is-active" data-ai-tool="story-idea">Generate Story Idea</button>
+              <button type="button" class="ai-tool-btn" data-ai-tool="generate-chapter">Generate Chapter</button>
+              <button type="button" class="ai-tool-btn" data-ai-tool="rewrite-scene">Rewrite Scene</button>
+              <button type="button" class="ai-tool-btn" data-ai-tool="improve-dialogue">Improve Dialogue</button>
+              <button type="button" class="ai-tool-btn" data-ai-tool="continue-writing">Continue Writing</button>
+              <button type="button" class="ai-tool-btn" data-ai-tool="expand-scene">Expand Scene</button>
+              <button type="button" class="ai-tool-btn" data-ai-tool="create-chapter-title">Create Chapter Title</button>
+            </div>
+
+            <label class="field" for="aiInstructions">
+              <span>Writer Instructions</span>
+              <textarea id="aiInstructions" rows="4" placeholder="Add tone notes, pacing direction, character goals, or any other creative guidance."></textarea>
+            </label>
+
+            <div class="ai-context-card">
+              <p class="ai-context-label">Current AI context</p>
+              <p class="ai-context-value" id="aiContextSummary">Chapter details will appear here after the editor loads.</p>
+              <p class="ai-context-snippet" id="aiSelectedTextPreview">No text selected yet.</p>
+            </div>
+
+            <div class="ai-generate-row">
+              <button type="button" class="btn" id="generateAiPreviewBtn">Generate Preview</button>
+              <p class="ai-generation-status" id="aiGenerationStatus" aria-live="polite"></p>
+            </div>
+
+            <label class="field ai-preview-field" for="aiPreviewOutput">
+              <span>AI Preview</span>
+              <textarea id="aiPreviewOutput" rows="12" readonly placeholder="AI output will appear here first so you can review it before using it in the chapter."></textarea>
+            </label>
+
+            <div class="ai-preview-actions">
+              <button type="button" class="btn soft" id="replaceContentBtn">Replace Content</button>
+              <button type="button" class="btn soft" id="insertAtCursorBtn">Insert at Cursor</button>
+              <button type="button" class="btn soft" id="appendToChapterBtn">Append to Chapter</button>
+              <button type="button" class="btn soft" id="useAsTitleBtn">Use as Title</button>
+              <button type="button" class="btn soft" id="regenerateAiBtn">Regenerate</button>
+              <button type="button" class="btn soft" id="cancelAiPreviewBtn">Cancel</button>
+            </div>
+          </aside>
+        </div>
+      </form>
+    </section>
+  </div>
+
+  <script src="novara-session.js"></script>
+  <script src="writer-story-chapters.js"></script>
+</body>
+</html>

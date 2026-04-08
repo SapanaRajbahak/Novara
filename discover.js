@@ -1,49 +1,87 @@
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
+const PAGE_SIZE = 12;
+
 const elements = {
   searchInput: document.getElementById("searchInput"),
   categoryChips: document.getElementById("categoryChips"),
-  trendingSearches: document.getElementById("trendingSearches"),
-  recommendedGenres: document.getElementById("recommendedGenres"),
+  featuredPanel: document.getElementById("featuredPanel"),
+  featuredCount: document.getElementById("featuredCount"),
+  featuredBooks: document.getElementById("featuredBooks"),
+  trendingPanel: document.getElementById("trendingPanel"),
+  trendingCount: document.getElementById("trendingCount"),
+  trendingBooks: document.getElementById("trendingBooks"),
+  recentSection: document.getElementById("recentSection"),
+  recentCount: document.getElementById("recentCount"),
+  recentBooks: document.getElementById("recentBooks"),
   filterGenre: document.getElementById("filterGenre"),
-  filterLanguage: document.getElementById("filterLanguage"),
   filterType: document.getElementById("filterType"),
-  filterAccess: document.getElementById("filterAccess"),
   filterSort: document.getElementById("filterSort"),
-  minPopularity: document.getElementById("minPopularity"),
-  minPopularityText: document.getElementById("minPopularityText"),
   resetFiltersBtn: document.getElementById("resetFiltersBtn"),
   resultsMeta: document.getElementById("resultsMeta"),
   booksCount: document.getElementById("booksCount"),
-  authorsCount: document.getElementById("authorsCount"),
-  audioCount: document.getElementById("audioCount"),
   booksResults: document.getElementById("booksResults"),
-  authorsResults: document.getElementById("authorsResults"),
-  audioResults: document.getElementById("audioResults"),
+  pageInfo: document.getElementById("pageInfo"),
+  prevPageBtn: document.getElementById("prevPageBtn"),
+  nextPageBtn: document.getElementById("nextPageBtn"),
   openDrawerBtn: document.getElementById("openDrawerBtn"),
   closeDrawerBtn: document.getElementById("closeDrawerBtn"),
   filterDrawer: document.getElementById("filterDrawer"),
-  drawerFiltersMount: document.getElementById("drawerFiltersMount")
+  drawerFiltersMount: document.getElementById("drawerFiltersMount"),
 };
 
 const state = {
-  data: {
-    books: [],
-    authors: [],
-    audiobooks: [],
-    categories: [],
-    trendingSearches: [],
-    recommendedGenres: []
-  },
   query: "",
-  activeCategory: "All",
+  activeCategory: "all",
   filters: {
     genre: "all",
-    language: "all",
     type: "all",
-    access: "all",
-    sort: "relevance",
-    minPopularity: 0
-  }
+    sort: "newest",
+  },
+  books: [],
+  sections: {
+    featured: [],
+    trending: [],
+    recent: [],
+  },
+  filterOptions: {
+    genres: [],
+    types: [],
+    highlightedTags: [],
+  },
+  meta: {
+    totalPublished: 0,
+    matchingBooks: 0,
+  },
+  pagination: {
+    page: 1,
+    totalPages: 1,
+  },
+  requestId: 0,
 };
+
+let searchDebounceTimer = null;
 
 function createCoverSvg(title, genre) {
   const initials = title
@@ -80,193 +118,98 @@ function createCoverSvg(title, genre) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-function normalizeText(value) {
-  return String(value || "").toLowerCase();
+function toAbsoluteUrl(url) {
+  if (!url) {
+    return "";
+  }
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
 }
 
-function matchesQuery(item, query, extraFields = []) {
-  if (!query.trim()) {
-    return true;
+function formatDate(value) {
+  if (!value) {
+    return "";
   }
-
-  const haystack = [
-    item.title,
-    item.author,
-    item.genre,
-    ...(item.tags || []),
-    ...extraFields
-  ]
-    .join(" ")
-    .toLowerCase();
-
-  return haystack.includes(query.toLowerCase());
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "2-digit" });
 }
 
-function applyCommonFilters(item) {
-  if (state.filters.genre !== "all" && item.genre !== state.filters.genre) {
-    return false;
+function truncateText(value, maxLength = 140) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return "Summary coming soon.";
   }
-
-  if (state.filters.language !== "all" && item.language !== state.filters.language) {
-    return false;
+  if (normalized.length <= maxLength) {
+    return normalized;
   }
-
-  if (state.filters.type !== "all" && item.type !== state.filters.type) {
-    return false;
-  }
-
-  if (state.filters.access !== "all" && item.access !== state.filters.access) {
-    return false;
-  }
-
-  if ((item.popularity || 0) < state.filters.minPopularity) {
-    return false;
-  }
-
-  if (state.activeCategory !== "All") {
-    const categoryTarget = normalizeText(state.activeCategory);
-    const values = [item.genre, item.type, ...(item.tags || [])].map(normalizeText);
-    if (!values.includes(categoryTarget)) {
-      return false;
-    }
-  }
-
-  return true;
+  return `${normalized.slice(0, maxLength).trim()}...`;
 }
 
-function sortItems(items) {
-  const sorted = [...items];
-  if (state.filters.sort === "title") {
-    sorted.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
-    return sorted;
+function formatTypeLabel(type) {
+  if (type === "both") {
+    return "eBook + Audio";
   }
-
-  if (state.filters.sort === "popularity") {
-    sorted.sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
-    return sorted;
+  if (type === "audiobook") {
+    return "Audiobook";
   }
-
-  if (state.filters.sort === "newest") {
-    sorted.sort((a, b) => new Date(b.publishedAt || 0).getTime() - new Date(a.publishedAt || 0).getTime());
-    return sorted;
-  }
-
-  return sorted;
+  return "eBook";
 }
 
-function createBookCard(book) {
+function buildBookStats(book) {
+  const stats = [];
+
+  if (typeof book.reads === "number" && book.reads > 0) {
+    stats.push(`${book.reads} reads`);
+  }
+
+  if (typeof book.likes === "number" && book.likes > 0) {
+    stats.push(`${book.likes} likes`);
+  }
+
+  const addedLabel = formatDate(book.createdAt);
+  if (addedLabel) {
+    stats.push(`Added ${addedLabel}`);
+  }
+
+  return stats;
+}
+
+function createBookCard(book, compact = false) {
+  const coverSrc = toAbsoluteUrl(book.coverUrl) || createCoverSvg(book.title || "Book", book.genre || "default");
+  const tags = [book.genre, ...(Array.isArray(book.tags) ? book.tags.slice(0, compact ? 1 : 3) : [])].filter(Boolean);
+  const stats = buildBookStats(book);
   const card = document.createElement("article");
-  card.className = "card";
+  card.className = compact ? "story-strip-card" : "card book-card";
   card.innerHTML = `
-    <img class="cover" src="${createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" />
-    <h3>${book.title}</h3>
-    <p class="muted">${book.author}</p>
-    <div class="chip-row">${(book.tags || []).slice(0, 3).map((tag) => `<span class="chip">${tag}</span>`).join("")}</div>
-    <div class="actions">
-      <a href="book.html?id=${encodeURIComponent(book.id)}">Open</a>
-      ${book.type === "audiobook" || book.type === "both" ? `<a href="audiobook.html?book=${encodeURIComponent(book.id)}">Listen</a>` : ""}
+    <div class="card-top">
+      <img class="cover" src="${coverSrc}" alt="${book.title} cover" loading="lazy" />
+      <div class="label-row">
+        <span class="pill">Published</span>
+        <span class="pill">${formatTypeLabel(book.type)}</span>
+      </div>
     </div>
-  `;
-  return card;
-}
-
-function createAudioCard(item) {
-  const card = document.createElement("article");
-  card.className = "card";
-  card.innerHTML = `
-    <img class="cover" src="${createCoverSvg(item.title, item.genre)}" alt="${item.title} cover" loading="lazy" />
-    <h3>${item.title}</h3>
-    <p class="muted">${item.author}</p>
-    <p class="muted">${item.trackCount} tracks</p>
-    <div class="actions">
-      <a href="audiobook.html?book=${encodeURIComponent(item.id)}">Play</a>
-      <a href="book.html?id=${encodeURIComponent(item.id)}">Details</a>
+    <div class="card-body">
+      <h3>${book.title}</h3>
+      <p class="muted">${book.authorName || "Unknown Author"}</p>
+      <div class="chip-row">${tags.map((tag) => `<span class="chip">${tag}</span>`).join("")}</div>
+      ${compact ? "" : `<p class="card-summary">${truncateText(book.description)}</p>`}
+      ${stats.length ? `<div class="stat-row">${stats.map((item) => `<span>${item}</span>`).join("")}</div>` : ""}
+      <div class="actions">
+        <a href="book.html?id=${encodeURIComponent(book.id)}">Open</a>
+        ${book.hasAudiobook ? `<a href="audiobook.html?book=${encodeURIComponent(book.id)}">Listen</a>` : ""}
+      </div>
     </div>
-  `;
-  return card;
-}
-
-function createAuthorCard(author) {
-  const card = document.createElement("article");
-  card.className = "author-card";
-  card.innerHTML = `
-    <h3>${author.name}</h3>
-    <p class="muted">Genres: ${(author.genres || []).join(", ")}</p>
-    <p class="muted">Books: ${author.bookCount}</p>
-    <div class="chip-row">${(author.tags || []).map((tag) => `<span class="chip">${tag}</span>`).join("")}</div>
   `;
   return card;
 }
 
 function renderEmpty(container, message) {
   container.innerHTML = `<div class="empty">${message}</div>`;
-}
-
-function renderResults() {
-  const query = state.query;
-
-  const filteredBooks = sortItems(
-    state.data.books.filter((book) => matchesQuery(book, query) && applyCommonFilters(book))
-  );
-
-  const filteredAudio = sortItems(
-    state.data.audiobooks.filter((item) => {
-      const asBookLike = {
-        ...item,
-        type: "audiobook",
-        access: item.access || "paid",
-        language: item.language || "English"
-      };
-      return matchesQuery(item, query) && applyCommonFilters(asBookLike);
-    })
-  );
-
-  const filteredAuthors = sortItems(
-    state.data.authors.filter((author) => {
-      if (!matchesQuery({ title: author.name, author: author.name, genre: (author.genres || []).join(" "), tags: author.tags || [] }, query)) {
-        return false;
-      }
-
-      if (state.filters.genre !== "all" && !(author.genres || []).includes(state.filters.genre)) {
-        return false;
-      }
-
-      if (state.filters.minPopularity > 0 && (author.popularity || 0) < state.filters.minPopularity) {
-        return false;
-      }
-
-      return true;
-    })
-  );
-
-  elements.booksCount.textContent = String(filteredBooks.length);
-  elements.audioCount.textContent = String(filteredAudio.length);
-  elements.authorsCount.textContent = String(filteredAuthors.length);
-
-  const total = filteredBooks.length + filteredAudio.length + filteredAuthors.length;
-  elements.resultsMeta.textContent = `${total} total results`;
-
-  elements.booksResults.innerHTML = "";
-  elements.audioResults.innerHTML = "";
-  elements.authorsResults.innerHTML = "";
-
-  if (!filteredBooks.length) {
-    renderEmpty(elements.booksResults, "No books match your search.");
-  } else {
-    filteredBooks.forEach((book) => elements.booksResults.appendChild(createBookCard(book)));
-  }
-
-  if (!filteredAudio.length) {
-    renderEmpty(elements.audioResults, "No audiobooks found.");
-  } else {
-    filteredAudio.forEach((item) => elements.audioResults.appendChild(createAudioCard(item)));
-  }
-
-  if (!filteredAuthors.length) {
-    renderEmpty(elements.authorsResults, "No authors match your filters.");
-  } else {
-    filteredAuthors.forEach((author) => elements.authorsResults.appendChild(createAuthorCard(author)));
-  }
 }
 
 function populateSelect(selectEl, values, label) {
@@ -277,80 +220,64 @@ function populateSelect(selectEl, values, label) {
 
 function renderCategoryChips() {
   elements.categoryChips.innerHTML = "";
-  state.data.categories.forEach((category) => {
+  ["all", ...state.filterOptions.genres].forEach((category) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `chip ${state.activeCategory === category ? "active" : ""}`;
-    button.textContent = category;
+    button.textContent = category === "all" ? "All" : category;
     button.addEventListener("click", () => {
       state.activeCategory = category;
+      state.filters.genre = category;
+      elements.filterGenre.value = category;
+      state.pagination.page = 1;
       renderCategoryChips();
-      renderResults();
+      loadDiscoverData();
     });
     elements.categoryChips.appendChild(button);
   });
 }
 
-function renderQuickChips() {
-  elements.trendingSearches.innerHTML = "";
-  state.data.trendingSearches.forEach((text) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "chip";
-    button.textContent = text;
-    button.addEventListener("click", () => {
-      state.query = text;
-      elements.searchInput.value = text;
-      renderResults();
-    });
-    elements.trendingSearches.appendChild(button);
-  });
+function renderSection(panel, countEl, container, books, emptyMessage) {
+  if (!books.length) {
+    panel.hidden = true;
+    container.innerHTML = "";
+    if (countEl) {
+      countEl.textContent = "0";
+    }
+    return;
+  }
 
-  elements.recommendedGenres.innerHTML = "";
-  state.data.recommendedGenres.forEach((genre) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "chip";
-    button.textContent = genre;
-    button.addEventListener("click", () => {
-      state.filters.genre = genre;
-      elements.filterGenre.value = genre;
-      renderResults();
-    });
-    elements.recommendedGenres.appendChild(button);
-  });
+  panel.hidden = false;
+  countEl.textContent = String(books.length);
+  container.innerHTML = "";
+  books.forEach((book) => container.appendChild(createBookCard(book, true)));
+
+  if (!books.length && emptyMessage) {
+    renderEmpty(container, emptyMessage);
+  }
 }
 
 function syncFiltersFromForm() {
   state.filters.genre = elements.filterGenre.value;
-  state.filters.language = elements.filterLanguage.value;
   state.filters.type = elements.filterType.value;
-  state.filters.access = elements.filterAccess.value;
   state.filters.sort = elements.filterSort.value;
-  state.filters.minPopularity = Number(elements.minPopularity.value);
-  elements.minPopularityText.textContent = `${state.filters.minPopularity}+`;
+  state.activeCategory = state.filters.genre;
 }
 
 function resetFilters() {
   state.filters = {
     genre: "all",
-    language: "all",
     type: "all",
-    access: "all",
-    sort: "relevance",
-    minPopularity: 0
+    sort: "newest",
   };
 
   elements.filterGenre.value = "all";
-  elements.filterLanguage.value = "all";
   elements.filterType.value = "all";
-  elements.filterAccess.value = "all";
-  elements.filterSort.value = "relevance";
-  elements.minPopularity.value = "0";
-  elements.minPopularityText.textContent = "0+";
-  state.activeCategory = "All";
+  elements.filterSort.value = "newest";
+  state.activeCategory = "all";
+  state.pagination.page = 1;
   renderCategoryChips();
-  renderResults();
+  loadDiscoverData();
 }
 
 function cloneFiltersForDrawer() {
@@ -375,41 +302,22 @@ function cloneFiltersForDrawer() {
   bind("filterGenre", (event) => {
     elements.filterGenre.value = event.target.value;
     syncFiltersFromForm();
-    renderResults();
-  });
-
-  bind("filterLanguage", (event) => {
-    elements.filterLanguage.value = event.target.value;
-    syncFiltersFromForm();
-    renderResults();
+    state.pagination.page = 1;
+    loadDiscoverData();
   });
 
   bind("filterType", (event) => {
     elements.filterType.value = event.target.value;
     syncFiltersFromForm();
-    renderResults();
-  });
-
-  bind("filterAccess", (event) => {
-    elements.filterAccess.value = event.target.value;
-    syncFiltersFromForm();
-    renderResults();
+    state.pagination.page = 1;
+    loadDiscoverData();
   });
 
   bind("filterSort", (event) => {
     elements.filterSort.value = event.target.value;
     syncFiltersFromForm();
-    renderResults();
-  });
-
-  bind("minPopularity", (event) => {
-    elements.minPopularity.value = event.target.value;
-    syncFiltersFromForm();
-    renderResults();
-    const txt = drawerRoot.querySelector("#minPopularityText");
-    if (txt) {
-      txt.textContent = `${event.target.value}+`;
-    }
+    state.pagination.page = 1;
+    loadDiscoverData();
   });
 
   const resetBtn = drawerRoot.querySelector("#resetFiltersBtn");
@@ -421,21 +329,38 @@ function cloneFiltersForDrawer() {
 function bindEvents() {
   elements.searchInput.addEventListener("input", () => {
     state.query = elements.searchInput.value;
-    renderResults();
+    state.pagination.page = 1;
+    window.clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = window.setTimeout(() => {
+      loadDiscoverData();
+    }, 180);
   });
 
-  [elements.filterGenre, elements.filterLanguage, elements.filterType, elements.filterAccess, elements.filterSort, elements.minPopularity].forEach((control) => {
+  [elements.filterGenre, elements.filterType, elements.filterSort].forEach((control) => {
     control.addEventListener("change", () => {
       syncFiltersFromForm();
-      renderResults();
-    });
-    control.addEventListener("input", () => {
-      syncFiltersFromForm();
-      renderResults();
+      state.pagination.page = 1;
+      loadDiscoverData();
     });
   });
 
   elements.resetFiltersBtn.addEventListener("click", resetFilters);
+
+  elements.prevPageBtn.addEventListener("click", () => {
+    if (state.pagination.page <= 1) {
+      return;
+    }
+    state.pagination.page -= 1;
+    loadDiscoverData();
+  });
+
+  elements.nextPageBtn.addEventListener("click", () => {
+    if (state.pagination.page >= state.pagination.totalPages) {
+      return;
+    }
+    state.pagination.page += 1;
+    loadDiscoverData();
+  });
 
   elements.openDrawerBtn.addEventListener("click", () => {
     cloneFiltersForDrawer();
@@ -456,48 +381,117 @@ function bindEvents() {
   });
 }
 
-async function loadData() {
+function updateFilterOptions() {
+  populateSelect(elements.filterGenre, state.filterOptions.genres, "Genres");
+  elements.filterGenre.value = state.filters.genre;
+}
+
+function renderResults() {
+  elements.booksCount.textContent = String(state.meta.matchingBooks || state.books.length);
+  elements.pageInfo.textContent = `Page ${state.pagination.page} of ${state.pagination.totalPages}`;
+  elements.prevPageBtn.disabled = state.pagination.page <= 1;
+  elements.nextPageBtn.disabled = state.pagination.page >= state.pagination.totalPages;
+
+  if (!state.meta.totalPublished) {
+    elements.resultsMeta.textContent = "No published books are available yet.";
+  } else if (!state.books.length) {
+    elements.resultsMeta.textContent = `No published books matched your current search and filters. Catalog size: ${state.meta.totalPublished}.`;
+  } else {
+    elements.resultsMeta.textContent = `Showing ${state.books.length} of ${state.meta.matchingBooks} matching published books. Total catalog: ${state.meta.totalPublished}.`;
+  }
+
+  elements.booksResults.innerHTML = "";
+  if (!state.books.length) {
+    renderEmpty(elements.booksResults, "No published books match your current filters.");
+  } else {
+    state.books.forEach((book) => elements.booksResults.appendChild(createBookCard(book)));
+  }
+
+  renderSection(elements.featuredPanel, elements.featuredCount, elements.featuredBooks, state.sections.featured, "");
+  renderSection(elements.trendingPanel, elements.trendingCount, elements.trendingBooks, state.sections.trending, "");
+
+  if (!state.sections.recent.length) {
+    elements.recentSection.hidden = true;
+    elements.recentBooks.innerHTML = "";
+    elements.recentCount.textContent = "0";
+  } else {
+    elements.recentSection.hidden = false;
+    elements.recentCount.textContent = String(state.sections.recent.length);
+    elements.recentBooks.innerHTML = "";
+    state.sections.recent.forEach((book) => elements.recentBooks.appendChild(createBookCard(book, true)));
+  }
+}
+
+async function loadDiscoverData() {
+  const requestId = state.requestId + 1;
+  state.requestId = requestId;
+  elements.resultsMeta.textContent = "Loading published books...";
+
+  const params = new URLSearchParams({
+    page: String(state.pagination.page),
+    limit: String(PAGE_SIZE),
+    sort: state.filters.sort,
+  });
+
+  const genre = state.filters.genre !== "all" ? state.filters.genre : "";
+  if (genre) {
+    params.set("genre", genre);
+  }
+  if (state.filters.type !== "all") {
+    params.set("type", state.filters.type);
+  }
+  if (state.query.trim()) {
+    params.set("search", state.query.trim());
+  }
+
   try {
-    const response = await fetch("./data/discover.json", { cache: "no-store" });
+    const response = await fetch(`${API_BASE_URL}/api/books/discover?${params.toString()}`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
     const payload = await response.json();
-    state.data = {
-      books: Array.isArray(payload.books) ? payload.books : [],
-      authors: Array.isArray(payload.authors) ? payload.authors : [],
-      audiobooks: Array.isArray(payload.audiobooks) ? payload.audiobooks : [],
-      categories: Array.isArray(payload.categories) ? payload.categories : ["All"],
-      trendingSearches: Array.isArray(payload.trendingSearches) ? payload.trendingSearches : [],
-      recommendedGenres: Array.isArray(payload.recommendedGenres) ? payload.recommendedGenres : []
+    if (!payload.success) {
+      throw new Error(payload.error || "Failed to load discover feed");
+    }
+
+    if (requestId !== state.requestId) {
+      return;
+    }
+
+    state.books = Array.isArray(payload.data) ? payload.data : [];
+    state.sections = {
+      featured: payload.sections && Array.isArray(payload.sections.featured) ? payload.sections.featured : [],
+      trending: payload.sections && Array.isArray(payload.sections.trending) ? payload.sections.trending : [],
+      recent: payload.sections && Array.isArray(payload.sections.recent) ? payload.sections.recent : [],
     };
+    state.filterOptions = payload.filterOptions || { genres: [], types: [], highlightedTags: [] };
+    state.meta = payload.meta || { totalPublished: 0, matchingBooks: state.books.length };
+    state.pagination = payload.pagination || { page: 1, totalPages: 1 };
+
+    updateFilterOptions();
+    renderCategoryChips();
+    renderResults();
   } catch (error) {
-    state.data = {
-      books: [],
-      authors: [],
-      audiobooks: [],
-      categories: ["All"],
-      trendingSearches: [],
-      recommendedGenres: []
-    };
+    if (requestId !== state.requestId) {
+      return;
+    }
+
+    state.books = [];
+    state.sections = { featured: [], trending: [], recent: [] };
+    state.filterOptions = { genres: [], types: [], highlightedTags: [] };
+    state.meta = { totalPublished: 0, matchingBooks: 0 };
+    state.pagination = { page: 1, totalPages: 1 };
+    updateFilterOptions();
+    renderCategoryChips();
+    renderResults();
+    elements.resultsMeta.textContent = error.message || "Unable to load published books.";
   }
 }
 
-function setupFilterOptions() {
-  const genres = new Set(state.data.books.map((book) => book.genre).concat(state.data.audiobooks.map((item) => item.genre)).filter(Boolean));
-  const languages = new Set(state.data.books.map((book) => book.language).concat(state.data.audiobooks.map((item) => item.language)).filter(Boolean));
-  populateSelect(elements.filterGenre, genres, "Genres");
-  populateSelect(elements.filterLanguage, languages, "Languages");
-}
-
 async function bootstrap() {
-  await loadData();
-  setupFilterOptions();
-  renderCategoryChips();
-  renderQuickChips();
   bindEvents();
   syncFiltersFromForm();
-  renderResults();
+  await loadDiscoverData();
 }
 
 bootstrap();

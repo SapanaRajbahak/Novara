@@ -107,6 +107,10 @@ a { color: inherit; text-decoration: none; }
   align-items: end;
 }
 
+.controls--compact {
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+}
+
 .search-wrap, .filter-wrap { display: grid; gap: 0.2rem; }
 .search-wrap label, .filter-wrap label { font-size: 0.76rem; color: var(--muted); }
 
@@ -117,6 +121,17 @@ a { color: inherit; text-decoration: none; }
   color: var(--text);
   padding: 0.48rem 0.55rem;
   font: inherit;
+}
+
+.search-wrap textarea,
+.filter-wrap input {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.48rem 0.55rem;
+  font: inherit;
+  resize: vertical;
 }
 
 .panel-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.65rem; }
@@ -211,6 +226,60 @@ th { color: var(--muted); font-weight: 600; }
   background: var(--surface);
   padding: 0.5rem 0.65rem;
   box-shadow: var(--shadow-soft);
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+}
+
+.modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 14, 11, 0.45);
+}
+
+.modal__dialog {
+  position: relative;
+  width: min(760px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+}
+
+.edit-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.modal__checks {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.modal__checks label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.modal__actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.modal__message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
 }
 
 .hidden { display: none; }

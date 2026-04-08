@@ -1,3 +1,123 @@
+/* Sidebar Monetization Group */
+.sidebar-group-label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: #b7ac9f;
+  font-weight: 700;
+  margin: 1.2rem 0 0.2rem 0.7rem;
+}
+.sidebar-monetization-link {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 7px;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #2b5839;
+  text-decoration: none;
+  transition: background 0.13s, color 0.13s;
+  margin-left: 0.2rem;
+  margin-right: 0.2rem;
+}
+.sidebar-monetization-link:hover,
+.sidebar-monetization-link.active {
+  background: #ebe5da;
+  color: #1c1810;
+}
+.sidebar-monetization-icon {
+  font-size: 1.2em;
+  width: 1.5em;
+  text-align: center;
+  flex-shrink: 0;
+}
+/* Monetization sidebar-style dashboard links */
+.monetization-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin-top: 1.2rem;
+}
+.monetization-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.7rem 1.2rem;
+  border-radius: 7px;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #2b5839;
+  text-decoration: none;
+  transition: background 0.13s, color 0.13s;
+}
+.monetization-sidebar-item:hover,
+.monetization-sidebar-item.active {
+  background: #ebe5da;
+  color: #1c1810;
+}
+.monetization-icon {
+  font-size: 1.2em;
+  width: 1.5em;
+  text-align: center;
+  flex-shrink: 0;
+}
+/* Monetization dashboard links */
+.monetization-dashboard-links {
+  margin-top: 1rem;
+}
+.monetization-link {
+  display: inline-block;
+  padding: 1.2rem 2.2rem;
+  background: #f5f0e8;
+  border: 1px solid #e3ddd2;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2b5839;
+  text-decoration: none;
+  transition: background 0.13s, box-shadow 0.13s;
+  box-shadow: 0 1px 4px rgba(55,40,15,0.07);
+}
+.monetization-link:hover {
+  background: #ebe5da;
+  color: #1c1810;
+  box-shadow: 0 2px 12px rgba(55,40,15,0.09);
+}
+/* Premium pill-style dashboard switcher */
+.dashboard-switcher {
+  display: flex;
+  gap: 0.5rem;
+  background: #f8f6f2;
+  border-radius: 2rem;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+.dashboard-switcher__link {
+  padding: 0.5rem 1.25rem;
+  border-radius: 2rem;
+  background: none;
+  color: #2d3a2e;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+.dashboard-switcher__link:hover {
+  background: #ece7df;
+  color: #6b4a2a;
+}
+.dashboard-switcher__link.is-active {
+  background: linear-gradient(90deg, #2d3a2e 0%, #6b4a2a 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px #2d3a2e22;
+}
 :root {
   --bg: #f4efe7;
   --bg-soft: #faf6ef;

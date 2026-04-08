@@ -14,7 +14,7 @@
     <aside class="admin-sidebar" aria-label="Admin Navigation">
       <a href="admin.html" class="brand">
         <span class="brand-dot" aria-hidden="true"></span>
-        <span>NovelRead Admin</span>
+        <span>Novara Admin</span>
       </a>
 
       <nav class="sidebar-nav">
@@ -32,79 +32,107 @@
       <button type="button" id="logoutBtn" class="logout-btn">Logout</button>
     </aside>
 
+
     <main class="admin-main">
-      <header class="main-topbar">
-        <div>
-          <p class="eyebrow">Admin Panel</p>
-          <h1>Books Management</h1>
+      <!-- Header Section -->
+      <header class="main-topbar premium-header">
+        <div class="header-left">
+          <span class="eyebrow">ADMIN PANEL</span>
+          <h1 class="page-title">Books Management</h1>
+          <p class="subtitle">Manage your platform books, uploads, chapters, publishing status, and audio content.</p>
         </div>
-        <div class="top-actions">
-          <a href="admin.html" class="text-btn">Back to Dashboard</a>
+        <div class="header-actions">
+          <a href="admin-upload.html" class="btn btn-primary"><span class="icon-upload"></span>Upload New Book</a>
+          <a href="admin.html" class="btn btn-secondary">Back to Dashboard</a>
         </div>
       </header>
 
-      <section class="controls panel">
-        <div class="search-wrap">
-          <label for="searchInput">Search</label>
-          <input id="searchInput" type="search" placeholder="Search title, author, genre..." />
-        </div>
-
-        <div class="filter-wrap">
-          <label for="statusFilter">Status</label>
-          <select id="statusFilter">
-            <option value="all">All</option>
-            <option value="published">Published</option>
-            <option value="draft">Draft</option>
-          </select>
-        </div>
-
-        <div class="filter-wrap">
-          <label for="sourceFilter">Source</label>
-          <select id="sourceFilter">
-            <option value="all">All</option>
-            <option value="ai-generated">AI-generated</option>
-            <option value="uploaded-manually">Uploaded manually</option>
-          </select>
-        </div>
-
-        <div class="filter-wrap">
-          <label for="viewMode">View</label>
-          <select id="viewMode">
-            <option value="table">Table</option>
-            <option value="grid">Grid</option>
-          </select>
-        </div>
+      <!-- Stats Row -->
+      <section class="stats-row" id="booksStats">
+        <div class="stat-card"><div class="stat-label">Total Books</div><div class="stat-value" id="statTotalBooks">0</div></div>
+        <div class="stat-card"><div class="stat-label">Published</div><div class="stat-value" id="statPublished">0</div></div>
+        <div class="stat-card"><div class="stat-label">Drafts</div><div class="stat-value" id="statDrafts">0</div></div>
+        <div class="stat-card"><div class="stat-label">Audiobooks</div><div class="stat-value" id="statAudiobooks">0</div></div>
       </section>
 
-      <section class="panel" aria-labelledby="booksHeading">
+      <!-- Filter Toolbar -->
+      <section class="panel filter-toolbar" aria-label="Book Filters">
+        <form class="filters-form" id="filtersForm" autocomplete="off" onsubmit="return false;">
+          <div class="filter-group search-group">
+            <span class="input-icon"><svg width="18" height="18" fill="none"><circle cx="8" cy="8" r="7" stroke="#b7ac9f" stroke-width="2"/><path d="M15 15l-3.5-3.5" stroke="#b7ac9f" stroke-width="2" stroke-linecap="round"/></svg></span>
+            <input id="searchInput" type="search" placeholder="Search title, author, genre..." />
+          </div>
+          <div class="filter-group">
+            <label for="statusFilter">Status</label>
+            <select id="statusFilter">
+              <option value="all">All</option>
+              <option value="published">Published</option>
+              <option value="draft">Draft</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label for="sourceFilter">Source</label>
+            <select id="sourceFilter">
+              <option value="all">All</option>
+              <option value="ai-generated">AI-generated</option>
+              <option value="uploaded-manually">Uploaded manually</option>
+            </select>
+          </div>
+          <div class="filter-group view-toggle-group">
+            <label class="sr-only" for="viewMode">View</label>
+            <div class="segmented-toggle" id="viewToggle">
+              <button type="button" class="seg-btn active" data-view="table" aria-pressed="true">Table</button>
+              <button type="button" class="seg-btn" data-view="grid" aria-pressed="false">Grid</button>
+            </div>
+          </div>
+          <div class="filter-group">
+            <button type="button" class="btn btn-ghost" id="resetFilters">Reset Filters</button>
+          </div>
+          <div class="filter-group results-summary">
+            <span id="resultsMeta">0 books</span>
+          </div>
+        </form>
+      </section>
+
+      <!-- Books Table Card -->
+      <section class="panel books-table-card" aria-labelledby="booksHeading">
         <div class="panel-head">
           <h2 id="booksHeading">All Books</h2>
-          <span id="resultsMeta">0 results</span>
         </div>
-
         <div id="tableView" class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Cover</th>
-                <th>Title</th>
+                <th>Book</th>
                 <th>Author</th>
-                <th>Genre</th>
+                <th>Type</th>
                 <th>Status</th>
-                <th>Created Date</th>
+                <th>Upload Date</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="booksTableBody"></tbody>
           </table>
         </div>
-
         <div id="gridView" class="books-grid hidden"></div>
-
         <div class="pagination">
           <button type="button" id="prevPageBtn" class="text-btn">Previous</button>
           <span id="pageMeta">Page 1 of 1</span>
           <button type="button" id="nextPageBtn" class="text-btn">Next</button>
+        </div>
+      </section>
+
+      <!-- ...existing code for edit modal... -->
+      <section id="editModal" class="modal hidden" aria-hidden="true">
+        <div class="modal__backdrop" data-close-modal="true"></div>
+        <div class="modal__dialog panel" role="dialog" aria-modal="true" aria-labelledby="editBookHeading">
+          <div class="panel-head">
+            <h2 id="editBookHeading">Edit Book</h2>
+            <button type="button" class="text-btn" id="closeEditModalBtn">Close</button>
+          </div>
+          <form id="editBookForm" class="edit-form" novalidate>
+            <!-- ...existing code... -->
+          </form>
         </div>
       </section>
     </main>

@@ -1,5 +1,5 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const ADMIN_SETTINGS_KEY = "novelread.admin.settings";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+const ADMIN_SETTINGS_KEY = "novara.admin.settings";
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
@@ -66,7 +66,7 @@ function saveSettings(settings) {
 function getDefaultSettings() {
   return {
     platform: {
-      platformName: "NovelRead",
+      platformName: "Novara",
       defaultLanguage: "en",
       maintenanceMode: false
     },
@@ -95,7 +95,7 @@ function getDefaultSettings() {
 function getCurrentSettings() {
   return {
     platform: {
-      platformName: elements.platformNameInput.value.trim() || "NovelRead",
+      platformName: elements.platformNameInput.value.trim() || "Novara",
       defaultLanguage: elements.defaultLanguageSelect.value,
       maintenanceMode: elements.maintenanceModeInput.checked
     },
@@ -170,7 +170,7 @@ function handleSave(sectionName) {
 function bindEvents() {
   elements.logoutBtn.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);
-    window.location.href = "admin-login.html";
+    window.location.href = "index.html";
   });
 
   elements.platformForm.addEventListener("submit", (event) => {
@@ -211,3 +211,4 @@ function bootstrap() {
 }
 
 bootstrap();
+

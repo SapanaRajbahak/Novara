@@ -1,9 +1,35 @@
-const SAVE_KEY = "novelread.savedBooks";
-const FAVORITE_KEY = "novelread.favoriteBooks";
+const SAVE_KEY = "novara.savedBooks";
+const FAVORITE_KEY = "novara.favoriteBooks";
+const POST_LOGIN_REDIRECT_KEY = "novara.postLoginRedirect";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    try {
+      const parsed = new URL(explicitBase);
+      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
+      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
+
+      if (!isLocalPage || isExplicitLocal) {
+        return explicitBase.replace(/\/$/, "");
+      }
+    } catch (error) {
+      // Ignore invalid override and fall back to local default.
+    }
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const elements = {
   coverImage: document.getElementById("coverImage"),
   readBtn: document.getElementById("readBtn"),
+  resumeBtn: document.getElementById("resumeBtn"),
+  resumeHint: document.getElementById("resumeHint"),
   listenBtn: document.getElementById("listenBtn"),
   saveBtn: document.getElementById("saveBtn"),
   favoriteBtn: document.getElementById("favoriteBtn"),
@@ -27,45 +53,9 @@ const elements = {
   tabPanels: [...document.querySelectorAll(".tab-panel")]
 };
 
-const fallbackData = {
-  books: [
-    {
-      id: "book-last-lantern",
-      title: "The Last Lantern",
-      author: "M. K. Vale",
-      genre: ["Mystery", "Thriller"],
-      rating: null,
-      description: "A detective returns to a coastal town where every answer is hidden in lighthouse logs and tide charts.",
-      about: "The Last Lantern blends investigative suspense with atmospheric coastal fiction. As clues emerge from journals and forgotten boat ledgers, the story explores grief, legacy, and what people protect when the town is watching.",
-      language: "English",
-      chapters: [
-        { number: 1, title: "A Light on the Water" },
-        { number: 2, title: "Old Harbor Notes" },
-        { number: 3, title: "The Keeper's Name" },
-        { number: 4, title: "Storm Ledger" },
-        { number: 5, title: "Signal in the Fog" }
-      ],
-      format: "eBook + Audiobook",
-      hasAudiobook: true,
-      audiobookTracks: [
-        { number: 1, title: "Track 1 - A Light on the Water" },
-        { number: 2, title: "Track 2 - Old Harbor Notes" },
-        { number: 3, title: "Track 3 - The Keeper's Name" }
-      ],
-      reviews: [
-        { name: "Rina", text: "Perfect pacing and an ending that lands." },
-        { name: "Joel", text: "Loved the maritime setting and mystery threads." }
-      ],
-      relatedBooks: [
-        { title: "Below Quiet Waters", author: "Adrian Poe" },
-        { title: "Copper Rain", author: "Elio Park" }
-      ]
-    }
-  ]
-};
-
-let books = [];
 let currentBook = null;
+let resumeChapterId = null;
+let currentUser = null;
 let savedBooks = loadSet(SAVE_KEY);
 let favoriteBooks = loadSet(FAVORITE_KEY);
 
@@ -85,7 +75,7 @@ function persistSet(key, setValue) {
 
 function getBookIdFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get("id") || "book-last-lantern";
+  return params.get("id");
 }
 
 function getInitialTabFromUrl() {
@@ -154,6 +144,96 @@ function showToast(message) {
   }, 1500);
 }
 
+function buildReaderUrl(bookId, chapterId) {
+  const params = new URLSearchParams();
+  params.set("bookId", bookId);
+
+  if (chapterId) {
+    params.set("chapterId", chapterId);
+  }
+
+  return `reader.html?${params.toString()}`;
+}
+
+function buildLandingAuthUrl(nextUrl) {
+  const params = new URLSearchParams();
+  params.set("auth", "signup");
+  params.set("next", nextUrl);
+  return `index.html?${params.toString()}`;
+}
+
+function savePostLoginRedirect(url) {
+  try {
+    localStorage.setItem(POST_LOGIN_REDIRECT_KEY, url);
+  } catch (error) {
+    // Ignore storage failures in private mode.
+  }
+}
+
+function requestLoginForChapter(chapterId) {
+  if (!currentBook || !chapterId) {
+    return;
+  }
+
+  const readerUrl = buildReaderUrl(currentBook.id, chapterId);
+  savePostLoginRedirect(readerUrl);
+  showToast("Login required to read Chapter 2 and above");
+  window.setTimeout(() => {
+    window.location.href = buildLandingAuthUrl(readerUrl);
+  }, 180);
+}
+
+function toAbsoluteUrl(url) {
+  if (!url) {
+    return "";
+  }
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:")) {
+    return url;
+  }
+  return `${API_BASE_URL}${url}`;
+}
+
+function mapApiBookToViewModel(book, chapters, audioTracks, relatedBooks) {
+  const chaptersCount = book?._count?.chapters ?? 0;
+  const tracksCount = book?._count?.audioTracks ?? 0;
+  const likes = book?._count?.bookmarks ?? 0;
+  const reads = (book?._count?.readingProgress ?? 0) + (book?._count?.listeningProgress ?? 0);
+  const hasAudio = Boolean(book.isAudiobookAvailable || (Array.isArray(audioTracks) && audioTracks.length > 0));
+
+  const primaryGenre = book.genre || "General";
+
+  return {
+    id: book.id,
+    title: book.title || "Untitled",
+    author: book.authorName || "Unknown Author",
+    genre: [primaryGenre],
+    reads,
+    likes,
+    description: book.description || "No description available for this book yet.",
+    about: book.description || "No long description available yet.",
+    language: "Not specified",
+    publishedAt: book.createdAt || null,
+    chapters,
+    format: hasAudio ? "eBook + Audiobook" : "eBook",
+    hasAudiobook: hasAudio,
+    audiobookTracks: Array.isArray(audioTracks)
+      ? audioTracks.map((track) => ({
+        id: track.id,
+        number: track.order,
+        title: track.title || `Track ${track.order}`,
+      }))
+      : Array.from({ length: Math.min(tracksCount, 20) }, (_, index) => ({
+        id: "",
+        number: index + 1,
+        title: `Track ${index + 1}`,
+      })),
+    reviews: [],
+    relatedBooks: Array.isArray(relatedBooks) ? relatedBooks : [],
+    coverImage: toAbsoluteUrl(book.coverUrl) || createCoverSvg(book.title || "Book", [primaryGenre]),
+    fileUrl: book.fileUrl || "",
+  };
+}
+
 function renderGenres(genres) {
   elements.genreTags.innerHTML = "";
   genres.forEach((genre) => {
@@ -164,14 +244,23 @@ function renderGenres(genres) {
   });
 }
 
-function renderChapterList(chapters) {
+function renderChapterList(chapters, user) {
   elements.chapterList.innerHTML = "";
+
+  if (!chapters.length) {
+    elements.chapterList.innerHTML = "<li><p>No published chapters yet.</p></li>";
+    return;
+  }
+
+  const isGuest = !user;
+
   chapters.forEach((chapter) => {
+    const isLocked = isGuest && Number(chapter.number) > 1;
     const li = document.createElement("li");
     li.innerHTML = `
-      <button class="chapter-item" type="button" data-chapter-number="${chapter.number}">
-        <span>Chapter ${chapter.number}</span>
-        ${chapter.title}
+      <button class="chapter-item ${isLocked ? "is-locked" : ""}" type="button" data-chapter-id="${chapter.id}" data-chapter-number="${chapter.number}" ${isLocked ? 'data-chapter-locked="true"' : ""}>
+        <span>Chapter ${chapter.number}${isLocked ? " • Locked" : ""}</span>
+        ${chapter.title}${isLocked ? " <strong class=\"lock-badge\">Login required</strong>" : ""}
       </button>
     `;
     elements.chapterList.appendChild(li);
@@ -203,7 +292,7 @@ function renderAudioTracks(book) {
 function renderReviews(reviews) {
   elements.reviewsList.innerHTML = "";
   if (!reviews.length) {
-    elements.reviewsList.innerHTML = "<p>No reviews yet.</p>";
+    elements.reviewsList.innerHTML = "<p>No verified reviews available yet.</p>";
     return;
   }
 
@@ -218,28 +307,29 @@ function renderReviews(reviews) {
 function renderRelatedBooks(relatedBooks) {
   elements.relatedList.innerHTML = "";
   if (!relatedBooks.length) {
-    elements.relatedList.innerHTML = "<p>No related books available.</p>";
+    elements.relatedList.innerHTML = "<p>No related books available yet.</p>";
     return;
   }
 
   relatedBooks.forEach((book) => {
     const card = document.createElement("article");
     card.className = "related-card";
-    card.innerHTML = `<strong>${book.title}</strong><p>${book.author}</p>`;
+    card.innerHTML = `<strong>${book.title}</strong><p>${book.authorName || "Unknown Author"}</p><a class="btn" href="book.html?id=${encodeURIComponent(book.id)}">Open</a>`;
     elements.relatedList.appendChild(card);
   });
 }
 
 function renderBook(book) {
   currentBook = book;
-  document.title = `${book.title} | NovelRead`;
+  resumeChapterId = null;
+  document.title = `${book.title} | Novara`;
 
-  elements.coverImage.src = createCoverSvg(book.title, book.genre);
+  elements.coverImage.src = book.coverImage || createCoverSvg(book.title, book.genre);
   elements.coverImage.alt = `${book.title} cover`;
   elements.bookTitle.textContent = book.title;
   elements.bookAuthor.textContent = `by ${book.author}`;
   renderGenres(book.genre);
-  elements.ratingPlaceholder.textContent = `Rating: ${book.rating === null ? "--.--" : book.rating.toFixed(1)} / 5.0`;
+  elements.ratingPlaceholder.textContent = `${book.reads || 0} reads • ${book.likes || 0} likes`;
   elements.bookDescription.textContent = book.description;
   elements.aboutText.textContent = book.about;
 
@@ -248,7 +338,7 @@ function renderBook(book) {
   elements.metaFormat.textContent = book.format;
   elements.metaAudio.textContent = book.hasAudiobook ? "Available" : "Not available";
 
-  renderChapterList(book.chapters);
+  renderChapterList(book.chapters, currentUser);
   renderAudioTracks(book);
   renderReviews(book.reviews || []);
   renderRelatedBooks(book.relatedBooks || []);
@@ -259,7 +349,12 @@ function renderBook(book) {
   const favored = favoriteBooks.has(book.id);
   elements.favoriteBtn.textContent = favored ? "Favorited" : "Bookmark/Favorite";
 
-  elements.listenBtn.disabled = !book.hasAudiobook;
+  elements.listenBtn.disabled = !book.chapters.length;
+
+  // Hide resume UI by default until progress API returns.
+  elements.resumeBtn.classList.add("hidden");
+  elements.resumeHint.classList.add("hidden");
+  elements.resumeHint.textContent = "";
 }
 
 function setActiveTab(tabName) {
@@ -283,17 +378,111 @@ function setupTabEvents() {
   });
 }
 
-function openReader(chapterNumber) {
-  window.location.href = `reader.html?book=${encodeURIComponent(currentBook.id)}&chapter=${encodeURIComponent(chapterNumber)}`;
+function openReader(chapterId) {
+  window.location.href = buildReaderUrl(currentBook.id, chapterId);
+}
+
+async function fetchCurrentUser() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      currentUser = null;
+      return null;
+    }
+
+    const payload = await response.json();
+    currentUser = payload && payload.success ? payload.user || null : null;
+    return currentUser;
+  } catch (error) {
+    currentUser = null;
+    return null;
+  }
+}
+
+async function loadReadingProgress(bookId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/reading/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      // Not signed in: this is a valid state, just skip resume UI.
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (!payload.success || !payload.data) {
+      return null;
+    }
+
+    return payload.data;
+  } catch (error) {
+    console.warn("Failed to load reading progress:", error);
+    return null;
+  }
+}
+
+function applyReadingProgressUi(progress) {
+  if (!progress || !progress.chapterId) {
+    elements.resumeBtn.classList.add("hidden");
+    elements.resumeHint.classList.add("hidden");
+    elements.resumeHint.textContent = "";
+    resumeChapterId = null;
+    return;
+  }
+
+  resumeChapterId = progress.chapterId;
+  elements.resumeBtn.classList.remove("hidden");
+
+  const chapterFromList = currentBook.chapters.find((item) => item.id === progress.chapterId);
+  const chapterNumber = chapterFromList?.number || progress?.chapter?.chapterNumber;
+
+  if (chapterNumber) {
+    elements.resumeHint.textContent = `Continue from Chapter ${chapterNumber}`;
+    elements.resumeHint.classList.remove("hidden");
+  } else {
+    elements.resumeHint.classList.add("hidden");
+    elements.resumeHint.textContent = "";
+  }
+}
+
+async function initializeResumeReading() {
+  if (!currentBook) {
+    return;
+  }
+
+  elements.resumeBtn.disabled = true;
+  elements.resumeBtn.textContent = "Checking...";
+
+  const progress = await loadReadingProgress(currentBook.id);
+  applyReadingProgressUi(progress);
+
+  elements.resumeBtn.disabled = false;
+  elements.resumeBtn.textContent = "Resume Reading";
 }
 
 function setupChapterEvents() {
   elements.chapterList.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-chapter-number]");
+    const button = event.target.closest("button[data-chapter-id]");
     if (!button) {
       return;
     }
-    openReader(button.dataset.chapterNumber);
+
+    if (button.dataset.chapterLocked === "true") {
+      requestLoginForChapter(button.dataset.chapterId);
+      return;
+    }
+
+    openReader(button.dataset.chapterId);
   });
 
   elements.trackList.addEventListener("click", (event) => {
@@ -301,20 +490,43 @@ function setupChapterEvents() {
     if (!button) {
       return;
     }
-    showToast(`Opening track ${button.dataset.trackNumber}`);
+
+    if (!currentBook || !currentBook.hasAudiobook) {
+      showToast("No audiobook available for this book yet");
+      return;
+    }
+
+    window.location.href = `audiobook.html?book=${encodeURIComponent(currentBook.id)}`;
   });
 }
 
 function setupPrimaryActions() {
-  elements.readBtn.addEventListener("click", () => {
-    openReader(1);
+  elements.readBtn.addEventListener("click", async () => {
+    if (!currentBook.chapters.length) {
+      showToast("No published chapters yet");
+      return;
+    }
+
+    const firstChapter = currentBook.chapters[0];
+    openReader(firstChapter.id);
+  });
+
+  elements.resumeBtn.addEventListener("click", () => {
+    if (!resumeChapterId) {
+      return;
+    }
+
+    openReader(resumeChapterId);
   });
 
   elements.listenBtn.addEventListener("click", () => {
-    if (!currentBook.hasAudiobook) {
+    if (!currentBook.chapters.length) {
+      showToast("No published chapters yet");
       return;
     }
-    window.location.href = `audiobook.html?book=${encodeURIComponent(currentBook.id)}`;
+
+    const chapterId = resumeChapterId || currentBook.chapters[0].id;
+    window.location.href = `${buildReaderUrl(currentBook.id, chapterId)}&mode=audio`;
   });
 
   elements.saveBtn.addEventListener("click", () => {
@@ -350,7 +562,7 @@ function setupPrimaryActions() {
       try {
         await navigator.share({
           title: currentBook.title,
-          text: `Check out ${currentBook.title} on NovelRead`,
+          text: `Check out ${currentBook.title} on Novara`,
           url: shareUrl
         });
       } catch (error) {
@@ -368,30 +580,132 @@ function setupPrimaryActions() {
   });
 }
 
-async function loadData() {
-  try {
-    const response = await fetch("./data/book-details.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const data = await response.json();
-    books = Array.isArray(data.books) ? data.books : fallbackData.books;
-  } catch (error) {
-    books = fallbackData.books;
+async function loadBookFromApi(bookId) {
+  const [bookResponse, chapterResponse, audioResponse] = await Promise.all([
+    fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+    }),
+    fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}/chapters`, {
+      cache: "no-store",
+    }),
+    fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}/audio`, {
+      cache: "no-store",
+    }),
+  ]);
+
+  if (!bookResponse.ok) {
+    throw new Error(`Book fetch failed with HTTP ${bookResponse.status}`);
   }
+  if (!chapterResponse.ok) {
+    throw new Error(`Chapter list fetch failed with HTTP ${chapterResponse.status}`);
+  }
+  if (!audioResponse.ok) {
+    throw new Error(`Audio list fetch failed with HTTP ${audioResponse.status}`);
+  }
+
+  const bookPayload = await bookResponse.json();
+  const chapterPayload = await chapterResponse.json();
+  const audioPayload = await audioResponse.json();
+
+  if (!bookPayload.success || !bookPayload.data) {
+    throw new Error("Invalid book API response");
+  }
+  if (!chapterPayload.success || !Array.isArray(chapterPayload.data)) {
+    throw new Error("Invalid chapters API response");
+  }
+  if (!audioPayload.success || !Array.isArray(audioPayload.data)) {
+    throw new Error("Invalid audio API response");
+  }
+
+  const chapters = chapterPayload.data.map((chapter) => ({
+    id: chapter.id,
+    number: chapter.chapterNumber,
+    title: chapter.title,
+  }));
+
+  const audioTracks = audioPayload.data.map((track) => ({
+    id: track.id,
+    order: track.order,
+    title: track.title,
+  }));
+
+  const genre = bookPayload.data && bookPayload.data.genre ? bookPayload.data.genre : "";
+  let relatedBooks = [];
+  if (genre) {
+    try {
+      const relatedResponse = await fetch(`${API_BASE_URL}/api/books?genre=${encodeURIComponent(genre)}&limit=8&sort=newest`, {
+        cache: "no-store",
+      });
+      if (relatedResponse.ok) {
+        const relatedPayload = await relatedResponse.json();
+        if (relatedPayload.success && Array.isArray(relatedPayload.data)) {
+          relatedBooks = relatedPayload.data
+            .filter((item) => item.id !== bookId)
+            .slice(0, 4)
+            .map((item) => ({
+              id: item.id,
+              title: item.title,
+              authorName: item.authorName,
+            }));
+        }
+      }
+    } catch (error) {
+      relatedBooks = [];
+    }
+  }
+
+  return mapApiBookToViewModel(bookPayload.data, chapters, audioTracks, relatedBooks);
 }
 
-function findBookById(bookId) {
-  return books.find((book) => book.id === bookId) || books[0];
+function renderLoadError(message) {
+  elements.bookTitle.textContent = "Book not available";
+  elements.bookAuthor.textContent = "Unable to load this book right now";
+  elements.bookDescription.textContent = message;
+  elements.aboutText.textContent = "Please go back to Library and open another book.";
+  elements.genreTags.innerHTML = "";
+  elements.coverImage.src = createCoverSvg("Unavailable", ["default"]);
+  elements.coverImage.alt = "Unavailable book";
+  elements.metaLanguage.textContent = "-";
+  elements.metaChapters.textContent = "-";
+  elements.metaFormat.textContent = "-";
+  elements.metaAudio.textContent = "-";
+  elements.chapterList.innerHTML = "";
+  elements.trackList.innerHTML = "";
+  elements.reviewsList.innerHTML = "";
+  elements.relatedList.innerHTML = "";
+  elements.readBtn.disabled = true;
+  elements.resumeBtn.disabled = true;
+  elements.resumeBtn.classList.add("hidden");
+  elements.resumeHint.classList.add("hidden");
+  elements.listenBtn.disabled = true;
+  elements.saveBtn.disabled = true;
+  elements.favoriteBtn.disabled = true;
+  elements.shareBtn.disabled = true;
 }
 
 async function bootstrap() {
-  await loadData();
   const bookId = getBookIdFromUrl();
-  renderBook(findBookById(bookId));
+
+  if (!bookId) {
+    renderLoadError("Missing book id in URL. Open a book from the Library page.");
+    return;
+  }
+
+  await fetchCurrentUser();
+
+  try {
+    const book = await loadBookFromApi(bookId);
+    renderBook(book);
+  } catch (error) {
+    console.error("Failed to load book details:", error);
+    renderLoadError("Could not fetch book details from the backend API.");
+    return;
+  }
+
   setupTabEvents();
   setupChapterEvents();
   setupPrimaryActions();
+  await initializeResumeReading();
   setActiveTab(getInitialTabFromUrl());
   if (getModeFromUrl() === "audio" && currentBook.hasAudiobook) {
     showToast("Audiobook tracks ready");

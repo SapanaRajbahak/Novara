@@ -14,7 +14,7 @@
     <aside class="admin-sidebar" aria-label="Admin Navigation">
       <a href="admin.html" class="brand">
         <span class="brand-dot" aria-hidden="true"></span>
-        <span>NovelRead Admin</span>
+        <span>Novara Admin</span>
       </a>
 
       <nav class="sidebar-nav">
@@ -48,22 +48,22 @@
           <input id="searchInput" type="search" placeholder="Search by name or email" />
         </label>
 
-        <label class="field" for="statusFilter">
-          <span>Status</span>
-          <select id="statusFilter">
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="suspended">Suspended</option>
-          </select>
-        </label>
-
         <label class="field" for="roleFilter">
           <span>Role</span>
           <select id="roleFilter">
             <option value="all">All</option>
             <option value="reader">Reader</option>
-            <option value="editor">Editor</option>
+            <option value="writer">Writer</option>
             <option value="admin">Admin</option>
+          </select>
+        </label>
+
+        <label class="field" for="sortFilter">
+          <span>Sort</span>
+          <select id="sortFilter">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="name_asc">Name A-Z</option>
           </select>
         </label>
       </section>
@@ -79,10 +79,13 @@
             <thead>
               <tr>
                 <th>User</th>
-                <th>User Role</th>
-                <th>Joined Date</th>
-                <th>Books Read</th>
+                <th>Role</th>
+                <th>Writer Status</th>
+                <th>Admin Status</th>
                 <th>Account Status</th>
+                <th>Joined Date</th>
+                <th>Books</th>
+                <th>Published Books</th>
                 <th>Admin Actions</th>
               </tr>
             </thead>

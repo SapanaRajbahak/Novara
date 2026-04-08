@@ -1,6 +1,17 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
-const BOOK_DRAFTS_KEY = "novelread.admin.uploadedBooks";
-const CHAPTER_DRAFTS_KEY = "novelread.admin.chapterDrafts";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),
@@ -32,6 +43,8 @@ const elements = {
 };
 
 let currentBookDraftId = "";
+let currentBookStatus = "DRAFT";
+let currentChapters = [];
 
 function requireAuth() {
   const auth = localStorage.getItem(ADMIN_AUTH_KEY);
@@ -49,19 +62,6 @@ function showToast(message) {
   toast.textContent = message;
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), 1500);
-}
-
-function readJson(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (error) {
-    return fallback;
-  }
-}
-
-function writeJson(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
 }
 
 function getBookTypeConfig(type) {
@@ -139,60 +139,8 @@ function validateUploadForm() {
   return "";
 }
 
-function serializeBasicForm() {
-  const tags = elements.tags.value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
-
-  return {
-    id: currentBookDraftId || `draft-${Date.now()}`,
-    title: elements.title.value.trim(),
-    author: elements.author.value.trim(),
-    description: elements.description.value.trim(),
-    genre: elements.genre.value,
-    tags,
-    status: elements.status.value,
-    bookType: elements.bookType.value,
-    files: {
-      cover: elements.coverInput.files?.[0]?.name || "",
-      main: elements.mainFileInput.files?.[0]?.name || "",
-      audiobook: elements.audiobookInput.files?.[0]?.name || "",
-      sampleAudio: elements.sampleAudioInput.files?.[0]?.name || ""
-    },
-    savedAt: new Date().toISOString()
-  };
-}
-
-function persistBookDraft(payload) {
-  const drafts = readJson(BOOK_DRAFTS_KEY, []);
-  const idx = drafts.findIndex((item) => item.id === payload.id);
-  if (idx >= 0) {
-    drafts[idx] = payload;
-  } else {
-    drafts.unshift(payload);
-  }
-  writeJson(BOOK_DRAFTS_KEY, drafts);
-}
-
-function getChapterStore() {
-  return readJson(CHAPTER_DRAFTS_KEY, {});
-}
-
-function persistChapterStore(store) {
-  writeJson(CHAPTER_DRAFTS_KEY, store);
-}
-
-function getCurrentBookChapters() {
-  if (!currentBookDraftId) {
-    return [];
-  }
-  const store = getChapterStore();
-  return Array.isArray(store[currentBookDraftId]) ? store[currentBookDraftId] : [];
-}
-
 function renderChapterList() {
-  const chapters = getCurrentBookChapters();
+  const chapters = [...currentChapters];
   elements.chapterList.innerHTML = "";
 
   if (!chapters.length) {
@@ -212,7 +160,7 @@ function renderChapterList() {
 
 function validateChapterForm() {
   if (!currentBookDraftId) {
-    return "Save basic info first.";
+    return "Create the book first.";
   }
 
   if (!elements.chapterTitle.value.trim()) {
@@ -228,27 +176,90 @@ function validateChapterForm() {
     return "Chapter content is required.";
   }
 
-  const existing = getCurrentBookChapters();
-  if (existing.some((chapter) => chapter.number === number)) {
+  if (currentChapters.some((chapter) => chapter.number === number)) {
     return "Chapter number already exists.";
   }
 
   return "";
 }
 
-function addChapter() {
-  const store = getChapterStore();
-  const list = Array.isArray(store[currentBookDraftId]) ? store[currentBookDraftId] : [];
+function mapBookType(type) {
+  if (type === "epub") {
+    return "EPUB";
+  }
+  if (type === "pdf") {
+    return "PDF";
+  }
+  return "TXT";
+}
 
-  list.push({
-    number: Number(elements.chapterNumber.value),
-    title: elements.chapterTitle.value.trim(),
-    content: elements.chapterContent.value.trim(),
-    createdAt: new Date().toISOString()
+function mapStatus(status) {
+  return String(status).toLowerCase() === "published" ? "PUBLISHED" : "DRAFT";
+}
+
+function readFileAsDataUrl(file) {
+  if (!file) {
+    return Promise.resolve(null);
+  }
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    reader.onerror = () => reject(new Error(`Unable to read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    cache: "no-store",
+    ...options,
   });
 
-  store[currentBookDraftId] = list;
-  persistChapterStore(store);
+  const payload = await response.json().catch(() => ({ success: false }));
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem(ADMIN_AUTH_KEY);
+    const next = encodeURIComponent("admin-upload.html");
+    window.location.href = `admin-login.html?next=${next}`;
+    throw new Error("Authentication required");
+  }
+
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || `HTTP ${response.status}`);
+  }
+
+  return payload;
+}
+
+async function createBookPayload() {
+  const tags = elements.tags.value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  const [coverUrl, fileUrl, audiobookUrl] = await Promise.all([
+    readFileAsDataUrl(elements.coverInput.files?.[0] || null),
+    readFileAsDataUrl(elements.mainFileInput.files?.[0] || null),
+    readFileAsDataUrl(elements.audiobookInput.files?.[0] || null),
+  ]);
+
+  return {
+    payload: {
+      title: elements.title.value.trim(),
+      authorName: elements.author.value.trim(),
+      description: elements.description.value.trim(),
+      genre: elements.genre.value,
+      tags,
+      status: mapStatus(elements.status.value),
+      fileType: mapBookType(elements.bookType.value),
+      coverUrl,
+      fileUrl,
+      isAudiobookAvailable: Boolean(audiobookUrl),
+      isAiGenerated: false,
+    },
+    audiobookUrl,
+  };
 }
 
 function updateMainFileHint() {
@@ -308,7 +319,7 @@ function connectDropzone(dropzoneId, inputEl, labelEl) {
 function bindEvents() {
   elements.logoutBtn.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);
-    window.location.href = "admin-login.html";
+    window.location.href = "index.html";
   });
 
   elements.bookType.addEventListener("change", () => {
@@ -322,43 +333,107 @@ function bindEvents() {
     event.preventDefault();
     elements.formError.textContent = "";
 
-    const error = validateUploadForm();
-    if (error) {
-      elements.formError.textContent = error;
-      return;
-    }
+    const run = async () => {
+      const error = validateUploadForm();
+      if (error) {
+        elements.formError.textContent = error;
+        return;
+      }
 
-    const payload = serializeBasicForm();
-    currentBookDraftId = payload.id;
-    persistBookDraft(payload);
+      try {
+        const { payload, audiobookUrl } = await createBookPayload();
+        const createResult = await apiFetch("/api/admin/books", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
 
-    if (payload.bookType === "chapters") {
-      elements.chapterBuilder.classList.remove("hidden");
-      renderChapterList();
-      showToast("Basic info saved. You can add chapters now.");
-      return;
-    }
+        currentBookDraftId = createResult.data.id;
+        currentBookStatus = payload.status;
+        currentChapters = [];
 
-    elements.chapterBuilder.classList.add("hidden");
-    showToast("Book saved successfully.");
+        if (audiobookUrl) {
+          await apiFetch(`/api/admin/books/${encodeURIComponent(currentBookDraftId)}/audio`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              title: `${payload.title} Audio`,
+              audioUrl: audiobookUrl,
+              order: 1,
+            }),
+          });
+        }
+
+        if (elements.bookType.value === "chapters") {
+          elements.chapterBuilder.classList.remove("hidden");
+          renderChapterList();
+          showToast("Book created. You can add chapters now.");
+          return;
+        }
+
+        elements.chapterBuilder.classList.add("hidden");
+        showToast("Book saved successfully.");
+        window.setTimeout(() => {
+          window.location.href = "admin-books.html";
+        }, 900);
+      } catch (requestError) {
+        elements.formError.textContent = requestError.message || "Unable to save book.";
+      }
+    };
+
+    run();
   });
 
   elements.chapterForm.addEventListener("submit", (event) => {
     event.preventDefault();
     elements.chapterError.textContent = "";
 
-    const error = validateChapterForm();
-    if (error) {
-      elements.chapterError.textContent = error;
-      return;
-    }
+    const run = async () => {
+      const error = validateChapterForm();
+      if (error) {
+        elements.chapterError.textContent = error;
+        return;
+      }
 
-    addChapter();
-    renderChapterList();
-    elements.chapterTitle.value = "";
-    elements.chapterNumber.value = "";
-    elements.chapterContent.value = "";
-    showToast("Chapter added.");
+      try {
+        const payload = {
+          chapterNumber: Number(elements.chapterNumber.value),
+          title: elements.chapterTitle.value.trim(),
+          content: elements.chapterContent.value.trim(),
+          isPublished: currentBookStatus === "PUBLISHED",
+        };
+
+        const result = await apiFetch(`/api/admin/books/${encodeURIComponent(currentBookDraftId)}/chapters`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+
+        currentChapters.push({
+          id: result.data.id,
+          number: result.data.chapterNumber,
+          title: result.data.title,
+          content: payload.content,
+          createdAt: result.data.createdAt,
+        });
+
+        renderChapterList();
+        elements.chapterTitle.value = "";
+        elements.chapterNumber.value = "";
+        elements.chapterContent.value = "";
+        showToast("Chapter added.");
+      } catch (requestError) {
+        elements.chapterError.textContent = requestError.message || "Unable to add chapter.";
+      }
+    };
+
+    run();
   });
 
   connectDropzone("coverDropzone", elements.coverInput, elements.coverFileName);
@@ -376,3 +451,4 @@ function bootstrap() {
 }
 
 bootstrap();
+

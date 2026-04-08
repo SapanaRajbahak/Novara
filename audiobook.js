@@ -1,15 +1,30 @@
-const AUDIO_PROGRESS_KEY = "novelread.audio.progress";
-const AUDIO_BOOKMARKS_KEY = "novelread.audio.bookmarks";
+const AUDIO_PROGRESS_KEY = "novara.audio.progress";
+const AUDIO_BOOKMARKS_KEY = "novara.audio.bookmarks";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const state = {
-  books: [],
   currentBook: null,
   currentTrackIndex: 0,
   currentSec: 0,
   playing: false,
   speed: 1,
   sleepTimerId: null,
-  tickId: null
+  audioReady: false,
+  listeningApiEnabled: true,
+  listeningApiAuthMissingNotified: false,
+  lastListeningSyncMs: 0,
 };
 
 const elements = {
@@ -36,8 +51,14 @@ const elements = {
   miniTime: document.getElementById("miniTime"),
   miniPrevBtn: document.getElementById("miniPrevBtn"),
   miniPlayBtn: document.getElementById("miniPlayBtn"),
-  miniNextBtn: document.getElementById("miniNextBtn")
+  miniNextBtn: document.getElementById("miniNextBtn"),
+  audioPlayer: document.getElementById("audioPlayer"),
+  syncStatus: document.getElementById("syncStatus"),
 };
+
+state.lastListeningSyncSuccessMs = 0;
+state.syncStatus = "idle";
+state.syncTickerId = null;
 
 function showToast(message) {
   const toast = document.createElement("div");
@@ -45,6 +66,78 @@ function showToast(message) {
   toast.textContent = message;
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), 1500);
+}
+
+function getSyncLabelText() {
+  if (state.syncStatus === "error") {
+    return "Sync failed";
+  }
+
+  if (!state.lastListeningSyncSuccessMs) {
+    return "Last synced: not yet";
+  }
+
+  const secondsAgo = Math.max(0, Math.floor((Date.now() - state.lastListeningSyncSuccessMs) / 1000));
+  if (secondsAgo <= 1) {
+    return "Last synced: just now";
+  }
+
+  return `Last synced: ${secondsAgo}s ago`;
+}
+
+function updateSyncStatusClasses() {
+  if (!elements.syncStatus) {
+    return;
+  }
+
+  elements.syncStatus.classList.add("sync-status");
+  elements.syncStatus.classList.remove("sync-idle", "sync-saving", "sync-success", "sync-error");
+
+  const classByStatus = {
+    idle: "sync-idle",
+    saving: "sync-saving",
+    success: "sync-success",
+    error: "sync-error",
+  };
+
+  const statusClass = classByStatus[state.syncStatus] || "sync-idle";
+  elements.syncStatus.classList.add(statusClass);
+}
+
+function updateSyncStatusLabel() {
+  if (!elements.syncStatus) {
+    return;
+  }
+
+  updateSyncStatusClasses();
+  elements.syncStatus.textContent = getSyncLabelText();
+}
+
+function markSyncSaving() {
+  state.syncStatus = "saving";
+  updateSyncStatusLabel();
+}
+
+function markSyncSuccess() {
+  state.syncStatus = "success";
+  state.lastListeningSyncSuccessMs = Date.now();
+  updateSyncStatusLabel();
+}
+
+function markSyncFailed() {
+  state.syncStatus = "error";
+  updateSyncStatusLabel();
+}
+
+function startSyncStatusTicker() {
+  if (state.syncTickerId) {
+    clearInterval(state.syncTickerId);
+  }
+
+  updateSyncStatusLabel();
+  state.syncTickerId = window.setInterval(() => {
+    updateSyncStatusLabel();
+  }, 1000);
 }
 
 function formatTime(totalSec) {
@@ -57,8 +150,9 @@ function formatTime(totalSec) {
 function parseParams() {
   const params = new URLSearchParams(window.location.search);
   return {
-    bookId: params.get("book") || "book-last-lantern",
-    track: Number(params.get("track") || 1)
+    // Support both old (?book=) and new (?bookId=) URL formats.
+    bookId: params.get("bookId") || params.get("book") || "",
+    track: Number(params.get("track") || 1),
   };
 }
 
@@ -75,21 +169,71 @@ function saveJsonStorage(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+function getTrackIndexById(trackId) {
+  if (!state.currentBook || !Array.isArray(state.currentBook.tracks)) {
+    return -1;
+  }
+
+  return state.currentBook.tracks.findIndex((track) => track.id === trackId);
+}
+
 function getBookKey(bookId) {
   return `book:${bookId}`;
 }
 
-async function loadData() {
-  try {
-    const response = await fetch("./data/audiobooks.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    const data = await response.json();
-    state.books = Array.isArray(data.books) ? data.books : [];
-  } catch (error) {
-    state.books = [];
+async function fetchBookMeta(bookId) {
+  const response = await fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch book metadata (HTTP ${response.status})`);
   }
+
+  const payload = await response.json();
+  if (!payload.success || !payload.data) {
+    throw new Error("Invalid book metadata response");
+  }
+
+  return payload.data;
+}
+
+async function fetchAudioTracks(bookId) {
+  const response = await fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(bookId)}/audio`, {
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch audio tracks (HTTP ${response.status})`);
+  }
+
+  const payload = await response.json();
+  if (!payload.success || !Array.isArray(payload.data)) {
+    throw new Error("Invalid audio tracks response");
+  }
+
+  return payload.data;
+}
+
+function mapApiTrack(track) {
+  return {
+    id: track.id,
+    number: Number(track.order),
+    title: track.title || "Untitled Track",
+    audioUrl: track.audioUrl || "",
+    durationSec: Number(track.duration || 0),
+    chapter: track.chapter || null,
+  };
+}
+
+function buildCurrentBookFromApi(bookMeta, tracks) {
+  return {
+    id: bookMeta.id,
+    title: bookMeta.title || "Untitled Book",
+    author: bookMeta.authorName || "Unknown Author",
+    genre: bookMeta.genre || "default",
+    tracks: tracks.map(mapApiTrack),
+  };
 }
 
 function getCurrentTrack() {
@@ -99,9 +243,230 @@ function getCurrentTrack() {
   return state.currentBook.tracks[state.currentTrackIndex] || null;
 }
 
+function getCurrentTimeSeconds() {
+  if (Number.isFinite(elements.audioPlayer.currentTime) && elements.audioPlayer.currentTime >= 0) {
+    return Number(elements.audioPlayer.currentTime);
+  }
+
+  return Math.max(0, Number(state.currentSec || 0));
+}
+
+function buildListeningPayload() {
+  if (!state.currentBook) {
+    return null;
+  }
+
+  const track = getCurrentTrack();
+  if (!track || !track.id) {
+    return null;
+  }
+
+  return {
+    bookId: state.currentBook.id,
+    audioTrackId: track.id,
+    currentTimeSeconds: Math.floor(getCurrentTimeSeconds()),
+  };
+}
+
+async function saveListeningProgressToApi(payload, options = {}) {
+  if (!state.listeningApiEnabled || !payload) {
+    return;
+  }
+
+  markSyncSaving();
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/listening`, {
+      method: "POST",
+      credentials: "include",
+      keepalive: Boolean(options.keepalive),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (response.status === 401) {
+      state.listeningApiEnabled = false;
+      markSyncFailed();
+      if (!state.listeningApiAuthMissingNotified) {
+        state.listeningApiAuthMissingNotified = true;
+        showToast("Sign in to sync listening progress across devices");
+      }
+      return;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    markSyncSuccess();
+  } catch (error) {
+    console.warn("Failed to save listening progress:", error);
+    markSyncFailed();
+  }
+}
+
+async function getListeningProgressFromApi(bookId) {
+  if (!state.listeningApiEnabled) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/progress/listening/${encodeURIComponent(bookId)}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+
+    if (response.status === 401) {
+      state.listeningApiEnabled = false;
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    const payload = await response.json();
+    if (!payload.success || !payload.data) {
+      return null;
+    }
+
+    return payload.data;
+  } catch (error) {
+    console.warn("Failed to fetch listening progress:", error);
+    return null;
+  }
+}
+
+function syncListeningProgress(options = {}) {
+  const payload = buildListeningPayload();
+  if (!payload) {
+    return;
+  }
+
+  const now = Date.now();
+  const intervalMs = Number(options.intervalMs || 5000);
+  const force = Boolean(options.force);
+
+  if (!force && now - state.lastListeningSyncMs < intervalMs) {
+    return;
+  }
+
+  state.lastListeningSyncMs = now;
+  saveListeningProgressToApi(payload, { keepalive: options.keepalive });
+}
+
 function getTrackDuration() {
+  if (
+    elements.audioPlayer &&
+    Number.isFinite(elements.audioPlayer.duration) &&
+    elements.audioPlayer.duration > 0
+  ) {
+    return Number(elements.audioPlayer.duration);
+  }
+
   const track = getCurrentTrack();
   return track ? Number(track.durationSec || 0) : 0;
+}
+
+function getResolvedAudioUrl(track) {
+  if (!track || !track.audioUrl || typeof track.audioUrl !== "string") {
+    return null;
+  }
+
+  const raw = track.audioUrl.trim();
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return new URL(raw, window.location.href).toString();
+  } catch (error) {
+    return null;
+  }
+}
+
+function setTrackFromState(autoplay, startAtSec = 0) {
+  const track = getCurrentTrack();
+  if (!track) {
+    state.audioReady = false;
+    elements.audioPlayer.removeAttribute("src");
+    elements.audioPlayer.load();
+    updateUi();
+    return;
+  }
+
+  const resolvedUrl = getResolvedAudioUrl(track);
+  if (!resolvedUrl) {
+    state.playing = false;
+    state.audioReady = false;
+    state.currentSec = 0;
+    elements.audioPlayer.removeAttribute("src");
+    elements.audioPlayer.load();
+    updateUi();
+    showToast("This track has no valid audio URL");
+    return;
+  }
+
+  state.audioReady = false;
+  elements.audioPlayer.src = resolvedUrl;
+  state.currentSec = Math.max(0, Number(startAtSec || 0));
+  elements.audioPlayer.currentTime = 0;
+  elements.audioPlayer.playbackRate = state.speed;
+  elements.audioPlayer.load();
+
+  if (autoplay) {
+    const playPromise = elements.audioPlayer.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => {
+        state.playing = false;
+        updateUi();
+      });
+    }
+  } else {
+    state.playing = false;
+    updateUi();
+  }
+}
+
+function handleTrackEnded() {
+  if (!state.currentBook) {
+    state.playing = false;
+    updateUi();
+    return;
+  }
+
+  const hasNextTrack = state.currentTrackIndex < state.currentBook.tracks.length - 1;
+
+  if (!hasNextTrack) {
+    // Keep final track selected and stop cleanly.
+    state.playing = false;
+    state.currentSec = getTrackDuration();
+    updateUi();
+    saveProgress();
+    syncListeningProgress({ force: true });
+    return;
+  }
+
+  state.currentTrackIndex += 1;
+  state.currentSec = 0;
+
+  // Load and auto-play the next track using existing real audio flow.
+  setTrackFromState(true);
+  updateUi();
+
+  // Persist the new audioTrackId immediately after auto-advance.
+  saveProgress();
+  syncListeningProgress({ force: true });
+}
+
+function formatDurationOrDash(seconds) {
+  const value = Number(seconds || 0);
+  if (!Number.isFinite(value) || value <= 0) {
+    return "--:--";
+  }
+  return formatTime(value);
 }
 
 function createCoverSvg(title, genre) {
@@ -156,12 +521,24 @@ function updateWaveform(progress) {
 
 function renderTracks() {
   elements.trackList.innerHTML = "";
+
+  if (!state.currentBook.tracks.length) {
+    elements.trackList.innerHTML = "<li class=\"bookmark-item\"><span>No audio tracks available for this book yet.</span></li>";
+    return;
+  }
+
   state.currentBook.tracks.forEach((track, idx) => {
+    const chapterMeta = track.chapter
+      ? `<small>Chapter ${track.chapter.chapterNumber}: ${track.chapter.title}</small>`
+      : "<small>No linked chapter</small>";
+
     const li = document.createElement("li");
     li.innerHTML = `
       <button type="button" class="track-item ${idx === state.currentTrackIndex ? "active" : ""}" data-track-index="${idx}">
         <small>Track ${track.number}</small>
         ${track.title}
+        ${chapterMeta}
+        <small>Duration: ${formatDurationOrDash(track.durationSec)}</small>
       </button>
     `;
     elements.trackList.appendChild(li);
@@ -190,10 +567,14 @@ function renderBookmarks() {
 }
 
 function saveProgress() {
+  if (!state.currentBook || !state.currentBook.tracks.length) {
+    return;
+  }
+
   const all = loadJsonStorage(AUDIO_PROGRESS_KEY, {});
   all[getBookKey(state.currentBook.id)] = {
     trackIndex: state.currentTrackIndex,
-    second: state.currentSec,
+    second: getCurrentTimeSeconds(),
     speed: state.speed,
     updatedAt: new Date().toISOString()
   };
@@ -201,6 +582,10 @@ function saveProgress() {
 }
 
 function resumeProgress() {
+  if (!state.currentBook || !state.currentBook.tracks.length) {
+    return;
+  }
+
   const all = loadJsonStorage(AUDIO_PROGRESS_KEY, {});
   const saved = all[getBookKey(state.currentBook.id)];
   if (!saved) {
@@ -216,10 +601,15 @@ function resumeProgress() {
 
 function updateUi() {
   const track = getCurrentTrack();
+  state.currentSec = getCurrentTimeSeconds();
   const duration = getTrackDuration();
   const progress = duration ? Math.min(1, state.currentSec / duration) : 0;
 
-  elements.currentTrack.textContent = track ? `Track ${track.number}: ${track.title}` : "No track";
+  const chapterText = track?.chapter
+    ? ` • Chapter ${track.chapter.chapterNumber}`
+    : "";
+
+  elements.currentTrack.textContent = track ? `Track ${track.number}: ${track.title}${chapterText}` : "No track";
   elements.currentTime.textContent = formatTime(state.currentSec);
   elements.durationTime.textContent = formatTime(duration);
   elements.progressSlider.value = String(Math.round(progress * 100));
@@ -233,42 +623,34 @@ function updateUi() {
 }
 
 function pausePlayback() {
-  state.playing = false;
-  if (state.tickId) {
-    clearInterval(state.tickId);
-    state.tickId = null;
-  }
-  updateUi();
-  saveProgress();
+  elements.audioPlayer.pause();
 }
 
 function playPlayback() {
-  if (state.playing) {
+  if (!state.currentBook || !state.currentBook.tracks.length) {
     return;
   }
-  state.playing = true;
-  if (state.tickId) {
-    clearInterval(state.tickId);
+
+  const track = getCurrentTrack();
+  const resolvedUrl = getResolvedAudioUrl(track);
+  if (!resolvedUrl) {
+    showToast("This track has no valid audio URL");
+    return;
   }
-  state.tickId = window.setInterval(() => {
-    const duration = getTrackDuration();
-    state.currentSec += 1 * state.speed;
 
-    if (state.currentSec >= duration) {
-      if (state.currentTrackIndex < state.currentBook.tracks.length - 1) {
-        state.currentTrackIndex += 1;
-        state.currentSec = 0;
-      } else {
-        state.currentSec = duration;
-        pausePlayback();
-        return;
-      }
-    }
+  const needsLoad = elements.audioPlayer.src !== resolvedUrl;
+  if (needsLoad) {
+    setTrackFromState(true);
+    return;
+  }
 
-    updateUi();
-    saveProgress();
-  }, 1000);
-  updateUi();
+  const playPromise = elements.audioPlayer.play();
+  if (playPromise && typeof playPromise.catch === "function") {
+    playPromise.catch(() => {
+      state.playing = false;
+      updateUi();
+    });
+  }
 }
 
 function togglePlay() {
@@ -280,13 +662,25 @@ function togglePlay() {
 }
 
 function jumpTrack(index) {
+  if (!state.currentBook || !state.currentBook.tracks.length) {
+    return;
+  }
+
+  // Save old track position before switching tracks.
+  syncListeningProgress({ force: true });
+
   state.currentTrackIndex = Math.min(state.currentBook.tracks.length - 1, Math.max(0, index));
   state.currentSec = 0;
+  setTrackFromState(false);
   updateUi();
   saveProgress();
 }
 
 function addBookmark() {
+  if (!state.currentBook || !state.currentBook.tracks.length) {
+    return;
+  }
+
   const all = loadJsonStorage(AUDIO_BOOKMARKS_KEY, {});
   const key = getBookKey(state.currentBook.id);
   const list = all[key] || [];
@@ -333,16 +727,22 @@ function bindEvents() {
   elements.miniPlayBtn.addEventListener("click", togglePlay);
 
   elements.skipBackBtn.addEventListener("click", () => {
-    state.currentSec = Math.max(0, state.currentSec - 10);
+    const nextSec = Math.max(0, getCurrentTimeSeconds() - 10);
+    elements.audioPlayer.currentTime = nextSec;
+    state.currentSec = nextSec;
     updateUi();
     saveProgress();
+    syncListeningProgress({ force: true });
   });
 
   elements.skipForwardBtn.addEventListener("click", () => {
     const duration = getTrackDuration();
-    state.currentSec = Math.min(duration, state.currentSec + 10);
+    const nextSec = Math.min(duration, getCurrentTimeSeconds() + 10);
+    elements.audioPlayer.currentTime = nextSec;
+    state.currentSec = nextSec;
     updateUi();
     saveProgress();
+    syncListeningProgress({ force: true });
   });
 
   elements.speedSelect.addEventListener("change", () => {
@@ -358,8 +758,10 @@ function bindEvents() {
   elements.progressSlider.addEventListener("input", () => {
     const duration = getTrackDuration();
     state.currentSec = (Number(elements.progressSlider.value) / 100) * duration;
+    elements.audioPlayer.currentTime = state.currentSec;
     updateUi();
     saveProgress();
+    syncListeningProgress({ force: true });
   });
 
   elements.trackList.addEventListener("click", (event) => {
@@ -368,6 +770,7 @@ function bindEvents() {
       return;
     }
     jumpTrack(Number(button.dataset.trackIndex));
+    playPlayback();
   });
 
   elements.bookmarkBtn.addEventListener("click", addBookmark);
@@ -386,9 +789,18 @@ function bindEvents() {
     }
 
     state.currentTrackIndex = item.trackIndex;
-    state.currentSec = item.second;
+    state.currentSec = Math.max(0, Number(item.second || 0));
+    setTrackFromState(false);
+    if (state.audioReady) {
+      try {
+        elements.audioPlayer.currentTime = state.currentSec;
+      } catch (error) {
+        // Ignore seek issues for formats that do not allow seeking immediately.
+      }
+    }
     updateUi();
     saveProgress();
+    syncListeningProgress({ force: true });
     showToast("Jumped to bookmark");
   });
 
@@ -402,12 +814,67 @@ function bindEvents() {
 
   window.addEventListener("beforeunload", () => {
     saveProgress();
-    if (state.tickId) {
-      clearInterval(state.tickId);
-    }
+    syncListeningProgress({ force: true, keepalive: true });
     if (state.sleepTimerId) {
       clearTimeout(state.sleepTimerId);
     }
+  });
+
+  window.addEventListener("pagehide", () => {
+    saveProgress();
+    syncListeningProgress({ force: true, keepalive: true });
+  });
+}
+
+function bindAudioEvents() {
+  elements.audioPlayer.addEventListener("play", () => {
+    state.playing = true;
+    updateUi();
+  });
+
+  elements.audioPlayer.addEventListener("pause", () => {
+    state.playing = false;
+    state.currentSec = Number(elements.audioPlayer.currentTime || 0);
+    updateUi();
+    saveProgress();
+    syncListeningProgress({ force: true });
+  });
+
+  elements.audioPlayer.addEventListener("timeupdate", () => {
+    state.currentSec = Number(elements.audioPlayer.currentTime || 0);
+    updateUi();
+    syncListeningProgress({ intervalMs: 5000 });
+  });
+
+  elements.audioPlayer.addEventListener("loadedmetadata", () => {
+    state.audioReady = true;
+
+    // Use persisted timestamp on first load of the selected track.
+    if (state.currentSec > 0) {
+      try {
+        elements.audioPlayer.currentTime = Math.min(state.currentSec, elements.audioPlayer.duration || state.currentSec);
+      } catch (error) {
+        // Ignore invalid seeks on unsupported streams.
+      }
+    }
+
+    const track = getCurrentTrack();
+    if (track && (!track.durationSec || track.durationSec <= 0) && Number.isFinite(elements.audioPlayer.duration)) {
+      track.durationSec = Number(elements.audioPlayer.duration);
+    }
+
+    updateUi();
+  });
+
+  elements.audioPlayer.addEventListener("ended", () => {
+    handleTrackEnded();
+  });
+
+  elements.audioPlayer.addEventListener("error", () => {
+    state.playing = false;
+    state.audioReady = false;
+    updateUi();
+    showToast("Audio failed to load for this track");
   });
 }
 
@@ -420,26 +887,145 @@ function renderBook() {
   document.title = `${state.currentBook.title} | Audiobook`;
   renderTracks();
   renderBookmarks();
+  setTrackFromState(false, state.currentSec);
   updateUi();
+}
+
+async function applyResumeFromApiIfChosen() {
+  const progress = await getListeningProgressFromApi(state.currentBook.id);
+  if (!progress || !progress.audioTrackId) {
+    return false;
+  }
+
+  const trackIndex = getTrackIndexById(progress.audioTrackId);
+  if (trackIndex < 0) {
+    return false;
+  }
+
+  const resumeTime = Math.max(0, Number(progress.currentTimeSeconds || 0));
+  if (resumeTime <= 0 && trackIndex === 0) {
+    return false;
+  }
+
+  const chosen = window.confirm(
+    `Resume from Track ${state.currentBook.tracks[trackIndex].number} at ${formatTime(resumeTime)}?`
+  );
+
+  if (!chosen) {
+    return false;
+  }
+
+  state.currentTrackIndex = trackIndex;
+  state.currentSec = resumeTime;
+  setTrackFromState(false);
+
+  if (state.audioReady) {
+    try {
+      elements.audioPlayer.currentTime = resumeTime;
+    } catch (error) {
+      // Ignore seek issues on streams that are not seekable immediately.
+    }
+  }
+
+  updateUi();
+  showToast(`Resumed from ${formatTime(resumeTime)}`);
+  return true;
+}
+
+function setPlayerDisabled(disabled) {
+  elements.playPauseBtn.disabled = disabled;
+  elements.skipBackBtn.disabled = disabled;
+  elements.skipForwardBtn.disabled = disabled;
+  elements.progressSlider.disabled = disabled;
+  elements.bookmarkBtn.disabled = disabled;
+  elements.miniPrevBtn.disabled = disabled;
+  elements.miniPlayBtn.disabled = disabled;
+  elements.miniNextBtn.disabled = disabled;
+}
+
+function renderLoadingState() {
+  elements.bookTitle.textContent = "Loading audiobook...";
+  elements.bookAuthor.textContent = "Fetching tracks from server";
+  elements.currentTrack.textContent = "Please wait";
+  elements.trackList.innerHTML = "<li class=\"bookmark-item\"><span>Loading tracks...</span></li>";
+  setPlayerDisabled(true);
+}
+
+function renderErrorState(message) {
+  elements.bookTitle.textContent = "Unable to load audiobook";
+  elements.bookAuthor.textContent = "Please return to Book Details and try again";
+  elements.currentTrack.textContent = message;
+  elements.trackList.innerHTML = `<li class=\"bookmark-item\"><span>${message}</span></li>`;
+  setPlayerDisabled(true);
+}
+
+function renderEmptyState(book) {
+  elements.bookTitle.textContent = book.title;
+  elements.bookAuthor.textContent = `by ${book.author}`;
+  elements.currentTrack.textContent = "No audio tracks available";
+  elements.trackList.innerHTML = "<li class=\"bookmark-item\"><span>No tracks found for this book yet.</span></li>";
+  elements.coverImage.src = createCoverSvg(book.title, book.genre || "default");
+  elements.coverImage.alt = `${book.title} cover`;
+  elements.backLink.href = `book.html?id=${encodeURIComponent(book.id)}`;
+  setPlayerDisabled(true);
 }
 
 async function bootstrap() {
   buildWaveBars();
   bindEvents();
-  await loadData();
+  bindAudioEvents();
+  startSyncStatusTicker();
+  renderLoadingState();
 
   const { bookId, track } = parseParams();
-  state.currentBook = state.books.find((book) => book.id === bookId) || state.books[0] || null;
+  if (!bookId) {
+    renderErrorState("Missing bookId in URL");
+    return;
+  }
 
-  if (!state.currentBook) {
-    elements.bookTitle.textContent = "No audiobook found";
-    elements.bookAuthor.textContent = "Please return to library.";
+  let bookMeta;
+  let tracks;
+
+  try {
+    [bookMeta, tracks] = await Promise.all([
+      fetchBookMeta(bookId),
+      fetchAudioTracks(bookId),
+    ]);
+  } catch (error) {
+    console.error("Failed to load audiobook data:", error);
+    renderErrorState("Could not fetch audiobook tracks from API");
+    return;
+  }
+
+  state.currentBook = buildCurrentBookFromApi(bookMeta, tracks);
+
+  if (!state.currentBook.tracks.length) {
+    renderEmptyState(state.currentBook);
     return;
   }
 
   state.currentTrackIndex = Math.min(state.currentBook.tracks.length - 1, Math.max(0, track - 1));
-  resumeProgress();
+
+  setPlayerDisabled(false);
   renderBook();
+
+  const resumedFromApi = await applyResumeFromApiIfChosen();
+  if (!resumedFromApi) {
+    resumeProgress();
+
+    if (state.currentSec > 0) {
+      setTrackFromState(false, state.currentSec);
+      if (state.audioReady) {
+        elements.audioPlayer.currentTime = Math.min(state.currentSec, elements.audioPlayer.duration || state.currentSec);
+      }
+      updateUi();
+    }
+  }
+
+  // Keep initial resumed position in sync with the audio element if metadata is ready quickly.
+  if (state.currentSec > 0 && Number.isFinite(elements.audioPlayer.duration) && elements.audioPlayer.duration > 0) {
+    elements.audioPlayer.currentTime = Math.min(state.currentSec, elements.audioPlayer.duration);
+  }
 }
 
 bootstrap();

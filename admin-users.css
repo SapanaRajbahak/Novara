@@ -157,8 +157,11 @@ th { color: var(--muted); font-weight: 600; }
   font-size: 0.72rem;
 }
 
-.status-pill.active { background: color-mix(in oklab, var(--primary) 18%, var(--surface)); }
-.status-pill.suspended { background: color-mix(in oklab, #b54b38 18%, var(--surface)); }
+.status-pill.active,
+.status-pill.yes { background: color-mix(in oklab, var(--primary) 18%, var(--surface)); }
+.status-pill.suspended,
+.status-pill.no,
+.status-pill.na { background: color-mix(in oklab, #b54b38 18%, var(--surface)); }
 
 .row-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 

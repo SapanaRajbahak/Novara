@@ -3,145 +3,190 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NovelRead Dashboard</title>
+  <title>Novara | Read, Write, and Fall Into New Worlds</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="landing.css" />
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="Primary">
-      <div class="sidebar__brand">
-        <div class="brand-dot" aria-hidden="true"></div>
-        <span>NovelRead</span>
-      </div>
-      <nav class="sidebar__nav">
-        <a href="#" class="active">Home</a>
-        <a href="library.html">Library</a>
-        <a href="discover.html">Discover</a>
-        <a href="annotations.html">Bookmarks</a>
-        <a href="#">Audiobooks</a>
-        <a href="#">Your Uploads</a>
-      </nav>
-      <div class="sidebar__footer">
-        <p>Daily Goal</p>
-        <strong>35 / 60 min</strong>
-        <div class="goal-track"><span style="width:58%"></span></div>
-      </div>
-    </aside>
-
-    <div class="main-shell">
-      <header class="topbar">
-        <div class="topbar__logo">
-          <div class="brand-dot" aria-hidden="true"></div>
-          <h1>NovelRead</h1>
-        </div>
-
-        <label class="search" for="searchInput">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M10 4a6 6 0 1 0 3.8 10.6l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
-          </svg>
-          <input id="searchInput" type="search" placeholder="Search novels, authors, genres..." />
-        </label>
-
-        <div class="topbar__actions">
-          <button class="icon-btn" aria-label="Notifications">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M12 3a6 6 0 0 0-6 6v3.6l-1.7 3.4h15.4L18 12.6V9a6 6 0 0 0-6-6zm0 19a3 3 0 0 0 2.8-2H9.2A3 3 0 0 0 12 22z" />
-            </svg>
-            <span class="badge">3</span>
-          </button>
-          <div class="profile-menu">
-            <button class="profile-menu__trigger" id="profileMenuBtn" aria-haspopup="true" aria-expanded="false">
-              <span class="avatar">AR</span>
-              <span class="profile-name">Ariana</span>
-            </button>
-            <div class="profile-menu__dropdown" id="profileDropdown" role="menu">
-              <a href="profile.html" role="menuitem">Profile</a>
-              <a href="#" role="menuitem">Reading Stats</a>
-              <a href="admin-login.html" role="menuitem">Admin Login</a>
-              <a href="settings.html" role="menuitem">Settings</a>
-              <a href="#" role="menuitem">Sign Out</a>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main class="content">
-        <section class="hero-banner" aria-labelledby="welcomeTitle">
-          <p class="eyebrow">Welcome back</p>
-          <h2 id="welcomeTitle">Your next chapter is waiting</h2>
-          <p>Pick up where you left off, discover trending stories, and switch seamlessly between reading and listening.</p>
-        </section>
-
-        <section class="dashboard-section" data-section="continueReading">
-          <div class="section-head">
-            <h3>Continue Reading</h3>
-            <a href="#">View all</a>
-          </div>
-          <div class="section-row" id="continueReadingRow" aria-live="polite"></div>
-        </section>
-
-        <section class="dashboard-section" data-section="trendingNovels">
-          <div class="section-head">
-            <h3>Trending Novels</h3>
-            <a href="#">View all</a>
-          </div>
-          <div class="section-row" id="trendingNovelsRow" aria-live="polite"></div>
-        </section>
-
-        <section class="dashboard-section" data-section="newReleases">
-          <div class="section-head">
-            <h3>New Releases</h3>
-            <a href="#">View all</a>
-          </div>
-          <div class="section-row" id="newReleasesRow" aria-live="polite"></div>
-        </section>
-
-        <section class="dashboard-section" data-section="recommendedForYou">
-          <div class="section-head">
-            <h3>Recommended for You</h3>
-            <a href="#">Refresh</a>
-          </div>
-          <div class="section-row" id="recommendedForYouRow" aria-live="polite"></div>
-        </section>
-
-        <section class="dashboard-section" data-section="audiobooks">
-          <div class="section-head">
-            <h3>Audiobooks</h3>
-            <a href="#">Browse</a>
-          </div>
-          <div class="section-row" id="audiobooksRow" aria-live="polite"></div>
-        </section>
-
-        <section class="dashboard-section categories" data-section="categoriesGenres">
-          <div class="section-head">
-            <h3>Categories & Genres</h3>
-            <a href="#">Manage interests</a>
-          </div>
-          <div class="chips" id="categoriesRow" aria-live="polite"></div>
-        </section>
-
-        <section class="dashboard-section" data-section="recentlyAdded">
-          <div class="section-head">
-            <h3>Recently Added</h3>
-            <a href="#">See archive</a>
-          </div>
-          <div class="section-row" id="recentlyAddedRow" aria-live="polite"></div>
-        </section>
-      </main>
+  <div class="landing-bg" aria-hidden="true"></div>
+  <header class="landing-header" id="home">
+    <a href="index.html" class="brand-mark" aria-label="Novara home">
+      <span class="brand-dot"></span>
+      <span>Novara</span>
+    </a>
+    <nav class="landing-nav" aria-label="Main navigation">
+      <a href="#home">Home</a>
+      <a href="#featured">Explore</a>
+      <a href="#genres">Genres</a>
+      <a href="#writer">Become a Writer</a>
+    </nav>
+    <div class="landing-actions">
+      <button type="button" class="ghost-btn" data-auth-open="signin">Login</button>
+      <button type="button" class="solid-btn" data-auth-open="signup">Sign Up</button>
     </div>
+  </header>
+
+  <main class="landing-main">
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-copy">
+        <p class="eyebrow">The premium home for readers and storytellers</p>
+        <h1 id="heroTitle">Read, Write, and Fall Into New Worlds</h1>
+        <p>Novara brings immersive fiction and emerging voices into one elegant platform. Discover trending stories, preview chapters instantly, and start publishing under your writer identity when you are ready.</p>
+        <div class="hero-ctas">
+          <a class="solid-btn" href="reader-dashboard.html" id="startReadingBtn">Start Reading</a>
+          <button type="button" class="outline-btn" id="startWriterJourneyBtn">Start Your Writer Journey</button>
+        </div>
+      </div>
+      <div class="hero-showcase" aria-label="Featured books layout">
+        <article class="showcase-card showcase-card--primary">
+          <h2>The Glass Orchard</h2>
+          <p>Emi Hart · Romance</p>
+          <span>Featured Editorial Pick</span>
+        </article>
+        <article class="showcase-card">
+          <h2>Code of Silence</h2>
+          <p>Leah Warren · Thriller</p>
+          <span>Top Reader Momentum</span>
+        </article>
+        <article class="showcase-card">
+          <h2>Echoes at Dawn</h2>
+          <p>Nira Sol · Fantasy</p>
+          <span>New Voices Spotlight</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="featured" aria-labelledby="featuredHeading">
+      <div class="section-head">
+        <div>
+          <h2 id="featuredHeading">Featured Stories</h2>
+          <p>Preview Chapter 1 instantly. Continue reading full chapters after login or sign up.</p>
+        </div>
+        <p class="sync-message" id="featuredSyncMessage" hidden></p>
+      </div>
+      <div class="story-grid" id="featuredStoriesGrid"></div>
+    </section>
+
+    <section class="section" id="genres" aria-labelledby="genresHeading">
+      <div class="section-head">
+        <h2 id="genresHeading">Browse by Genre</h2>
+      </div>
+      <div class="genre-grid" id="genreGrid"></div>
+    </section>
+
+    <section class="section benefits" id="benefits" aria-labelledby="benefitsHeading">
+      <div class="section-head">
+        <h2 id="benefitsHeading">Built for Deep Reading</h2>
+      </div>
+      <div class="benefit-grid">
+        <article class="benefit-card">
+          <h3>Read Anywhere</h3>
+          <p>Pick up your story across desktop, tablet, and mobile with seamless progress continuity.</p>
+        </article>
+        <article class="benefit-card">
+          <h3>Audiobook Ready</h3>
+          <p>Switch between text and audio sessions without losing your place in the chapter.</p>
+        </article>
+        <article class="benefit-card">
+          <h3>Favorites and Lists</h3>
+          <p>Save your favorite books, build custom shelves, and return to them in one click.</p>
+        </article>
+        <article class="benefit-card">
+          <h3>Discover New Writers</h3>
+          <p>Explore fresh voices and breakout stories before they trend everywhere else.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section writer-section" id="writer" aria-labelledby="writerHeading">
+      <div class="writer-copy">
+        <p class="eyebrow">For aspiring authors</p>
+        <h2 id="writerHeading">Turn your ideas into published chapters on Novara.</h2>
+        <p>Create your writer profile with your reader account, build an audience, and move between reading and writing dashboards whenever you want.</p>
+      </div>
+      <button type="button" class="solid-btn" id="writerCtaBtn">Start Your Writer Journey</button>
+    </section>
+  </main>
+
+  <footer class="landing-footer">
+    <div class="footer-brand">
+      <span class="brand-dot"></span>
+      <span>Novara</span>
+    </div>
+    <nav class="footer-links" aria-label="Footer">
+      <a href="#">About</a>
+      <a href="#">Contact</a>
+      <a href="#">Terms</a>
+      <a href="#">Privacy</a>
+      <a href="#">Help</a>
+    </nav>
+    <div class="social-links" aria-label="Social links">
+      <a href="#">X</a>
+      <a href="#">Instagram</a>
+      <a href="#">YouTube</a>
+    </div>
+  </footer>
+
+  <div class="dialog-backdrop" id="chapterPreviewModal" hidden>
+    <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="chapterPreviewTitle">
+      <button type="button" class="dialog-close" data-close-modal="chapterPreviewModal">Close</button>
+      <h3 id="chapterPreviewTitle">Chapter 1 Preview</h3>
+      <p class="dialog-meta" id="chapterPreviewMeta"></p>
+      <div class="chapter-controls">
+        <button type="button" class="chapter-chip active" data-chapter="1">Chapter 1</button>
+        <button type="button" class="chapter-chip locked" data-locked="true">Chapter 2</button>
+        <button type="button" class="chapter-chip locked" data-locked="true">Chapter 3</button>
+      </div>
+      <article class="chapter-text" id="chapterPreviewBody"></article>
+      <p class="locked-message" id="lockedChapterPrompt" hidden>🔒 Unlock this chapter to continue reading.</p>
+      <div class="dialog-actions">
+        <button type="button" class="ghost-btn" data-auth-open="signin">Login to Continue</button>
+        <button type="button" class="solid-btn" data-auth-open="signup">Sign Up Free</button>
+      </div>
+    </section>
   </div>
 
-  <nav class="mobile-nav" aria-label="Mobile navigation">
-    <a href="#" class="active">Home</a>
-    <a href="library.html">Library</a>
-    <a href="discover.html">Discover</a>
-    <a href="annotations.html">Saved</a>
-    <a href="profile.html">Profile</a>
-  </nav>
+  <div class="dialog-backdrop" id="authModal" hidden>
+    <section class="dialog auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authHeading">
+      <button type="button" class="dialog-close" data-close-modal="authModal">Close</button>
+      <h3 id="authHeading">Welcome to Novara</h3>
+      <div class="auth-tabs">
+        <button type="button" class="auth-tab active" data-auth-tab="signin">Login</button>
+        <button type="button" class="auth-tab" data-auth-tab="signup">Sign Up</button>
+      </div>
+      <form id="signinForm" class="auth-form">
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" name="password" minlength="6" required />
+        </label>
+        <button type="submit" class="solid-btn auth-submit">Login</button>
+      </form>
+      <form id="signupForm" class="auth-form" hidden>
+        <label>
+          <span>Name</span>
+          <input type="text" name="name" required />
+        </label>
+        <label>
+          <span>Email</span>
+          <input type="email" name="email" required />
+        </label>
+        <label>
+          <span>Password</span>
+          <input type="password" name="password" minlength="6" required />
+        </label>
+        <button type="submit" class="solid-btn auth-submit">Create Account</button>
+      </form>
+      <p class="auth-message" id="authMessage" aria-live="polite"></p>
+    </section>
+  </div>
 
-  <script src="app.js"></script>
+  <script src="novara-session.js"></script>
+  <script src="landing.js"></script>
 </body>
 </html>

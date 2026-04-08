@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novara Writer Chapters</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="writer-chapters.css" />
+</head>
+<body>
+  <main class="chapters-shell">
+    <section id="bookHeader" class="card top-header">
+      <div class="top-header-main">
+        <p class="eyebrow">Writer Studio</p>
+        <h1 id="bookTitle">Loading book...</h1>
+        <p id="bookMeta" class="subcopy">Preparing chapter workspace...</p>
+      </div>
+      <div class="top-header-actions">
+        <a class="btn btn-soft" href="writer-dashboard.html?section=stories">Back to My Books</a>
+        <button id="previewBookBtn" class="btn btn-soft" type="button">Preview Book</button>
+        <button id="saveBookBtn" class="btn btn-primary" type="button">Save Book</button>
+      </div>
+    </section>
+
+    <section class="workspace-grid">
+      <aside class="card chapter-sidebar">
+        <div class="chapter-sidebar-head">
+          <h2>Chapters</h2>
+          <p id="chapterCountText" class="subcopy">0 chapters</p>
+        </div>
+        <div class="chapter-sidebar-tools">
+          <button id="addChapterBtn" class="btn btn-primary" type="button">+ Add Chapter</button>
+          <input id="chapterSearchInput" type="search" placeholder="Search chapters" />
+        </div>
+        <div id="chapterListState" class="list-state">Loading chapters...</div>
+        <div id="chapterList" class="chapter-list" aria-live="polite"></div>
+      </aside>
+
+      <section class="card editor-panel">
+        <div class="editor-head">
+          <h2 id="editorHeading">Select a chapter</h2>
+          <div class="editor-status">
+            <span id="publishBadge" class="badge badge-draft">Draft</span>
+            <span id="dirtyIndicator" class="status-pill status-unsaved hidden">Unsaved changes</span>
+            <span id="lastSavedIndicator" class="status-pill">Not saved yet</span>
+          </div>
+        </div>
+
+        <div id="editorError" class="editor-message error hidden"></div>
+        <div id="editorSuccess" class="editor-message success hidden"></div>
+
+        <form id="chapterEditorForm" novalidate>
+          <div class="meta-row">
+            <label class="field chapter-number-field" for="chapterNumberInput">
+              <span>Chapter Number</span>
+              <input id="chapterNumberInput" type="number" min="1" step="1" />
+            </label>
+            <label class="field" for="chapterTitleInput">
+              <span>Chapter Title</span>
+              <input id="chapterTitleInput" type="text" maxlength="180" placeholder="Enter chapter title" />
+            </label>
+          </div>
+
+          <label class="field" for="chapterContentInput">
+            <span>Chapter Content</span>
+            <textarea id="chapterContentInput" rows="18" placeholder="Start writing your chapter..."></textarea>
+          </label>
+
+          <div class="editor-actions">
+            <button id="saveChapterBtn" class="btn btn-primary" type="button">Save Changes</button>
+            <button id="saveDraftBtn" class="btn btn-soft" type="button">Save as Draft</button>
+            <button id="publishChapterBtn" class="btn btn-soft success" type="button">Publish Chapter</button>
+            <button id="deleteChapterBtn" class="btn btn-soft danger" type="button">Delete Chapter</button>
+          </div>
+        </form>
+      </section>
+    </section>
+  </main>
+
+  <div id="confirmModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmModalTitle">
+    <div class="modal-card">
+      <h3 id="confirmModalTitle">Delete chapter?</h3>
+      <p id="confirmModalMessage">Are you sure you want to delete this chapter? This cannot be undone.</p>
+      <div class="modal-actions">
+        <button id="confirmCancelBtn" class="btn btn-soft" type="button">Cancel</button>
+        <button id="confirmDeleteBtn" class="btn btn-soft danger" type="button">Delete Chapter</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="novara-session.js"></script>
+  <script src="writer-chapters.js"></script>
+</body>
+</html>

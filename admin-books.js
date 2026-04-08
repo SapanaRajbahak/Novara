@@ -1,4 +1,17 @@
-const ADMIN_AUTH_KEY = "novelread.admin.auth";
+const ADMIN_AUTH_KEY = "novara.admin.auth";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 const PAGE_SIZE = 8;
 
 const elements = {
@@ -13,7 +26,20 @@ const elements = {
   booksTableBody: document.getElementById("booksTableBody"),
   prevPageBtn: document.getElementById("prevPageBtn"),
   nextPageBtn: document.getElementById("nextPageBtn"),
-  pageMeta: document.getElementById("pageMeta")
+  pageMeta: document.getElementById("pageMeta"),
+  editModal: document.getElementById("editModal"),
+  closeEditModalBtn: document.getElementById("closeEditModalBtn"),
+  editBookForm: document.getElementById("editBookForm"),
+  editTitle: document.getElementById("editTitle"),
+  editAuthor: document.getElementById("editAuthor"),
+  editGenre: document.getElementById("editGenre"),
+  editFileType: document.getElementById("editFileType"),
+  editStatus: document.getElementById("editStatus"),
+  editTags: document.getElementById("editTags"),
+  editDescription: document.getElementById("editDescription"),
+  editIsAudiobookAvailable: document.getElementById("editIsAudiobookAvailable"),
+  editIsAiGenerated: document.getElementById("editIsAiGenerated"),
+  editFormError: document.getElementById("editFormError"),
 };
 
 const state = {
@@ -22,7 +48,8 @@ const state = {
   query: "",
   status: "all",
   source: "all",
-  view: "table"
+  view: "table",
+  editingBookId: "",
 };
 
 function requireAuth() {
@@ -44,7 +71,7 @@ function showToast(message) {
 }
 
 function createCoverSvg(title, genre) {
-  const initials = title
+  const initials = String(title || "Book")
     .split(" ")
     .map((word) => word[0])
     .slice(0, 2)
@@ -60,7 +87,7 @@ function createCoverSvg(title, genre) {
     Historical: ["#4f412d", "#a58a5a"],
     Drama: ["#3f3348", "#8672a1"],
     Adventure: ["#2b4337", "#5f9267"],
-    default: ["#2d3b3a", "#608982"]
+    default: ["#2d3b3a", "#608982"],
   };
 
   const [c1, c2] = palette[genre] || palette.default;
@@ -79,6 +106,88 @@ function createCoverSvg(title, genre) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+function formatDate(value) {
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return "-";
+  }
+  return parsed.toLocaleString();
+}
+
+function formatStatus(value) {
+  return String(value || "DRAFT").toUpperCase() === "PUBLISHED" ? "published" : "draft";
+}
+
+function getSource(value) {
+  return value ? "ai-generated" : "uploaded-manually";
+}
+
+function getTypeLabel(book) {
+  const fileTypeMap = {
+    TXT: "Text Chapters",
+    EPUB: "EPUB",
+    PDF: "PDF",
+  };
+
+  const base = fileTypeMap[book.fileType] || "Text Chapters";
+  return book.isAudiobookAvailable ? `${base} + Audio` : base;
+}
+
+function toAbsoluteAssetUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return "";
+  }
+
+  if (/^(https?:)?\/\//i.test(raw) || raw.startsWith("data:")) {
+    return raw;
+  }
+
+  return `${API_BASE_URL}${raw.startsWith("/") ? raw : `/${raw}`}`;
+}
+
+function normalizeBook(book) {
+  return {
+    id: book.id,
+    title: book.title || "Untitled",
+    author: book.authorName || "Unknown Author",
+    genre: book.genre || "General",
+    coverUrl: toAbsoluteAssetUrl(book.coverUrl),
+    status: formatStatus(book.status),
+    source: getSource(book.isAiGenerated),
+    type: getTypeLabel(book),
+    createdDate: formatDate(book.createdAt),
+    createdAt: book.createdAt || "",
+    description: book.description || "",
+    tags: Array.isArray(book.tags) ? book.tags : [],
+    fileType: book.fileType || "TXT",
+    isAudiobookAvailable: Boolean(book.isAudiobookAvailable),
+    isAiGenerated: Boolean(book.isAiGenerated),
+  };
+}
+
+async function apiFetch(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    credentials: "include",
+    cache: "no-store",
+    ...options,
+  });
+
+  const payload = await response.json().catch(() => ({ success: false }));
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem(ADMIN_AUTH_KEY);
+    const next = encodeURIComponent("admin-books.html");
+    window.location.href = `admin-login.html?next=${next}`;
+    throw new Error("Authentication required");
+  }
+
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || `HTTP ${response.status}`);
+  }
+
+  return payload;
+}
+
 function applyFilters(source) {
   const q = state.query.trim().toLowerCase();
   return source.filter((book) => {
@@ -94,7 +203,7 @@ function applyFilters(source) {
       return true;
     }
 
-    const haystack = [book.title, book.author, book.genre, ...(book.tags || [])].join(" ").toLowerCase();
+    const haystack = [book.title, book.author, book.genre, book.type, ...(book.tags || [])].join(" ").toLowerCase();
     return haystack.includes(q);
   });
 }
@@ -123,16 +232,24 @@ function createActions(book) {
 
 function renderTable(items) {
   elements.booksTableBody.innerHTML = "";
+
+  if (!items.length) {
+    const tr = document.createElement("tr");
+    tr.innerHTML = '<td colspan="7">No real books found for the current filters.</td>';
+    elements.booksTableBody.appendChild(tr);
+    return;
+  }
+
   items.forEach((book) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td><img class="cover-thumb" src="${createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" /></td>
+      <td><img class="cover-thumb" src="${book.coverUrl || createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" /></td>
       <td>
         <strong>${book.title}</strong>
-        <div class="source-chip">${book.source === "ai-generated" ? "AI-generated" : "Uploaded manually"}</div>
+        <div class="source-chip">${book.source === "ai-generated" ? "AI-generated" : book.genre}</div>
       </td>
       <td>${book.author}</td>
-      <td>${book.genre}</td>
+      <td>${book.type}</td>
       <td><span class="status ${book.status}">${book.status}</span></td>
       <td>${book.createdDate}</td>
       <td>${createActions(book)}</td>
@@ -143,16 +260,22 @@ function renderTable(items) {
 
 function renderGrid(items) {
   elements.gridView.innerHTML = "";
+
+  if (!items.length) {
+    elements.gridView.innerHTML = "<article class=\"book-card\"><h3>No real books found</h3><p>Change filters or create a book from the upload page.</p></article>";
+    return;
+  }
+
   items.forEach((book) => {
     const card = document.createElement("article");
     card.className = "book-card";
     card.innerHTML = `
-      <img class="cover-thumb" src="${createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" />
+      <img class="cover-thumb" src="${book.coverUrl || createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" />
       <h3>${book.title}</h3>
-      <p>${book.author} • ${book.genre}</p>
+      <p>${book.author} • ${book.type}</p>
       <p>${book.createdDate}</p>
       <span class="status ${book.status}">${book.status}</span>
-      <span class="source-chip">${book.source === "ai-generated" ? "AI-generated" : "Uploaded manually"}</span>
+      <span class="source-chip">${book.source === "ai-generated" ? "AI-generated" : book.genre}</span>
       ${createActions(book)}
     `;
     elements.gridView.appendChild(card);
@@ -175,21 +298,61 @@ function render() {
   renderGrid(visible);
 }
 
-function updateBook(id, updater) {
-  const index = state.books.findIndex((item) => item.id === id);
-  if (index < 0) {
-    return;
-  }
-  state.books[index] = updater(state.books[index]);
+function setEditError(message) {
+  elements.editFormError.textContent = message;
 }
 
-function handleAction(action, id) {
+function openEditModal(book) {
+  state.editingBookId = book.id;
+  elements.editTitle.value = book.title;
+  elements.editAuthor.value = book.author;
+  elements.editGenre.value = book.genre;
+  elements.editFileType.value = book.fileType;
+  elements.editStatus.value = book.status === "published" ? "PUBLISHED" : "DRAFT";
+  elements.editTags.value = (book.tags || []).join(", ");
+  elements.editDescription.value = book.description || "";
+  elements.editIsAudiobookAvailable.checked = book.isAudiobookAvailable;
+  elements.editIsAiGenerated.checked = book.source === "ai-generated";
+  setEditError("");
+  elements.editModal.classList.remove("hidden");
+  elements.editModal.setAttribute("aria-hidden", "false");
+}
+
+function closeEditModal() {
+  state.editingBookId = "";
+  elements.editModal.classList.add("hidden");
+  elements.editModal.setAttribute("aria-hidden", "true");
+  setEditError("");
+}
+
+async function refreshBooks() {
+  const allBooks = [];
+  let page = 1;
+  let totalPages = 1;
+
+  while (page <= totalPages) {
+    const payload = await apiFetch(`/api/admin/books?page=${page}&limit=100&sort=newest`);
+    const pageItems = Array.isArray(payload.data) ? payload.data : [];
+    allBooks.push(...pageItems.map(normalizeBook));
+    totalPages = payload.pagination && payload.pagination.totalPages ? payload.pagination.totalPages : 1;
+    page += 1;
+  }
+
+  state.books = allBooks;
+}
+
+async function handleAction(action, id) {
   const book = state.books.find((item) => item.id === id);
   if (!book) {
     return;
   }
 
   if (action === "delete") {
+    if (!window.confirm(`Delete ${book.title}? This removes the book and its related content.`)) {
+      return;
+    }
+
+    await apiFetch(`/api/admin/books/${encodeURIComponent(id)}`, { method: "DELETE" });
     state.books = state.books.filter((item) => item.id !== id);
     showToast("Book deleted");
     render();
@@ -197,31 +360,35 @@ function handleAction(action, id) {
   }
 
   if (action === "toggle-publish") {
-    updateBook(id, (item) => ({ ...item, status: item.status === "published" ? "draft" : "published" }));
+    const endpoint = book.status === "published"
+      ? `/api/admin/books/${encodeURIComponent(id)}/unpublish`
+      : `/api/admin/books/${encodeURIComponent(id)}/publish`;
+    await apiFetch(endpoint, { method: "POST" });
+    await refreshBooks();
     showToast("Publication status updated");
     render();
     return;
   }
 
   if (action === "edit") {
-    showToast(`Edit ${book.title}`);
+    openEditModal(book);
     return;
   }
 
   if (action === "chapters") {
-    showToast(`Manage chapters for ${book.title}`);
+    window.location.href = `admin-chapters.html?bookId=${encodeURIComponent(book.id)}`;
     return;
   }
 
   if (action === "audio") {
-    showToast(`Upload audio for ${book.title}`);
+    window.location.href = `admin-audiobooks.html?bookId=${encodeURIComponent(book.id)}`;
   }
 }
 
 function bindEvents() {
   elements.logoutBtn.addEventListener("click", () => {
     localStorage.removeItem(ADMIN_AUTH_KEY);
-    window.location.href = "admin-login.html";
+    window.location.href = "index.html";
   });
 
   elements.searchInput.addEventListener("input", () => {
@@ -259,35 +426,85 @@ function bindEvents() {
     render();
   });
 
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
+    const closeTarget = event.target.closest("[data-close-modal]");
+    if (closeTarget) {
+      closeEditModal();
+      return;
+    }
+
     const actionEl = event.target.closest("[data-action][data-id]");
     if (!actionEl || actionEl.tagName === "A") {
       return;
     }
-    handleAction(actionEl.dataset.action, actionEl.dataset.id);
-  });
-}
 
-async function loadBooks() {
-  try {
-    const response = await fetch("./data/admin-books.json", { cache: "no-store" });
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+    try {
+      await handleAction(actionEl.dataset.action, actionEl.dataset.id);
+    } catch (error) {
+      showToast(error.message || "Unable to complete book action");
     }
-    const data = await response.json();
-    state.books = Array.isArray(data.books) ? data.books : [];
-  } catch (error) {
-    state.books = [];
-  }
+  });
+
+  elements.closeEditModalBtn.addEventListener("click", closeEditModal);
+
+  elements.editBookForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setEditError("");
+
+    if (!state.editingBookId) {
+      setEditError("No book selected.");
+      return;
+    }
+
+    const payload = {
+      title: elements.editTitle.value.trim(),
+      authorName: elements.editAuthor.value.trim(),
+      genre: elements.editGenre.value.trim() || null,
+      fileType: elements.editFileType.value,
+      status: elements.editStatus.value,
+      description: elements.editDescription.value.trim() || null,
+      tags: elements.editTags.value.split(",").map((item) => item.trim()).filter(Boolean),
+      isAudiobookAvailable: elements.editIsAudiobookAvailable.checked,
+      isAiGenerated: elements.editIsAiGenerated.checked,
+    };
+
+    if (!payload.title || !payload.authorName) {
+      setEditError("Title and author are required.");
+      return;
+    }
+
+    try {
+      await apiFetch(`/api/admin/books/${encodeURIComponent(state.editingBookId)}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      await refreshBooks();
+      render();
+      closeEditModal();
+      showToast("Book updated");
+    } catch (error) {
+      setEditError(error.message || "Unable to save changes.");
+    }
+  });
 }
 
 async function bootstrap() {
   if (!requireAuth()) {
     return;
   }
+
   bindEvents();
-  await loadBooks();
+  try {
+    await refreshBooks();
+  } catch (error) {
+    state.books = [];
+    showToast("Unable to load real book data");
+  }
   render();
 }
 
 bootstrap();
+

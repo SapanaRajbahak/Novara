@@ -142,6 +142,23 @@ a { color: inherit; text-decoration: none; }
   overflow: hidden;
 }
 
+.sparkline svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sparkline.empty {
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--surface) 88%, var(--surface-2));
+}
+
+.sparkline-empty {
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
 .sparkline::after {
   content: "";
   position: absolute;
@@ -151,6 +168,10 @@ a { color: inherit; text-decoration: none; }
   height: 2px;
   background: linear-gradient(90deg, transparent, color-mix(in oklab, var(--primary) 70%, var(--accent)), transparent);
   transform: translateY(-50%) rotate(-8deg);
+}
+
+.sparkline.empty::after {
+  display: none;
 }
 
 .layout-grid {
@@ -205,6 +226,14 @@ a { color: inherit; text-decoration: none; }
 
 .rank-metric { color: var(--muted); font-size: 0.78rem; }
 
+.rank-sub {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .activity-item {
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -215,9 +244,28 @@ a { color: inherit; text-decoration: none; }
   gap: 0.5rem;
 }
 
+.activity-main {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.activity-main small {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
 .activity-meta { color: var(--muted); font-size: 0.77rem; }
 
 .hint { color: var(--muted); font-size: 0.82rem; }
+
+.empty-item {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0.72rem;
+  text-align: center;
+}
 
 @media (max-width: 1080px) {
   .kpi-grid { grid-template-columns: 1fr; }

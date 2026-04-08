@@ -1,5 +1,16 @@
-const BOOKMARK_KEY = "novelread.reader.bookmarks";
-const NOTES_KEY = "novelread.reader.notes";
+function resolveApiBaseUrl() {
+  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
+  if (explicitBase) {
+    return explicitBase.replace(/\/$/, "");
+  }
+
+  const isFileProtocol = window.location.protocol === "file:";
+  const protocol = isFileProtocol ? "http:" : window.location.protocol;
+  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
+  return `${protocol}//${host}:5002`;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 const elements = {
   bookFilter: document.getElementById("bookFilter"),
@@ -12,21 +23,26 @@ const elements = {
 };
 
 const state = {
-  booksById: {},
   selectedBook: "all",
   bookmarks: [],
   highlights: [],
   notes: []
 };
 
-function loadJsonStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (error) {
-    return fallback;
-  }
-}
+const ACTION_LABELS = {
+  bookmarks: {
+    edit: "Edit label",
+    remove: "Delete bookmark",
+  },
+  highlights: {
+    edit: "Edit note",
+    remove: "Delete highlight",
+  },
+  notes: {
+    edit: "Edit note",
+    remove: "Delete note",
+  },
+};
 
 function formatDate(iso) {
   if (!iso) {
@@ -75,107 +91,112 @@ function createCoverSvg(title, genre) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
-function normalizeBook(book) {
-  if (!book || !book.id) {
-    return null;
-  }
-
+function getBookMeta(item) {
+  const book = item.book || {};
   return {
-    id: book.id,
+    id: book.id || item.bookId,
     title: book.title || "Unknown Book",
-    genre: Array.isArray(book.genre) ? book.genre[0] || "default" : (book.genre || "default")
+    genre: book.genre || "default",
   };
 }
 
-async function loadBookMeta() {
-  const sources = ["./data/book-details.json", "./data/library.json", "./data/discover.json", "./data/reader-content.json"];
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    cache: "no-store",
+    credentials: "include",
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+    },
+  });
 
-  for (const source of sources) {
-    try {
-      const response = await fetch(source, { cache: "no-store" });
-      if (!response.ok) {
-        continue;
-      }
-      const data = await response.json();
-      const books = Array.isArray(data.books) ? data.books : [];
-      books.forEach((book) => {
-        const normalized = normalizeBook(book);
-        if (normalized && !state.booksById[normalized.id]) {
-          state.booksById[normalized.id] = normalized;
-        }
-      });
-    } catch (error) {
-      continue;
-    }
+  const payload = await response.json().catch(() => ({ success: false }));
+
+  if (response.status === 401 || response.status === 403) {
+    window.location.href = "index.html";
+    throw new Error("Authentication required");
+  }
+
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || `HTTP ${response.status}`);
+  }
+
+  return payload;
+}
+
+function findSourceItem(type, id) {
+  const list = Array.isArray(state[type]) ? state[type] : [];
+  return list.find((item) => item.id === id) || null;
+}
+
+// Use localStorage fallback for bookmarks if backend is not ready
+function loadAnnotationsData() {
+  // Only bookmarks for now; highlights/notes can be added similarly
+  state.bookmarks = (getBookmarks && typeof getBookmarks === 'function')
+    ? getBookmarks().filter(e => e.userId === (getCurrentUserId && getCurrentUserId() || 'guest'))
+    : [];
+  // Optionally: state.highlights = ...; state.notes = ...;
+}
+
+function reloadAndRender() {
+  const previousFilter = state.selectedBook;
+  loadAnnotationsData();
+  populateBookFilter();
+  const selectedStillExists = elements.bookFilter.querySelector(`option[value="${previousFilter}"]`);
+  state.selectedBook = selectedStillExists ? previousFilter : "all";
+  elements.bookFilter.value = state.selectedBook;
+  renderAll();
+}
+
+function updateAnnotation(type, item, value) {
+  if (!item || !item.bookId) return;
+  if (type === 'bookmarks') {
+    // Update note/label if needed
+    let entries = getBookmarks();
+    entries = entries.map(e => (e.bookId === item.bookId ? { ...e, note: value } : e));
+    setBookmarks(entries);
+    reloadAndRender();
   }
 }
 
-function getBookMeta(bookId) {
-  return state.booksById[bookId] || { id: bookId, title: bookId.replace(/^book-/, "").replace(/-/g, " "), genre: "default" };
+function deleteAnnotation(type, item) {
+  if (!item || !item.bookId) return;
+  if (type === 'bookmarks') {
+    let entries = getBookmarks();
+    entries = entries.filter(e => e.bookId !== item.bookId);
+    setBookmarks(entries);
+    reloadAndRender();
+  }
 }
 
-function mapBookmarks() {
-  const bookmarksMap = loadJsonStorage(BOOKMARK_KEY, {});
-  const items = [];
-
-  Object.entries(bookmarksMap).forEach(([key, value]) => {
-    const bookId = String(key).replace(/^book:/, "");
-    const chapter = Number(value.chapterIndex || 0) + 1;
-    items.push({
-      bookId,
-      chapter,
-      snippet: "Bookmark saved at this chapter position.",
-      note: "-",
-      dateSaved: value.createdAt || null,
-      jumpUrl: `reader.html?book=${encodeURIComponent(bookId)}&chapter=${encodeURIComponent(chapter)}`
-    });
-  });
-
-  items.sort((a, b) => new Date(b.dateSaved || 0).getTime() - new Date(a.dateSaved || 0).getTime());
-  return items;
-}
-
-function mapHighlightsAndNotes() {
-  const notesMap = loadJsonStorage(NOTES_KEY, {});
-  const highlights = [];
-  const notes = [];
-
-  Object.entries(notesMap).forEach(([key, list]) => {
-    const bookId = String(key).replace(/^book:/, "");
-    if (!Array.isArray(list)) {
+function handleItemAction(type, action, id) {
+  const item = findSourceItem(type, id);
+  if (!item) return;
+  if (action === "edit") {
+    const promptLabel = type === "bookmarks" ? "Update bookmark label:" : "Update note:";
+    const currentValue = type === "bookmarks" ? item.snippet : item.note;
+    const input = window.prompt(promptLabel, currentValue === "-" ? "" : currentValue);
+    if (input === null) return;
+    const nextValue = input.trim();
+    if (type === "notes" && !nextValue) {
+      window.alert("Note content cannot be empty.");
       return;
     }
-
-    list.forEach((entry) => {
-      const chapter = Number(entry.chapterNumber || 1);
-      const item = {
-        bookId,
-        chapter,
-        snippet: entry.selectedText || "No highlighted text",
-        note: entry.noteText || "-",
-        dateSaved: entry.createdAt || null,
-        jumpUrl: `reader.html?book=${encodeURIComponent(bookId)}&chapter=${encodeURIComponent(chapter)}`
-      };
-
-      if (entry.highlighted) {
-        highlights.push(item);
-      }
-
-      if (entry.noteText && entry.noteText.trim()) {
-        notes.push(item);
-      }
-    });
-  });
-
-  const byDate = (a, b) => new Date(b.dateSaved || 0).getTime() - new Date(a.dateSaved || 0).getTime();
-  highlights.sort(byDate);
-  notes.sort(byDate);
-
-  return { highlights, notes };
+    updateAnnotation(type, item, nextValue);
+    return;
+  }
+  if (action === "remove") {
+    const confirmed = window.confirm(`Are you sure you want to ${ACTION_LABELS[type].remove.toLowerCase()}?`);
+    if (!confirmed) return;
+    deleteAnnotation(type, item);
+  }
 }
 
 function createItemCard(item, type) {
-  const book = getBookMeta(item.bookId);
+  const book = getBookMeta(item);
+  const chapterLabel = item.chapterNumber ? `Chapter ${item.chapterNumber}` : "Chapter unavailable";
+  const actionConfig = ACTION_LABELS[type] || ACTION_LABELS.notes;
   const card = document.createElement("article");
   card.className = "item";
   card.innerHTML = `
@@ -183,7 +204,7 @@ function createItemCard(item, type) {
       <img class="thumb" src="${createCoverSvg(book.title, book.genre)}" alt="${book.title} cover" loading="lazy" />
       <div>
         <h3>${book.title}</h3>
-        <p class="meta">Chapter ${item.chapter}</p>
+        <p class="meta">${chapterLabel}</p>
       </div>
     </div>
 
@@ -199,7 +220,11 @@ function createItemCard(item, type) {
 
     <div class="item-footer">
       <span class="date">${formatDate(item.dateSaved)}</span>
-      <a class="jump-btn" href="${item.jumpUrl}">${type === "bookmarks" ? "Jump to Bookmark" : "Open in Reader"}</a>
+      <div class="item-actions">
+        <a class="jump-btn" href="${item.jumpUrl}">${type === "bookmarks" ? "Jump to Bookmark" : "Open in Reader"}</a>
+        <button class="secondary-btn" data-action="edit" data-type="${type}" data-id="${item.id}" type="button">${actionConfig.edit}</button>
+        <button class="danger-btn" data-action="remove" data-type="${type}" data-id="${item.id}" type="button">Delete</button>
+      </div>
     </div>
   `;
   return card;
@@ -237,8 +262,19 @@ function populateBookFilter() {
   );
 
   const options = ["<option value=\"all\">All Books</option>"];
-  [...uniqueIds].sort((a, b) => getBookMeta(a).title.localeCompare(getBookMeta(b).title)).forEach((bookId) => {
-    options.push(`<option value=\"${bookId}\">${getBookMeta(bookId).title}</option>`);
+  [...uniqueIds].sort((a, b) => {
+    const first = state.bookmarks.find((item) => item.bookId === a)
+      || state.highlights.find((item) => item.bookId === a)
+      || state.notes.find((item) => item.bookId === a);
+    const second = state.bookmarks.find((item) => item.bookId === b)
+      || state.highlights.find((item) => item.bookId === b)
+      || state.notes.find((item) => item.bookId === b);
+    return getBookMeta(first).title.localeCompare(getBookMeta(second).title);
+  }).forEach((bookId) => {
+    const source = state.bookmarks.find((item) => item.bookId === bookId)
+      || state.highlights.find((item) => item.bookId === bookId)
+      || state.notes.find((item) => item.bookId === bookId);
+    options.push(`<option value=\"${bookId}\">${getBookMeta(source).title}</option>`);
   });
 
   elements.bookFilter.innerHTML = options.join("");
@@ -275,14 +311,30 @@ function bindEvents() {
     state.selectedBook = elements.bookFilter.value;
     renderAll();
   });
+
+  [elements.bookmarksList, elements.highlightsList, elements.notesList].forEach((container) => {
+    container.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-action][data-type][data-id]");
+      if (!button) {
+        return;
+      }
+
+      const action = button.dataset.action;
+      const type = button.dataset.type;
+      const id = button.dataset.id;
+      handleItemAction(type, action, id);
+    });
+  });
 }
 
-async function bootstrap() {
-  await loadBookMeta();
-  state.bookmarks = mapBookmarks();
-  const grouped = mapHighlightsAndNotes();
-  state.highlights = grouped.highlights;
-  state.notes = grouped.notes;
+function bootstrap() {
+  try {
+    loadAnnotationsData();
+  } catch (error) {
+    state.bookmarks = [];
+    state.highlights = [];
+    state.notes = [];
+  }
   populateBookFilter();
   bindEvents();
   renderAll();
