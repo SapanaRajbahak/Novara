@@ -38,8 +38,8 @@ router.post('/create-subscription-checkout', requireAuth, async (req, res) => {
         purchaseType: 'subscription',
         plan,
       },
-      success_url: `${process.env.APP_URL}/billing-success.html`,
-      cancel_url: `${process.env.APP_URL}/billing-cancel.html`,
+      success_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=success',
+      cancel_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=cancel',
     });
     res.json({ url: session.url });
   } catch (err) {
@@ -68,8 +68,8 @@ router.post('/create-coin-checkout', requireAuth, async (req, res) => {
         pack,
         coins: packInfo.coins,
       },
-      success_url: `${process.env.APP_URL}/billing-success.html`,
-      cancel_url: `${process.env.APP_URL}/billing-cancel.html`,
+      success_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=success',
+      cancel_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=cancel',
     });
     res.json({ url: session.url });
   } catch (err) {

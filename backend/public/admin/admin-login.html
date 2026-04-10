@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/admin/admin-login.css" />
+</head>
+<body>
+  <main class="login-card">
+    <h1>Admin Access</h1>
+    <p>Sign in to access the publishing dashboard.</p>
+
+    <form id="loginForm" class="login-form">
+      <label for="adminEmail">Email</label>
+      <input id="adminEmail" type="email" placeholder="admin@Novara.app" required />
+
+      <label for="adminPass">Password</label>
+      <input id="adminPass" type="password" placeholder="Enter password" required />
+
+      <button type="submit">Login</button>
+    </form>
+
+    <small>Demo credentials: any email + password length 4+</small>
+  </main>
+
+  <script src="/js/admin/admin-login.js"></script>
+</body>
+</html>

@@ -80,7 +80,6 @@ async function signup(req, res) {
       });
     }
 
-
     const passwordHash = await bcrypt.hash(password, 12);
     // TEMPORARY: Skip email verification, set user as verified
     const user = await prisma.user.create({
@@ -95,6 +94,7 @@ async function signup(req, res) {
     });
 
     const referralCode = await ensureReferralCode(user.id, user.name);
+
     if (referralToken) {
       try {
         await attachReferralToSignup({
@@ -104,13 +104,21 @@ async function signup(req, res) {
           signupIp: req.ip || null,
         });
       } catch (referralError) {
-        // Signup should remain successful even if referral attribution fails.
+        // keep signup successful even if referral fails
       }
     }
 
+    const safeUser = buildSafeUser({
+      ...user,
+      referralCode,
+    });
+
+    req.session.user = safeUser;
+
     return res.status(201).json({
       success: true,
-      message: "Signup successful. Please check your email to verify your account.",
+      message: "Signup successful",
+      user: safeUser,
     });
   } catch (error) {
     if (error && error.code === "P2002") {

@@ -64,20 +64,6 @@ model User {
   subscriptionPlan           String?
   subscriptionStatus         String?
   subscriptionCurrentPeriodEnd DateTime?
-  /// Stripe wallet and transaction log for coin/subscription purchases
-  model WalletTransaction {
-    id              String   @id @default(cuid())
-    userId          String
-    type            String   // "PURCHASE", "SPEND", "REWARD"
-    coins           Int
-    source          String   // "STRIPE", "AD", "SYSTEM"
-    stripeSessionId String?  @unique
-    createdAt       DateTime @default(now())
-
-    user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-    @@index([userId, createdAt])
-  }
   aiCredits         Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -98,13 +84,36 @@ model User {
   referredByUser     User?              @relation("UserReferrals", fields: [referredBy], references: [id], onDelete: SetNull)
   referredUsers      User[]             @relation("UserReferrals")
   referralsSent      Referral[]         @relation("ReferrerReferrals")
+
   referralRecord     Referral?          @relation("ReferredUserReferral")
+
+  walletTransactions WalletTransaction[]   // Stripe wallet and transaction log
 
   @@index([role])
   @@index([isWriter])
   @@index([createdAt])
   @@index([referredBy])
   @@index([referralCode])
+}
+
+/// Stripe wallet and transaction log for coin/subscription purchases
+model WalletTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "DAILY_CHECKIN", "CHAPTER_REWARD", "AD_REWARD", etc.
+  amount      Int?
+  description String?
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  // Legacy fields for compatibility (optional)
+  coins           Int?
+  source          String?
+  stripeSessionId String?  @unique
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 /// Account and Session tables are intentionally omitted for now because the

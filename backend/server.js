@@ -1,8 +1,7 @@
-
 require("dotenv").config();
 console.log('=== NOVARA BACKEND SERVER.JS STARTED ===');
 
-const express = require("express");
+const express = require('express');
 const cors = require("cors");
 const session = require("express-session");
 const path = require("path");
@@ -32,35 +31,17 @@ const referralMeRoutes = require("./routes/referralMeRoutes");
 const { requireAuth, requireAdmin, requireWriter, requireWriterOrAdmin } = require("./middleware/auth");
 const { connectDatabase } = require("./config/db");
 const { initializeUserStore } = require("./models/userModel");
+const rewardRoutes = require('./routes/rewardRoutes');
 
 
 const app = express();
 
 
 // ====== CLEAN MIDDLEWARE SETUP ======
-const allowedOrigins = [
-  "http://127.0.0.1:5501",
-  "http://localhost:5501",
-  "http://127.0.0.1:5500",
-  "http://localhost:5500",
-  "http://localhost:5001",
-  "http://localhost:5002",
-  "https://catachrestic-jeni-foraminate.ngrok-free.dev"
-];
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS: " + origin));
-      }
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"]
-  })
-);
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 // Stripe webhook route (must be before express.json)
 app.use("/api/stripe", stripeWebhookRoutes);
 // Body parsers
@@ -81,8 +62,7 @@ app.use(
   })
 );
 // Static files (ONE instance)
-app.use(express.static(path.join(__dirname, "..")));
-app.use("/books", express.static(path.join(__dirname, "..", "books")));
+app.use(express.static(path.join(__dirname, "public")));
 app.use("/books", express.static(path.join(__dirname, "books")));
 // Billing routes (after express.json)
 app.use("/api/billing", billingRoutes);
@@ -97,85 +77,9 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
-const PORT = Number(process.env.PORT) || 5001;
-
-function getFrontendOrigin(req) {
-  return `${req.protocol}://${req.hostname}:5500`;
-}
-
-
-
-
-// ✅ Test route for development
-app.get("/api/test", (req, res) => {
-  console.log("/api/test route hit");
-  return res.json({
-    success: true,
-    message: "API test route is working",
-    timestamp: new Date().toISOString(),
-  });
-});
 
 app.get("/", (req, res) => {
-  return res.json({
-    success: true,
-    message: "Novara backend is running",
-    routes: {
-      health:          "GET  /health",
-      signup:          "POST /api/auth/signup",
-      signin:          "POST /api/auth/signin",
-      signout:         "POST /api/auth/signout",
-      currentUser:     "GET  /api/auth/me",
-      books:           "GET  /api/books",
-      discoverBooks:   "GET  /api/books/discover",
-      featuredBooks:   "GET  /api/books/featured",
-      trendingBooks:   "GET  /api/books/trending",
-      recentBooks:     "GET  /api/books/recent",
-      book:            "GET  /api/books/:id",
-      adminCreateBook: "POST /api/admin/books",
-      adminUpdateBook: "PUT  /api/admin/books/:id",
-      adminDeleteBook: "DELETE /api/admin/books/:id",
-      adminPublish:    "POST /api/admin/books/:id/publish",
-      adminUnpublish:  "POST /api/admin/books/:id/unpublish",
-      chaptersByBook:  "GET  /api/books/:bookId/chapters",
-      chapterById:     "GET  /api/chapters/:id",
-      adminCreateChapter: "POST /api/admin/books/:bookId/chapters",
-      adminUpdateChapter: "PUT  /api/admin/chapters/:id",
-      adminDeleteChapter: "DELETE /api/admin/chapters/:id",
-      saveReadingProgress: "POST /api/progress/reading",
-      getReadingProgress: "GET  /api/progress/reading/:bookId",
-      saveListeningProgress: "POST /api/progress/listening",
-      getListeningProgress: "GET  /api/progress/listening/:bookId",
-      bookAudio: "GET  /api/books/:id/audio",
-      adminCreateAudio: "POST /api/admin/books/:id/audio",
-      adminUpdateAudio: "PUT  /api/admin/audio/:id",
-      adminDeleteAudio: "DELETE /api/admin/audio/:id",
-      adminUsers: "GET  /api/admin/users",
-      adminUser: "GET  /api/admin/users/:id",
-      adminPatchUser: "PATCH /api/admin/users/:id",
-      adminDeleteUser: "DELETE /api/admin/users/:id",
-      adminAnalytics: "GET  /api/admin/analytics",
-      profile: "GET  /api/profile",
-      profileUpdate: "PATCH /api/profile",
-      profileStats: "GET  /api/profile/stats",
-      profileLibrary: "GET  /api/profile/library",
-      profileActivity: "GET  /api/profile/activity",
-      profileAnnotations: "GET  /api/profile/annotations",
-      profileUpdateBookmarkAnnotation: "PATCH /api/profile/annotations/bookmarks/:id",
-      profileDeleteBookmarkAnnotation: "DELETE /api/profile/annotations/bookmarks/:id",
-      profileUpdateHighlightAnnotation: "PATCH /api/profile/annotations/highlights/:id",
-      profileDeleteHighlightAnnotation: "DELETE /api/profile/annotations/highlights/:id",
-      profileUpdateNoteAnnotation: "PATCH /api/profile/annotations/notes/:id",
-      profileDeleteNoteAnnotation: "DELETE /api/profile/annotations/notes/:id",
-      writerOnboarding: "POST /api/auth/writer/onboarding",
-      writerDashboard: "GET  /api/writer/dashboard",
-      writerReferrals: "GET  /api/writer/referrals",
-      referralSummary: "GET  /api/referrals/summary",
-      referralList: "GET  /api/referrals/list",
-      referralQr:    "GET  /api/referrals/qr",
-      referralMe:    "GET  /api/referrals/me",
-    },
-  });
+  res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 
 app.get("/health", (req, res) => {
@@ -189,7 +93,6 @@ app.use("/api/auth",        authRoutes);
 app.use("/api/referrals",   referralMeRoutes);
 app.use("/api/referrals",   referralQrRoutes);
 app.use("/api/referrals",   referralRoutes);
-app.use("/api/referrals",   referralQrRoutes);
 app.use("/api/writer",      writerRoutes);
 app.use("/api/writer",      writerStoryRoutes);
 app.use("/api/writer/ai",   writerAiRoutes);
@@ -207,7 +110,8 @@ app.use("/api/admin", adminAnalyticsRoutes);
 app.use("/api/profile", profileRoutes);
 const walletRoutes = require("./routes/walletRoutes");
 app.use("/api/wallet", walletRoutes);
-
+app.use("/api/rewards", rewardRoutes);
+const PORT = process.env.PORT || 5002;
 app.use((error, req, res, next) => {
   if (error && error.type === "entity.too.large") {
     return res.status(413).json({
@@ -295,6 +199,12 @@ app.get("/join/:code", (req, res) => {
   return res.redirect(`${getFrontendOrigin(req)}/index.html?auth=signup&ref=${referralCode}`);
 });
 
+// SPA fallback (after all API and page routes, before 404)
+app.get(/^\/(?!api|css|js|assets|books)(.*)/, (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// 404 handler LAST
 app.use((req, res) => {
   return res.status(404).json({
     success: false,
@@ -319,3 +229,7 @@ async function startServer() {
 startServer();
 
 module.exports = app;
+
+function getFrontendOrigin(req) {
+  return `${req.protocol}://${req.get("host")}`;
+}

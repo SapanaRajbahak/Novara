@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novara Writer Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/writer/writer-monetization-ai.css" />
+  <link rel="stylesheet" href="/css/writer/writer-dashboard.css" />
+</head>
+<body>
+  <div class="layout writer-dashboard-layout">
+    <aside class="sidebar writer-dashboard-sidebar" aria-label="Writer Navigation">
+      <div class="sidebar-logo">
+        <div class="sidebar-logo-icon">N</div>
+        <span class="sidebar-logo-text">Novara</span>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Writer Studio</div>
+        <nav id="writerSidebarNav">
+          <button class="nav-item sidebar-link active is-active" data-section="home">Home</button>
+          <button class="nav-item sidebar-link" data-section="stories">My Books</button>
+          <button class="nav-item sidebar-link" data-section="ai-tools">AI Assistant</button>
+        </nav>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Monetization</div>
+        <button class="nav-item sidebar-link" data-section="earnings">Earnings</button>
+        <a class="nav-item sidebar-link" id="aiEarningsNavLink" href="/writer/writer-monetization-ai.html">AI Assistant Earnings</a>
+        <a class="nav-item" href="/writer/writer-referrals.html">Referrals</a>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-section-label">Account</div>
+        <a class="nav-item" href="/reader/settings.html">Settings</a>
+        <a class="nav-item" href="#">Notifications</a>
+      </div>
+
+      <div class="sidebar-bottom">
+        <div class="writer-card">
+          <div class="writer-avatar" id="dashboardAvatar">NR</div>
+          <div class="writer-name" id="dashboardProfileName">Writer</div>
+          <div class="writer-tier">Gold Writer</div>
+        </div>
+      </div>
+    </aside>
+
+    <div class="main writer-dashboard-main">
+      <header class="top-bar writer-dashboard-topbar">
+        <div class="top-bar-tabs">
+          <button class="top-bar-tab" type="button">Reader Dashboard</button>
+          <button class="top-bar-tab active" type="button">Writer Dashboard</button>
+        </div>
+        <div class="top-bar-right">
+          <div id="dashboardSwitcher" class="dashboard-switcher-slot" aria-live="polite"></div>
+          <a class="btn btn-outline" href="/reader/profile.html">Profile</a>
+          <a class="btn btn-outline" href="#" id="profileSignOutLink">Sign Out</a>
+        </div>
+      </header>
+
+      <div class="page-header writer-dashboard-page-header">
+        <div class="section-eyebrow">Writer Studio</div>
+        <div class="page-title" id="writerDashboardTitle">Writer Dashboard</div>
+        <div class="page-subtitle">Manage books, track growth, and publish from one workspace</div>
+      </div>
+
+      <main class="writer-hub-content">
+        <section id="writerSectionContent" aria-live="polite"></section>
+      </main>
+    </div>
+  </div>
+
+  <script src="/js/shared/novara-session.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="/js/writer/writer-dashboard.js"></script>
+  <script>
+    // Highlight AI Assistant Earnings nav when on that page
+    if (window.location.pathname.endsWith('writer-monetization-ai.html')) {
+      document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active', 'is-active'));
+      const aiLink = document.getElementById('aiEarningsNavLink');
+      if (aiLink) aiLink.classList.add('active', 'is-active');
+    }
+  </script>
+</body>
+</html>
