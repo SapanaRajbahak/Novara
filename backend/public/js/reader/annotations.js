@@ -12,6 +12,16 @@ function resolveApiBaseUrl() {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+// Inline fallbacks — app.js is not loaded on this page
+function getCurrentUserId() {
+  return localStorage.getItem('novara.userId') || 'guest';
+}
+function getBookmarks() {
+  try { return JSON.parse(localStorage.getItem('novara.bookmarks') || '[]'); } catch (e) { return []; }
+}
+function setBookmarks(entries) {
+  localStorage.setItem('novara.bookmarks', JSON.stringify(entries));
+}
 const elements = {
   bookFilter: document.getElementById("bookFilter"),
   bookmarksList: document.getElementById("bookmarksList"),
@@ -95,8 +105,8 @@ function getBookMeta(item) {
   const book = item.book || {};
   return {
     id: book.id || item.bookId,
-    title: book.title || "Unknown Book",
-    genre: book.genre || "default",
+    title: book.title || item.bookTitle || "Unknown Book",
+    genre: book.genre || item.bookGenre || "default",
   };
 }
 
@@ -132,11 +142,8 @@ function findSourceItem(type, id) {
 
 // Use localStorage fallback for bookmarks if backend is not ready
 function loadAnnotationsData() {
-  // Only bookmarks for now; highlights/notes can be added similarly
-  state.bookmarks = (getBookmarks && typeof getBookmarks === 'function')
-    ? getBookmarks().filter(e => e.userId === (getCurrentUserId && getCurrentUserId() || 'guest'))
-    : [];
-  // Optionally: state.highlights = ...; state.notes = ...;
+  const userId = getCurrentUserId();
+  state.bookmarks = getBookmarks().filter(e => e.userId === userId);
 }
 
 function reloadAndRender() {
@@ -150,21 +157,20 @@ function reloadAndRender() {
 }
 
 function updateAnnotation(type, item, value) {
-  if (!item || !item.bookId) return;
+  if (!item) return;
   if (type === 'bookmarks') {
-    // Update note/label if needed
     let entries = getBookmarks();
-    entries = entries.map(e => (e.bookId === item.bookId ? { ...e, note: value } : e));
+    entries = entries.map(e => (e.id === item.id ? { ...e, note: value } : e));
     setBookmarks(entries);
     reloadAndRender();
   }
 }
 
 function deleteAnnotation(type, item) {
-  if (!item || !item.bookId) return;
+  if (!item) return;
   if (type === 'bookmarks') {
     let entries = getBookmarks();
-    entries = entries.filter(e => e.bookId !== item.bookId);
+    entries = entries.filter(e => e.id !== item.id);
     setBookmarks(entries);
     reloadAndRender();
   }

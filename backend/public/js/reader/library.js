@@ -21,7 +21,6 @@ function resolveApiBaseUrl() {
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
-const SAVED_BOOKS_KEY = "novara.savedBooks";
 const LOCAL_PROGRESS_KEY = "novara.reader.progress";
 
 const elements = {
@@ -50,7 +49,7 @@ const state = {
   recommended: [],
   becauseYouRead: [],
   becauseAnchor: null,
-  savedBookIds: loadSavedBooks(),
+  savedBookIds: new Set(),
   discoverPage: 1,
   discoverPageSize: 8,
   discoverSearch: "",
@@ -58,17 +57,43 @@ const state = {
   isSignedIn: false,
 };
 
-function loadSavedBooks() {
+async function fetchSavedBookIds() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(SAVED_BOOKS_KEY) || "[]");
-    return new Set(Array.isArray(parsed) ? parsed : []);
+    const response = await fetch(`${API_BASE_URL}/api/profile/saved-books`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return new Set();
+    }
+    const payload = await response.json();
+    if (payload.success && Array.isArray(payload.data)) {
+      return new Set(payload.data.map((item) => item.id));
+    }
   } catch (error) {
-    return new Set();
+    // Guest or offline — return empty set
   }
+  return new Set();
 }
 
-function saveSavedBooks() {
-  localStorage.setItem(SAVED_BOOKS_KEY, JSON.stringify([...state.savedBookIds]));
+async function toggleSavedBook(bookId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/profile/saved-books/${encodeURIComponent(bookId)}`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    if (data.saved) {
+      state.savedBookIds.add(bookId);
+    } else {
+      state.savedBookIds.delete(bookId);
+    }
+  } catch (error) {
+    // Silently ignore
+  }
 }
 
 function readLocalProgressMap() {
@@ -186,7 +211,7 @@ async function ensureSignedInUser() {
 
 async function fetchBooks() {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/books?page=1&limit=140&sort=newest`, {
+    const response = await fetch(`${API_BASE_URL}/api/books?page=1&limit=100&sort=newest`, {
       cache: "no-store",
       credentials: "include",
     });
@@ -326,21 +351,12 @@ function createRailCard(book, label) {
 
 function renderContinueReading() {
   elements.hubContinueRow.innerHTML = "";
-  const entries = getContinueReading().filter(e => e.userId === getCurrentUserId());
-  if (!entries.length) {
+  if (!state.inProgress.length) {
     elements.hubContinueRow.appendChild(createEmptyState("Start any novel and your progress will appear here."));
     return;
   }
-  entries.slice(0, 10).forEach((entry) => {
-    const book = state.books.find(b => b.id === entry.bookId);
-    if (book) {
-      elements.hubContinueRow.appendChild(createContinueCard({
-        ...book,
-        chapterId: entry.currentChapter,
-        chapterNumber: entry.currentChapter ? (parseInt(entry.currentChapter.replace(/\D/g, "")) || 1) : 1,
-        progressPercent: entry.progress || 0
-      }));
-    }
+  state.inProgress.slice(0, 10).forEach((item) => {
+    elements.hubContinueRow.appendChild(createContinueCard(item));
   });
 }
 
@@ -368,18 +384,12 @@ function renderRail(target, books, emptyMessage, label) {
 }
 
 function buildPersonalizedSections() {
-  // Use unified helpers for library and continue reading
-  const userId = getCurrentUserId();
-  const continueEntries = getContinueReading().filter(e => e.userId === userId);
-  const libraryEntries = getLibrary().filter(e => e.userId === userId);
+  // state.inProgress is already populated by buildInProgressBooks() — no need for localStorage helpers
+  const inProgressIds = new Set(state.inProgress.map(b => b.id));
+  state.yourBooks = state.books.filter(book => inProgressIds.has(book.id) || state.savedBookIds.has(book.id)).slice(0, 12);
 
-  // YourBooks: all books in library or in progress
-  const inProgressIds = new Set(continueEntries.map(e => e.bookId));
-  const libraryIds = new Set(libraryEntries.map(e => e.bookId));
-  state.yourBooks = state.books.filter(book => inProgressIds.has(book.id) || libraryIds.has(book.id)).slice(0, 12);
-
-  // Favorites: all books in library
-  state.favorites = state.books.filter(book => libraryIds.has(book.id));
+  // Favorites: all books the user has saved (from the API)
+  state.favorites = state.books.filter(book => state.savedBookIds.has(book.id));
 
   // Recommendations and because logic unchanged
   const genreCount = new Map();
@@ -525,18 +535,12 @@ function bindEvents() {
     }
 
     const bookId = saveButton.dataset.saveId;
-    if (state.savedBookIds.has(bookId)) {
-      state.savedBookIds.delete(bookId);
-      saveButton.textContent = "Save";
-    } else {
-      state.savedBookIds.add(bookId);
-      saveButton.textContent = "Saved";
-    }
-
-    saveSavedBooks();
-    buildPersonalizedSections();
-    renderGrid(elements.favoritesRow, state.favorites, "No saved books yet.");
-    elements.favoritesPanel.hidden = !state.favorites.length;
+    toggleSavedBook(bookId).then(() => {
+      saveButton.textContent = state.savedBookIds.has(bookId) ? "Saved" : "Save";
+      buildPersonalizedSections();
+      renderGrid(elements.favoritesRow, state.favorites, "No saved books yet.");
+      elements.favoritesPanel.hidden = !state.favorites.length;
+    });
   });
 }
 
@@ -555,7 +559,10 @@ function renderAll() {
 
 async function bootstrap() {
   await ensureSignedInUser();
-  state.books = await fetchBooks();
+  [state.books, state.savedBookIds] = await Promise.all([
+    fetchBooks(),
+    fetchSavedBookIds(),
+  ]);
   state.inProgress = await buildInProgressBooks();
 
   buildPersonalizedSections();

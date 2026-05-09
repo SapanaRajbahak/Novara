@@ -138,6 +138,52 @@ function persistSavedBooks() {
   localStorage.setItem(SAVED_BOOKS_KEY, JSON.stringify([...state.savedBooks]));
 }
 
+async function fetchSavedBookIdsFromApi() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/profile/saved-books`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) return new Set();
+    const payload = await response.json();
+    if (payload.success && Array.isArray(payload.data)) {
+      return new Set(payload.data.map((item) => item.id));
+    }
+  } catch (e) { /* guest or offline */ }
+  return new Set();
+}
+
+async function toggleSavedBookApi(bookId) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/profile/saved-books/${encodeURIComponent(bookId)}`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch (e) { return null; }
+}
+
+// One-time migration: sync any books saved via old localStorage system to the API
+async function migrateLocalSavesToApi() {
+  try {
+    const userId = getCurrentUserId();
+    const localEntries = getLibrary().filter(e => e.userId === userId && e.bookId);
+    if (!localEntries.length) return;
+
+    for (const entry of localEntries) {
+      if (!state.savedBooks.has(entry.bookId)) {
+        const result = await toggleSavedBookApi(entry.bookId);
+        if (result && result.success && result.saved) {
+          state.savedBooks.add(entry.bookId);
+        }
+      }
+    }
+    // Remove migrated entries so this only runs once
+    setLibrary(getLibrary().filter(e => e.userId !== userId));
+  } catch (e) { /* ignore migration errors */ }
+}
+
 function showToast(message) {
   let root = document.getElementById("toastRoot");
   if (!root) {
@@ -497,20 +543,30 @@ function bindDiscoveryEvents() {
       return;
     }
     const bookId = saveBtn.dataset.saveBookId;
-    if (getLibrary().some(e => e.userId === getCurrentUserId() && e.bookId === bookId)) {
-      // Remove from library
-      let entries = getLibrary().filter(e => !(e.userId === getCurrentUserId() && e.bookId === bookId));
-      setLibrary(entries);
-      saveBtn.textContent = "Save";
-      showToast("Removed from saved books");
-    } else {
-      addToLibrary(bookId);
-      saveBtn.textContent = "Saved";
-      showToast("Saved to your library");
-    }
-    // Update UI instantly
-    renderBrowseGrid();
-    renderContinueReading();
+    saveBtn.disabled = true;
+    toggleSavedBookApi(bookId).then((data) => {
+      saveBtn.disabled = false;
+      if (data && data.success) {
+        if (data.saved) {
+          state.savedBooks.add(bookId);
+          showToast("Saved to your library");
+        } else {
+          state.savedBooks.delete(bookId);
+          showToast("Removed from saved books");
+        }
+      } else {
+        // API unavailable — fall back to localStorage
+        if (state.savedBooks.has(bookId)) {
+          state.savedBooks.delete(bookId);
+          showToast("Removed from saved books");
+        } else {
+          state.savedBooks.add(bookId);
+          showToast("Saved to your library");
+        }
+        persistSavedBooks();
+      }
+      renderBrowseGrid();
+    });
   });
 }
 
@@ -584,7 +640,14 @@ async function bootstrap() {
 
   await syncSessionUi();
 
-  state.allBooks = await fetchBooksCatalog();
+  [state.allBooks, state.savedBooks] = await Promise.all([
+    fetchBooksCatalog(),
+    fetchSavedBookIdsFromApi(),
+  ]);
+
+  // Migrate any books saved via the old localStorage system to the database
+  await migrateLocalSavesToApi();
+
   buildRecommendations();
 
   renderContinueReading();

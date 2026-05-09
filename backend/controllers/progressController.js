@@ -27,6 +27,7 @@ async function saveReadingProgress(req, res) {
       success: true,
       message: "Reading progress saved successfully",
       data: result.data,
+      streak: result.streak || null,
     });
   } catch (error) {
     console.error("saveReadingProgress error:", error);
@@ -71,7 +72,21 @@ async function getReadingProgress(req, res) {
   }
 }
 
+async function getStreak(req, res) {
+  try {
+    const streak = await progressService.getStreakForUser(req.session.user.id);
+    if (!streak) {
+      return res.status(404).json({ success: false, error: "User not found" });
+    }
+    return res.json({ success: true, data: streak });
+  } catch (error) {
+    console.error("getStreak error:", error);
+    return res.status(500).json({ success: false, error: "Failed to fetch streak" });
+  }
+}
+
 module.exports = {
   saveReadingProgress,
   getReadingProgress,
+  getStreak,
 };

@@ -1,8 +1,8 @@
 const { prisma } = require('../config/db');
+const { updateReadingStreak } = require('../services/progressService');
 
 // Helper to add coins and create transaction
 async function addCoinsAndTransaction({ userId, amount, type, description, referenceId }) {
-  // Update coins and create transaction atomically
   const [user] = await prisma.$transaction([
     prisma.user.update({
       where: { id: userId },
@@ -18,17 +18,20 @@ async function addCoinsAndTransaction({ userId, amount, type, description, refer
       },
     }),
   ]);
+
   return user;
 }
 
 exports.dailyCheckin = async (req, res) => {
   try {
     const userId = req.session.user?.id;
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
 
-    // Prevent duplicate: Only one per day
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const alreadyClaimed = await prisma.walletTransaction.findFirst({
       where: {
         userId,
@@ -36,11 +39,16 @@ exports.dailyCheckin = async (req, res) => {
         createdAt: { gte: today },
       },
     });
+
     if (alreadyClaimed) {
-      return res.status(400).json({ success: false, message: 'Already claimed daily check-in.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Already claimed daily check-in.',
+      });
     }
 
-    const rewardAmount = 5; // Or dynamic logic
+    const rewardAmount = 5;
+
     const user = await addCoinsAndTransaction({
       userId,
       amount: rewardAmount,
@@ -49,7 +57,12 @@ exports.dailyCheckin = async (req, res) => {
     });
 
     req.session.user.coins = user.coins;
-    return res.json({ success: true, coins: user.coins });
+
+    return res.json({
+      success: true,
+      reward: rewardAmount,
+      coins: user.coins,
+    });
   } catch (err) {
     console.error('dailyCheckin error:', err);
     return res.status(500).json({ success: false, message: 'Server error' });
@@ -59,34 +72,87 @@ exports.dailyCheckin = async (req, res) => {
 exports.chapterComplete = async (req, res) => {
   try {
     const userId = req.session.user?.id;
-    const { chapterId } = req.body;
-    if (!userId || !chapterId) return res.status(400).json({ success: false, message: 'Missing data' });
+    const { bookId, chapterId } = req.body;
 
-    // Prevent duplicate: Only one per chapter
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    if (!bookId || !chapterId) {
+      return res.status(400).json({ success: false, message: 'Missing bookId or chapterId' });
+    }
+
+    const referenceId = `${bookId}:${chapterId}`;
+
     const alreadyClaimed = await prisma.walletTransaction.findFirst({
       where: {
         userId,
         type: 'CHAPTER_REWARD',
-        referenceId: String(chapterId),
+        referenceId,
       },
     });
+
     if (alreadyClaimed) {
-      return res.status(400).json({ success: false, message: 'Already claimed for this chapter.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Already claimed for this chapter.',
+      });
     }
 
-    const rewardAmount = 10; // Or dynamic logic
+    const rewardAmount = 10;
+
     const user = await addCoinsAndTransaction({
       userId,
       amount: rewardAmount,
       type: 'CHAPTER_REWARD',
       description: `Completed chapter ${chapterId}`,
-      referenceId: String(chapterId),
+      referenceId,
     });
 
+    const streak = await updateReadingStreak(userId);
+
     req.session.user.coins = user.coins;
-    return res.json({ success: true, coins: user.coins });
+
+    return res.json({
+      success: true,
+      reward: rewardAmount,
+      coins: user.coins,
+      streak,
+    });
   } catch (err) {
     console.error('chapterComplete error:', err);
+    return res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+exports.markReadToday = async (req, res) => {
+  try {
+    const userId = req.session.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const streak = await updateReadingStreak(userId);
+    if (!streak) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { coins: true },
+    });
+
+    if (req.session.user) {
+      req.session.user.coins = user?.coins ?? req.session.user.coins;
+    }
+
+    return res.json({
+      success: true,
+      streak,
+      coins: user?.coins ?? null,
+    });
+  } catch (err) {
+    console.error('markReadToday error:', err);
     return res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -94,11 +160,13 @@ exports.chapterComplete = async (req, res) => {
 exports.adReward = async (req, res) => {
   try {
     const userId = req.session.user?.id;
-    if (!userId) return res.status(401).json({ success: false, message: 'Unauthorized' });
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
 
-    // Prevent abuse: Limit to N per day (e.g., 3)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const adCount = await prisma.walletTransaction.count({
       where: {
         userId,
@@ -106,11 +174,16 @@ exports.adReward = async (req, res) => {
         createdAt: { gte: today },
       },
     });
+
     if (adCount >= 3) {
-      return res.status(400).json({ success: false, message: 'Ad reward limit reached for today.' });
+      return res.status(400).json({
+        success: false,
+        message: 'Ad reward limit reached for today.',
+      });
     }
 
-    const rewardAmount = 5; // Or dynamic logic
+    const rewardAmount = 5;
+
     const user = await addCoinsAndTransaction({
       userId,
       amount: rewardAmount,
@@ -119,7 +192,12 @@ exports.adReward = async (req, res) => {
     });
 
     req.session.user.coins = user.coins;
-    return res.json({ success: true, coins: user.coins });
+
+    return res.json({
+      success: true,
+      reward: rewardAmount,
+      coins: user.coins,
+    });
   } catch (err) {
     console.error('adReward error:', err);
     return res.status(500).json({ success: false, message: 'Server error' });

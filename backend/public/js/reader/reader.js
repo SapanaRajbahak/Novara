@@ -152,26 +152,22 @@ document.addEventListener('DOMContentLoaded', () => {
   if (elements.selectionTools) {
     elements.selectionTools.style.display = 'none';
   }
-  if (elements.chapterDrawer && !elements.chapterDrawer.classList.contains('hidden')) {
-    elements.chapterDrawer.classList.add('hidden');
-  }
-  if (elements.notesPanel && !elements.notesPanel.classList.contains('hidden')) {
-    elements.notesPanel.classList.add('hidden');
-  }
   // Always bind events after DOM and elements are ready
   bindEvents();
+  updateReaderMainLayout();
 });
 
 const elements = {
   root: document.documentElement,
   app: document.getElementById("readerApp"),
+  readerCenter: document.getElementById("readerCenter"),
   toolbar: document.getElementById("readerToolbar"),
   bottom: document.getElementById("readerBottom"),
+  panelFullscreenBtn: document.getElementById("panelFullscreenBtn"),
   backButton: document.getElementById("backButton"),
   drawerToggleBtn: document.getElementById("drawerToggleBtn"),
   notesToggleBtn: document.getElementById("notesToggleBtn"),
   settingsBtn: document.getElementById("settingsBtn"),
-  bookmarkBtn: document.getElementById("bookmarkBtn"),
   searchInput: document.getElementById("searchInput"),
   listenBtn: document.getElementById("listenBtn"),
   listenModeLabel: document.getElementById("listenModeLabel"),
@@ -219,12 +215,82 @@ const elements = {
   rightTapZone: document.getElementById("rightTapZone")
 };
 
+function updateReaderMainLayout() {
+  const readerMain = document.querySelector(".reader-main");
+  if (!readerMain) {
+    return;
+  }
+
+  const viewportWidth = window.innerWidth || 0;
+  if (viewportWidth <= 900) {
+    readerMain.style.gridTemplateColumns = "1fr";
+    return;
+  }
+
+  const drawerHidden = elements.chapterDrawer ? elements.chapterDrawer.classList.contains("hidden") : true;
+  const notesHidden = elements.notesPanel ? elements.notesPanel.classList.contains("hidden") : true;
+
+  if (viewportWidth <= 1200) {
+    readerMain.style.gridTemplateColumns = drawerHidden ? "1fr" : "250px 1fr";
+    return;
+  }
+
+  if (drawerHidden && notesHidden) {
+    readerMain.style.gridTemplateColumns = "1fr";
+  } else if (drawerHidden) {
+    readerMain.style.gridTemplateColumns = "1fr 300px";
+  } else if (notesHidden) {
+    readerMain.style.gridTemplateColumns = "280px 1fr";
+  } else {
+    readerMain.style.gridTemplateColumns = "280px 1fr 300px";
+  }
+}
+
 function showToast(message) {
   const toast = document.createElement("div");
   toast.className = "toast";
   toast.textContent = message;
   document.body.appendChild(toast);
   window.setTimeout(() => toast.remove(), 1600);
+}
+
+function updateFullscreenButtonLabel() {
+  if (!elements.panelFullscreenBtn) {
+    return;
+  }
+
+  const inReaderFullscreen = document.fullscreenElement === elements.readerCenter;
+  elements.panelFullscreenBtn.textContent = inReaderFullscreen ? "↙" : "↗";
+  elements.panelFullscreenBtn.setAttribute(
+    "aria-label",
+    inReaderFullscreen ? "Exit fullscreen" : "Expand reading panel"
+  );
+  elements.panelFullscreenBtn.setAttribute(
+    "title",
+    inReaderFullscreen ? "Back to normal" : "Expand reading panel"
+  );
+}
+
+async function toggleFullscreen() {
+  try {
+    if (!elements.readerCenter) {
+      showToast("Reader area not available");
+      return;
+    }
+
+    if (document.fullscreenElement === elements.readerCenter) {
+      await document.exitFullscreen();
+    } else if (!document.fullscreenElement) {
+      await elements.readerCenter.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+      await elements.readerCenter.requestFullscreen();
+    }
+
+    updateFullscreenButtonLabel();
+  } catch (error) {
+    showToast("Fullscreen is not available");
+  }
 }
 
 function getParams() {
@@ -1155,6 +1221,16 @@ async function saveReadingProgressToApi(payload) {
     if (!response.ok) {
       throw new Error(`HTTP ${response.status}`);
     }
+
+    // Auto-update streak in the monetization widget if it's loaded on this page
+    try {
+      const data = await response.json();
+      if (data && data.streak && typeof window.notifyStreakUpdate === "function") {
+        window.notifyStreakUpdate(data.streak);
+      }
+    } catch (_) {
+      // Non-fatal — streak widget update is best-effort
+    }
   } catch (error) {
     console.warn("Progress sync failed:", error);
   }
@@ -1232,21 +1308,37 @@ function loadProgress() {
   return progress[getBookStorageKey(state.currentBook.id)] || null;
 }
 
-function getBookmarksMap() {
-  return loadJsonStorage(BOOKMARK_KEY, {});
-}
-
 function saveBookmark() {
   if (!state.currentBook) {
     return;
   }
 
-  const map = getBookmarksMap();
-  map[getBookStorageKey(state.currentBook.id)] = {
-    chapterIndex: state.currentChapterIndex,
-    createdAt: new Date().toISOString()
+  const bookId = state.currentBook.id;
+  const chapterId = state.currentChapter ? state.currentChapter.id : '';
+  const chapterNumber = state.currentChapterIndex + 1;
+  const jumpUrl = `/reader/reader.html?bookId=${encodeURIComponent(bookId)}${chapterId ? `&chapterId=${encodeURIComponent(chapterId)}` : ''}`;
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2);
+
+  const entry = {
+    id,
+    userId: getCurrentUserId(),
+    bookId,
+    bookTitle: state.currentBook.title || 'Unknown Book',
+    bookGenre: state.currentBook.genre || 'default',
+    chapterId,
+    chapterNumber,
+    snippet: '-',
+    note: '',
+    dateSaved: new Date().toISOString(),
+    jumpUrl,
   };
-  saveJsonStorage(BOOKMARK_KEY, map);
+
+  try {
+    const entries = JSON.parse(localStorage.getItem('novara.bookmarks') || '[]');
+    entries.unshift(entry);
+    localStorage.setItem('novara.bookmarks', JSON.stringify(entries));
+  } catch (e) { /* storage full */ }
+
   showToast("Bookmark saved");
 }
 
@@ -1330,6 +1422,14 @@ function renderChapterEndNavigation() {
   const maxIndex = (state.currentBook?.chapters.length || 1) - 1;
   const isAtStart = state.currentChapterIndex <= 0;
   const isAtEnd = state.currentChapterIndex >= maxIndex;
+
+  if (isAtStart) {
+    return `
+      <div class="chapter-end-nav" aria-label="Chapter navigation">
+        <button type="button" class="icon-btn" data-chapter-end-nav="next" ${isAtEnd ? "disabled" : ""}>Next</button>
+      </div>
+    `;
+  }
 
   return `
     <div class="chapter-end-nav" aria-label="Chapter navigation">
@@ -1769,14 +1869,24 @@ function setReadingMode(mode) {
 }
 
 function bindEvents() {
+  if (elements.panelFullscreenBtn) {
+    elements.panelFullscreenBtn.addEventListener("click", toggleFullscreen);
+  }
+
+  document.addEventListener("fullscreenchange", updateFullscreenButtonLabel);
+
   elements.drawerToggleBtn.addEventListener("click", () => {
     elements.chapterDrawer.classList.toggle("hidden");
+    updateReaderMainLayout();
   });
 
   elements.notesToggleBtn.addEventListener("click", () => {
     const hidden = elements.notesPanel.classList.toggle("hidden");
     elements.notesToggleBtn.classList.toggle("active", !hidden);
+    updateReaderMainLayout();
   });
+
+  window.addEventListener("resize", updateReaderMainLayout);
 
   elements.settingsBtn.addEventListener("click", openSettingsModal);
   elements.closeSettingsBtn.addEventListener("click", closeSettingsModal);
@@ -1785,8 +1895,6 @@ function bindEvents() {
       closeSettingsModal();
     }
   });
-
-  elements.bookmarkBtn.addEventListener("click", saveBookmark);
 
   elements.listenBtn.addEventListener("click", handleListen);
   elements.miniPlayPauseBtn.addEventListener("click", () => {
@@ -2071,6 +2179,7 @@ function applyIncomingMode(mode) {
 
   elements.notesPanel.classList.remove("hidden");
   elements.notesToggleBtn.classList.add("active");
+  updateReaderMainLayout();
   handleListen();
 }
 
@@ -2118,7 +2227,6 @@ async function bootstrap() {
       ['toolbarChapterTitle', elements.toolbarChapterTitle],
       ['chapterList', elements.chapterList],
       ['readerContent', elements.readerContent],
-      ['bookmarkBtn', elements.bookmarkBtn],
     ];
     let domOk = true;
     for (const [name, el] of requiredSelectors) {
@@ -2372,3 +2480,4 @@ function clearLoadingState() {
 }
     
 bootstrap();
+updateFullscreenButtonLabel();

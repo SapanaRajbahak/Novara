@@ -202,8 +202,23 @@ function filterDiscoverBooks(books, filters = {}) {
   });
 }
 
+// Master genre list — always shown in filters even if no books use them yet.
+// Add any new genres here.
+const MASTER_GENRES = [
+  "Adventure / Action",
+  "Classic Literature",
+  "Horror / Gothic",
+  "Mystery / Detective",
+  "Romance",
+  "Science Fiction",
+  "Shakespeare",
+  "Thriller",
+  "World Classics",
+];
+
 function buildFilterOptions(books) {
-  const genres = [...new Set(books.map((book) => book.genre).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const fromBooks = [...new Set(books.map((book) => book.genre).filter(Boolean))];
+  const genres = [...new Set([...MASTER_GENRES, ...fromBooks])].sort((a, b) => a.localeCompare(b));
   const types = [...new Set(books.map((book) => book.type).filter(Boolean))];
   const tagCounts = new Map();
 

@@ -32,6 +32,7 @@ const { requireAuth, requireAdmin, requireWriter, requireWriterOrAdmin } = requi
 const { connectDatabase } = require("./config/db");
 const { initializeUserStore } = require("./models/userModel");
 const rewardRoutes = require('./routes/rewardRoutes');
+const savedBooksRoutes = require('./routes/savedBooksRoutes');
 
 
 const app = express();
@@ -64,6 +65,7 @@ app.use(
 // Static files (ONE instance)
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/books", express.static(path.join(__dirname, "books")));
+app.use("/books", express.static(path.join(__dirname, "..", "books")));
 // Billing routes (after express.json)
 app.use("/api/billing", billingRoutes);
 // ====== END CLEAN MIDDLEWARE SETUP ======
@@ -108,6 +110,7 @@ app.use("/api/admin", adminDashboardRoutes);
 app.use("/api/admin", adminUserRoutes);
 app.use("/api/admin", adminAnalyticsRoutes);
 app.use("/api/profile", profileRoutes);
+app.use("/api/profile", savedBooksRoutes);
 const walletRoutes = require("./routes/walletRoutes");
 app.use("/api/wallet", walletRoutes);
 app.use("/api/rewards", rewardRoutes);

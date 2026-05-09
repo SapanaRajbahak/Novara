@@ -127,10 +127,48 @@ async function syncBalanceFromBackend() {
 
 
 
+async function syncStreakFromBackend() {
+  try {
+    const res = await fetch('/api/progress/streak', { credentials: 'include' });
+    if (!res.ok) return;
+    const json = await res.json();
+    if (json.success && json.data) {
+      state.streakDays = json.data.streakDays || 0;
+      state.streakReadToday = json.data.streakReadToday || false;
+      state.freezesLeft = typeof json.data.freezesLeft === 'number' ? json.data.freezesLeft : state.freezesLeft;
+      renderAll();
+    }
+  } catch (e) {
+    console.warn('Failed to sync streak from backend', e);
+  }
+}
+
+// Called by reader.js when a progress save returns streak data
+window.notifyStreakUpdate = function(streak) {
+  if (!streak) return;
+  const wasToday = state.streakReadToday;
+  state.streakDays = streak.streakDays || state.streakDays;
+  state.streakReadToday = streak.streakReadToday || false;
+  state.freezesLeft = typeof streak.freezesLeft === 'number' ? streak.freezesLeft : state.freezesLeft;
+
+  if (!wasToday && state.streakReadToday) {
+    // First read of the day — check milestones
+    const milestone = CFG.STREAK_MILESTONES.find(
+      ms => ms.days === state.streakDays && !state.reachedMilestones.includes(ms.days)
+    );
+    if (milestone) {
+      state.reachedMilestones.push(milestone.days);
+      state.balance += milestone.coins;
+      addTransaction({ type: 'earned', title: `${milestone.days}-day streak reward`, amount: milestone.coins, icon: '🔥' });
+    }
+  }
+  renderAll();
+};
+
 async function init() {
   bindEvents();
   renderAll();
-  await syncBalanceFromBackend();
+  await Promise.all([syncBalanceFromBackend(), syncStreakFromBackend()]);
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('checkout') === 'success') {
@@ -179,11 +217,12 @@ function bindEvents() {
       return;
     }
 
-    const streakBtn = e.target.closest('#markReadBtn');
-    if (streakBtn) {
+    const markReadBtn = e.target.closest('#markReadTodayBtn');
+    if (markReadBtn) {
       markReadToday();
       return;
     }
+
 
     const adBtn = e.target.closest('#watchAdBtn');
     if (adBtn) {
@@ -382,11 +421,11 @@ function renderStreak() {
   }
 
   if (state.streakReadToday) {
-    streakStatus.textContent = 'You already read today.';
+    streakStatus.textContent = 'You already read today. Keep it up!';
     streakAction.innerHTML = `<div class="claimed-tag">✓ Protected today</div>`;
   } else {
     streakStatus.textContent = 'Have you read at least one chapter today?';
-    streakAction.innerHTML = `<button class="btn btn-gold btn-md" id="markReadBtn">Mark as read</button>`;
+    streakAction.innerHTML = `<button class="btn btn-gold btn-md" id="markReadTodayBtn">Mark as read</button>`;
   }
 }
 
@@ -583,36 +622,43 @@ async function claimCheckin() {
   }
 }
 
-function markReadToday() {
+async function markReadToday() {
   if (state.streakReadToday) return;
 
-  state.streakReadToday = true;
-  state.streakDays += 1;
-
-  const milestone = CFG.STREAK_MILESTONES.find(ms =>
-    ms.days === state.streakDays && !state.reachedMilestones.includes(ms.days)
-  );
-
-  if (milestone) {
-    state.reachedMilestones.push(milestone.days);
-    // Option B (recommended):
-    // TODO: Replace with backend call, e.g.:
-    // await fetch('/api/rewards/streak', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ days: milestone.days }) })
-    // and update state.balance from response
-
-    addTransaction({
-      type: 'earned',
-      title: `${milestone.days}-day reading streak reward`,
-      amount: milestone.coins,
-      icon: '🔥',
+  try {
+    const res = await fetch('/api/rewards/mark-read-today', {
+      method: 'POST',
+      credentials: 'include',
     });
+    const data = await res.json();
 
-    toast(`Milestone reached: +${milestone.coins} coins`, '🔥', 'success');
-  } else {
-    toast('Reading streak updated', '🔥', 'info');
+    if (!res.ok) {
+      toast(data.message || 'Could not update streak', '⚠️', 'warn');
+      return;
+    }
+
+    if (typeof data.coins === 'number') {
+      state.balance = data.coins;
+    }
+
+    if (data.streak) {
+      const previousDays = state.streakDays;
+      state.streakDays = data.streak.streakDays || state.streakDays;
+      state.streakReadToday = Boolean(data.streak.streakReadToday);
+      state.freezesLeft = typeof data.streak.freezesLeft === 'number' ? data.streak.freezesLeft : state.freezesLeft;
+
+      if (state.streakDays > previousDays) {
+        toast('Reading streak updated', '🔥', 'success');
+      } else {
+        toast('Today is already protected', '🔥', 'info');
+      }
+    }
+
+    renderAll();
+  } catch (e) {
+    console.error(e);
+    toast('Failed to update streak', '❌', 'warn');
   }
-
-  renderAll();
 }
 
 function startAdWatch(isBonus = false) {
@@ -764,6 +810,12 @@ async function claimChapterReward(chapterId) {
     }
 
     state.balance = data.coins;
+
+    if (data.streak) {
+      state.streakDays = data.streak.streakDays || state.streakDays;
+      state.streakReadToday = Boolean(data.streak.streakReadToday);
+      state.freezesLeft = typeof data.streak.freezesLeft === 'number' ? data.streak.freezesLeft : state.freezesLeft;
+    }
 
     addTransaction({
       type: 'earned',

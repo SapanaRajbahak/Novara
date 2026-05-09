@@ -79,9 +79,57 @@ const state = {
     totalPages: 1,
   },
   requestId: 0,
+  savedBookIds: new Set(),
 };
 
 let searchDebounceTimer = null;
+
+async function loadSavedBooks() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/profile/saved-books`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      return;
+    }
+    const payload = await response.json();
+    if (payload.success && Array.isArray(payload.data)) {
+      state.savedBookIds = new Set(payload.data.map((item) => item.id));
+    }
+  } catch (error) {
+    // Guest users or network errors — silently ignore
+  }
+}
+
+async function toggleSave(bookId, buttonEl) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/profile/saved-books/${encodeURIComponent(bookId)}`, {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return;
+    }
+    const data = await response.json();
+    if (data.saved) {
+      state.savedBookIds.add(bookId);
+    } else {
+      state.savedBookIds.delete(bookId);
+    }
+    updateSaveButtons(bookId);
+  } catch (error) {
+    // Silently ignore network errors
+  }
+}
+
+function updateSaveButtons(bookId) {
+  document.querySelectorAll(`[data-save-book-id="${bookId}"]`).forEach((btn) => {
+    const saved = state.savedBookIds.has(bookId);
+    btn.textContent = saved ? "Saved" : "Save";
+    btn.classList.toggle("saved", saved);
+  });
+}
 
 function createCoverSvg(title, genre) {
   const initials = title
@@ -202,6 +250,7 @@ function createBookCard(book, compact = false) {
       <div class="actions">
         <a href="/reader/book.html?id=${encodeURIComponent(book.id)}">Open</a>
         ${book.hasAudiobook ? `<a href="/reader/audiobook.html?book=${encodeURIComponent(book.id)}">Listen</a>` : ""}
+        <button type="button" class="save-btn${state.savedBookIds.has(book.id) ? " saved" : ""}" data-save-book-id="${book.id}">${state.savedBookIds.has(book.id) ? "Saved" : "Save"}</button>
       </div>
     </div>
   `;
@@ -379,6 +428,15 @@ function bindEvents() {
       elements.filterDrawer.setAttribute("aria-hidden", "true");
     }
   });
+
+  document.addEventListener("click", (event) => {
+    const saveBtn = event.target.closest("[data-save-book-id]");
+    if (!saveBtn) {
+      return;
+    }
+    const bookId = saveBtn.dataset.saveBookId;
+    toggleSave(bookId, saveBtn);
+  });
 }
 
 function updateFilterOptions() {
@@ -491,7 +549,7 @@ async function loadDiscoverData() {
 async function bootstrap() {
   bindEvents();
   syncFiltersFromForm();
-  await loadDiscoverData();
+  await Promise.all([loadDiscoverData(), loadSavedBooks()]);
 }
 
 bootstrap();

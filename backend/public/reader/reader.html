@@ -27,7 +27,6 @@
         <input id="searchInput" class="search-inline" type="search" placeholder="Search in chapter" />
         <button id="listenBtn" class="icon-btn" type="button">Listen</button>
         <span id="listenModeLabel" class="listen-mode-label">Idle</span>
-        <button id="bookmarkBtn" class="icon-btn" type="button">Bookmark</button>
         <button id="settingsBtn" class="icon-btn" type="button">Settings</button>
         <button id="notesToggleBtn" class="icon-btn" type="button">Notes</button>
       </div>
@@ -43,7 +42,8 @@
         </div>
       </aside>
 
-      <section class="reader-center" aria-label="Reading area">
+      <section id="readerCenter" class="reader-center" aria-label="Reading area">
+        <button id="panelFullscreenBtn" class="panel-fullscreen-btn" type="button" aria-label="Expand reading panel" title="Expand reading panel">↗</button>
         <div id="readingViewport" class="reading-viewport">
           <article id="readerContent" class="reader-content"></article>
         </div>

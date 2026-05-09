@@ -32,7 +32,7 @@ const elements = {
   resumeHint: document.getElementById("resumeHint"),
   listenBtn: document.getElementById("listenBtn"),
   saveBtn: document.getElementById("saveBtn"),
-  favoriteBtn: document.getElementById("favoriteBtn"),
+  favoriteBtn: null,
   shareBtn: document.getElementById("shareBtn"),
   bookTitle: document.getElementById("bookTitle"),
   bookAuthor: document.getElementById("bookAuthor"),
@@ -346,9 +346,6 @@ function renderBook(book) {
   const saved = savedBooks.has(book.id);
   elements.saveBtn.textContent = saved ? "Saved in Library" : "Save to Library";
 
-  const favored = favoriteBooks.has(book.id);
-  elements.favoriteBtn.textContent = favored ? "Favorited" : "Bookmark/Favorite";
-
   elements.listenBtn.disabled = !book.chapters.length;
 
   // Hide resume UI by default until progress API returns.
@@ -542,19 +539,6 @@ function setupPrimaryActions() {
     persistSet(SAVE_KEY, savedBooks);
   });
 
-  elements.favoriteBtn.addEventListener("click", () => {
-    if (favoriteBooks.has(currentBook.id)) {
-      favoriteBooks.delete(currentBook.id);
-      elements.favoriteBtn.textContent = "Bookmark/Favorite";
-      showToast("Removed from favorites");
-    } else {
-      favoriteBooks.add(currentBook.id);
-      elements.favoriteBtn.textContent = "Favorited";
-      showToast("Added to favorites");
-    }
-    persistSet(FAVORITE_KEY, favoriteBooks);
-  });
-
   elements.shareBtn.addEventListener("click", async () => {
     const shareUrl = window.location.href;
 
@@ -679,7 +663,6 @@ function renderLoadError(message) {
   elements.resumeHint.classList.add("hidden");
   elements.listenBtn.disabled = true;
   elements.saveBtn.disabled = true;
-  elements.favoriteBtn.disabled = true;
   elements.shareBtn.disabled = true;
 }
 
