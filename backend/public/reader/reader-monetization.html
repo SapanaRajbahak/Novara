@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Novara — Wallet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/reader/reader-monetization.css" />
+</head>
+<body>
+  <div class="toast-host" id="toastHost"></div>
+  <!-- Stripe Checkout Status Message -->
+  <div id="checkoutStatus" class="checkout-status" style="display:none;"></div>
+
+  <!-- Ad Modal -->
+  <div class="overlay" id="adOverlay">
+    <div class="modal">
+      <div class="modal-icon">📺</div>
+      <div class="modal-title">Watching ad</div>
+      <div class="modal-sub">Stay on this page — your coins are almost ready.</div>
+
+      <div class="ring-wrap">
+        <svg width="108" height="108" viewBox="0 0 108 108">
+          <circle class="ring-track" cx="54" cy="54" r="50"></circle>
+          <circle class="ring-fill" cx="54" cy="54" r="50" id="ringFill"></circle>
+        </svg>
+        <div class="ring-num" id="ringNum">15</div>
+      </div>
+
+      <p id="adSimText" class="ad-sim-text">15 seconds remaining</p>
+
+      <button class="btn btn-outline btn-sm" id="cancelAdBtn">Cancel — no coins</button>
+    </div>
+  </div>
+
+  <!-- Unlock Chapter Modal -->
+  <div class="overlay" id="unlockOverlay">
+    <div class="modal">
+      <div class="modal-icon">🔓</div>
+      <div class="modal-title">Unlock Chapter?</div>
+      <div class="modal-sub" id="unlockModalSub">Chapter 4 — The Secret</div>
+
+      <div class="unlock-info-box">
+        <div class="unlock-row">
+          <span class="unlock-row-lbl">Chapter cost</span>
+          <span class="unlock-row-val" id="unlockCost">10 coins</span>
+        </div>
+        <div class="unlock-row">
+          <span class="unlock-row-lbl">Current balance</span>
+          <span class="unlock-row-val" id="unlockBalance">—</span>
+        </div>
+        <div class="unlock-row unlock-total">
+          <span class="unlock-row-lbl">Coins spent</span>
+          <span class="unlock-row-val" id="unlockSpent">−10 coins</span>
+        </div>
+        <div class="unlock-row unlock-after">
+          <span class="unlock-row-lbl">Balance after</span>
+          <span class="unlock-row-val" id="unlockAfter">—</span>
+        </div>
+      </div>
+
+      <div id="unlockInsufficientMsg" class="unlock-warning">
+        ⚠️ Not enough coins. Buy a pack or earn more first.
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-forest btn-md btn-full" id="unlockConfirmBtn">Unlock for 10 coins</button>
+        <button class="btn btn-outline btn-sm btn-full" data-close-overlay="unlockOverlay">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Book Completion Modal -->
+  <div class="overlay" id="bookOverlay">
+    <div class="modal">
+      <div class="modal-icon">🎉</div>
+      <div class="modal-title">Book complete!</div>
+      <div class="modal-sub">You finished <em>Wuthering Heights</em>. A genuine achievement.</div>
+
+      <div class="reward-box">
+        <div class="reward-amt">+10 coins</div>
+        <div class="reward-lbl">completion reward added to your wallet</div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-forest btn-md btn-full" id="startNextBookBtn">Start next book</button>
+        <button class="btn btn-gold btn-md btn-full" id="watchBonusAdBtn">Watch ad → +5 extra coins</button>
+        <button class="btn btn-outline btn-sm btn-full" data-close-overlay="bookOverlay">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="wallet-page">
+    <div class="page-wrap">
+      <header class="page-header fade-up">
+        <div class="page-eyebrow">Novara · Reader Wallet</div>
+        <h1 class="page-title">Your Wallet</h1>
+        <p class="page-subtitle">
+          Buy coins, claim rewards, track your reading streak, and unlock chapters.
+        </p>
+      </header>
+
+      <!-- Hero -->
+      <section class="section fade-up d1">
+        <div class="hero">
+          <div class="hero-bg"></div>
+          <div class="hero-lines"></div>
+
+          <div class="hero-inner">
+            <div class="hero-grid">
+              <div>
+                <div class="hero-lbl">Available Balance</div>
+                <div class="hero-bal-row">
+                  <div class="hero-num" id="heroAmount">0</div>
+                  <div class="hero-unit">coins</div>
+                </div>
+                <div class="hero-equiv">
+                  <div class="hero-equiv-dot"></div>
+                  <span id="heroEquiv">≈ 0 chapters available</span>
+                </div>
+              </div>
+
+              <div class="hero-plan-col">
+                <div class="hero-plan-badge" id="heroPlanBadge">Free Reader</div>
+                <div class="hero-renew" id="heroRenew">Upgrade for more perks</div>
+              </div>
+            </div>
+
+            <div class="hero-divider"></div>
+
+            <div class="hero-footer">
+              <div class="hero-pills" id="heroPills"></div>
+              <div class="hero-actions">
+                <button class="btn-hero btn-hero-pri" data-scroll="membership">Manage Plan</button>
+                <button class="btn-hero btn-hero-sec" data-scroll="history">History</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Coin Packs -->
+      <section class="section fade-up d2" id="buyCoins">
+        <div class="sec-label">Buy Coins</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-gold">🪙</div>
+              <div>
+                <div class="card-title">Coin Packs</div>
+                <div class="card-sub">One-time purchase — coins never expire</div>
+              </div>
+            </div>
+            <div class="card-badge cb-gold">10 coins = 1 chapter</div>
+          </div>
+
+          <div class="card-body">
+            <div class="coin-packs-grid" id="coinPacksGrid"></div>
+
+            <div class="coins-meta">
+              <span class="coins-meta-icon">📖</span>
+              <span><strong>10 coins</strong> unlocks any single chapter instantly. Coins never expire.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Membership -->
+      <section class="section fade-up d3" id="membership">
+        <div class="sec-label">Membership</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-purple">⭐</div>
+              <div>
+                <div class="card-title">Subscription Plans</div>
+                <div class="card-sub">Monthly coin allowance + premium perks</div>
+              </div>
+            </div>
+            <div class="card-badge cb-purple" id="membershipBadge">Choose a plan</div>
+          </div>
+
+          <div class="card-body">
+            <div class="plans-grid" id="plansGrid"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Daily Check-in -->
+      <section class="section fade-up d4">
+        <div class="sec-label">Rewards</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-forest">📅</div>
+              <div>
+                <div class="card-title">Daily Check-in</div>
+                <div class="card-sub">Open Novara each day — claim before midnight</div>
+              </div>
+            </div>
+            <div class="card-badge cb-forest" id="checkinBadge">Day 1</div>
+          </div>
+
+          <div class="card-body">
+            <div id="missedWarning" class="missed-warning">
+              ⚠️ Missed yesterday — streak reset to Day 1
+            </div>
+
+            <div class="day-grid" id="dayGrid"></div>
+
+            <div class="checkin-row">
+              <div class="checkin-info" id="checkinInfo"></div>
+              <div id="checkinAction"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Reading Streak -->
+      <section class="section fade-up d5">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-gold">🔥</div>
+              <div>
+                <div class="card-title">Reading Streak</div>
+                <div class="card-sub">Read at least one chapter a day</div>
+              </div>
+            </div>
+            <div class="card-badge cb-gold" id="streakBadge">0 days</div>
+          </div>
+
+          <div class="card-body">
+            <div class="streak-top">
+              <span class="streak-fire" id="streakFire">🔥</span>
+              <div>
+                <div class="streak-count" id="streakNum">0 <sup>days</sup></div>
+                <div class="streak-lbl" id="streakLbl">Start reading today</div>
+                <div class="freeze-badge" id="freezeBadge">❄️ 1 freeze available</div>
+              </div>
+            </div>
+
+            <div class="milestones" id="milestones"></div>
+            <div class="prog-track"><div class="prog-fill" id="streakProg"></div></div>
+            <div class="prog-labels" id="streakProgLbl">
+              <span>0 days</span>
+              <span>Next: 3 days →</span>
+            </div>
+
+            <div class="streak-footer">
+              <div class="streak-status" id="streakStatus">Have you read today?</div>
+              <div id="streakAction"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Watch Ads -->
+      <section class="section fade-up d6">
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-terra">📺</div>
+              <div>
+                <div class="card-title">Watch & Earn</div>
+                <div class="card-sub">Optional — a small bonus, never forced</div>
+              </div>
+            </div>
+            <div class="card-badge cb-terra" id="adBadge">3 left today</div>
+          </div>
+
+          <div class="card-body">
+            <div class="ad-row">
+              <div class="ad-thumb">▶️</div>
+
+              <div class="ad-info">
+                <div class="ad-title">+5 coins per ad</div>
+                <div class="ad-desc">15-second ad · up to 3 per day · 2-minute cooldown</div>
+
+                <div class="ad-slots" id="adSlots">
+                  <div class="ad-dot" id="adDot0"></div>
+                  <div class="ad-dot" id="adDot1"></div>
+                  <div class="ad-dot" id="adDot2"></div>
+                </div>
+
+                <div class="ad-prog-lbl" id="adProgLbl">0 of 3 watched today</div>
+
+                <div class="cooldown-wrap" id="cooldownWrap">
+                  <div class="cooldown-track">
+                    <div class="cooldown-fill" id="cooldownFill"></div>
+                  </div>
+                  <div class="cooldown-lbl" id="cooldownLbl">Cooldown: 2:00</div>
+                </div>
+              </div>
+
+              <div id="adAction"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Transaction History -->
+      <section class="section fade-up d7" id="history">
+        <div class="sec-label">Transaction History</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-ink">📋</div>
+              <div>
+                <div class="card-title">Recent Activity</div>
+                <div class="card-sub">All coin movements in your account</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-body">
+            <div class="tx-filters">
+              <button class="tx-filter active" data-filter="all">All</button>
+              <button class="tx-filter" data-filter="earned">Earned</button>
+              <button class="tx-filter" data-filter="spent">Spent</button>
+              <button class="tx-filter" data-filter="purchased">Purchased</button>
+              <button class="tx-filter" data-filter="subscription">Subscription</button>
+            </div>
+
+            <div class="tx-list" id="txList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Chapter Unlock Demo -->
+      <section class="section fade-up d7">
+        <div class="sec-label">Chapter Unlock Demo</div>
+        <div class="card">
+          <div class="card-head">
+            <div class="card-head-left">
+              <div class="card-icon ci-blue">📚</div>
+              <div>
+                <div class="card-title">Locked Chapters</div>
+                <div class="card-sub">Demo for reader wallet spending</div>
+              </div>
+            </div>
+            <div class="card-badge cb-ink">10 coins each</div>
+          </div>
+
+          <div class="card-body">
+            <div class="chapters-grid" id="chaptersGrid"></div>
+
+            <div class="chapter-demo-actions">
+              <button class="btn btn-gold btn-md" id="completeBookBtn">Simulate Book Completion</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="/js/shared/novara-session.js"></script>
+  <script src="/js/reader/reader-monetization.js"></script>
+
+  <script>
+  (function() {
+    const statusBox = document.getElementById('checkoutStatus');
+    if (!statusBox) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const checkout = params.get('checkout');
+    if (!checkout) return;
+
+    let message = '';
+    let type = '';
+    if (checkout === 'success') {
+      message = 'Payment successful! Coins or subscription will be updated in your wallet shortly.';
+      type = 'success';
+    } else if (checkout === 'cancel') {
+      message = 'Checkout was canceled. No changes were made.';
+      type = 'error';
+    } else {
+      return;
+    }
+
+    statusBox.textContent = message;
+    statusBox.className = 'checkout-status ' + type;
+    statusBox.style.display = 'block';
+
+    // Optional: Add close button
+    const closeBtn = document.createElement('button');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.className = 'close-btn';
+    closeBtn.onclick = () => statusBox.style.display = 'none';
+    statusBox.appendChild(closeBtn);
+
+    // Auto-hide after 6 seconds
+    setTimeout(() => {
+      statusBox.style.display = 'none';
+    }, 6000);
+  })();
+  </script>
+</body>
+</html>

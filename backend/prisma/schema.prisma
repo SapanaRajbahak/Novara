@@ -1,0 +1,515 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Application roles are enforced in the Express auth layer.
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BookStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum FileType {
+  EPUB
+  PDF
+  TXT
+}
+
+enum AIGenerationType {
+  TITLE_IDEAS
+  STORY_CONCEPT
+  CHARACTER_BIOS
+  CHAPTER_OUTLINE
+  GENERATE_CHAPTER
+  REWRITE
+  SUMMARIZE
+  BOOK_DESCRIPTION
+}
+
+enum ReferralStatus {
+  PENDING
+  ACTIVE
+  COMPLETED
+  REJECTED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  /// Store the hashed password here, never plaintext.
+  password  String
+  avatarUrl String?
+  role      Role     @default(USER)
+  isWriter  Boolean  @default(false)
+  penName   String?
+  bio       String?  @db.Text
+  preferredGenres String[] @default([])
+  referralCode      String? @unique
+  referredBy        String?
+  signupIp          String?
+  referralCashEarned Float   @default(0)
+  coins             Int      @default(0)
+  stripeCustomerId           String?
+  stripeConnectAccountId     String?
+  isSubscribed               Boolean      @default(false)
+  subscriptionPlan           String?
+  subscriptionStatus         String?
+  subscriptionCurrentPeriodEnd DateTime?
+  aiCredits         Int      @default(0)
+  readingStreak       Int       @default(0)
+  streakLastReadDate  DateTime?
+  streakFreezesLeft   Int       @default(1)
+  chatNickname        String?   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Email verification fields
+  isVerified             Boolean   @default(false)
+  verificationToken      String?
+  verificationTokenExpiry DateTime?
+
+  /// Books created or uploaded by this user.
+  books              Book[]             @relation("UserBooks")
+  bookmarks          Bookmark[]
+  highlights         Highlight[]
+  notes              Note[]
+  readingProgress    ReadingProgress[]
+  listeningProgress  ListeningProgress[]
+  savedBooks         SavedBook[]
+  aiGenerationLogs   AIGenerationLog[]  @relation("AdminGenerationLogs")
+  referredByUser     User?              @relation("UserReferrals", fields: [referredBy], references: [id], onDelete: SetNull)
+  referredUsers      User[]             @relation("UserReferrals")
+  referralsSent      Referral[]         @relation("ReferrerReferrals")
+
+  referralRecord     Referral?          @relation("ReferredUserReferral")
+
+  walletTransactions WalletTransaction[]   // Stripe wallet and transaction log
+  chatSavedRooms   ChatSavedRoom[]
+
+  payoutMethod    PayoutMethod?
+  payoutRequests  PayoutRequest[]
+
+  @@index([role])
+  @@index([isWriter])
+  @@index([createdAt])
+  @@index([referredBy])
+  @@index([referralCode])
+}
+
+/// Stripe wallet and transaction log for coin/subscription purchases
+model WalletTransaction {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "DAILY_CHECKIN", "CHAPTER_REWARD", "AD_REWARD", etc.
+  amount      Int?
+  description String?
+  referenceId String?
+  createdAt   DateTime @default(now())
+
+  // Legacy fields for compatibility (optional)
+  coins           Int?
+  source          String?
+  stripeSessionId String?  @unique
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Account and Session tables are intentionally omitted for now because the
+/// current backend uses express-session with an in-memory/session-store flow.
+/// Add persistent Session or OAuth Account models later if the auth strategy expands.
+model Book {
+  id                   String      @id @default(cuid())
+  title                String
+  slug                 String      @unique
+  description          String?     @db.Text
+  authorName           String
+  coverUrl             String?
+  genre                String?
+  /// Text genre and structured category can coexist: genre is flexible editorial text,
+  /// while category supports curated navigation and relational filtering.
+  tags                 String[]
+  fileUrl              String?
+  fileType             FileType?
+  isAudiobookAvailable Boolean     @default(false)
+  isAiGenerated        Boolean     @default(false)
+  status               BookStatus  @default(DRAFT)
+  createdBy            String
+  categoryId           String?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  createdByUser        User                 @relation("UserBooks", fields: [createdBy], references: [id], onDelete: Cascade)
+  category             Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  chapters             Chapter[]
+  audioTracks          AudioTrack[]
+  bookmarks            Bookmark[]
+  highlights           Highlight[]
+  notes                Note[]
+  readingProgress      ReadingProgress[]
+  listeningProgress    ListeningProgress[]
+  savedByUsers         SavedBook[]
+
+  @@index([createdBy])
+  @@index([categoryId])
+  @@index([status])
+  @@index([title])
+  @@index([createdAt])
+}
+
+model Chapter {
+  id            String      @id @default(cuid())
+  bookId        String
+  chapterNumber Int
+  title         String
+  content       String      @db.Text
+  isPublished   Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  book             Book               @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  audioTracks      AudioTrack[]
+  bookmarks        Bookmark[]
+  highlights       Highlight[]
+  notes            Note[]
+  readingProgress  ReadingProgress[]
+
+  @@unique([bookId, chapterNumber])
+  @@index([bookId])
+  @@index([isPublished])
+}
+
+model AudioTrack {
+  id        String    @id @default(cuid())
+  bookId    String
+  chapterId String?
+  title     String
+  audioUrl  String
+  duration  Int?
+  order     Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  book               Book                 @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter            Chapter?             @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+  listeningProgress  ListeningProgress[]
+
+  @@unique([bookId, order])
+  @@index([bookId])
+  @@index([chapterId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  chapterId String
+  location  String
+  label     String?
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book    Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([bookId, chapterId])
+}
+
+model Highlight {
+  id           String   @id @default(cuid())
+  userId       String
+  bookId       String
+  chapterId    String
+  selectedText String   @db.Text
+  startOffset  Int
+  endOffset    Int
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter      Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  linkedNotes  Note[]
+
+  @@index([userId, createdAt])
+  @@index([bookId, chapterId])
+}
+
+model Note {
+  id                String     @id @default(cuid())
+  userId            String
+  bookId            String
+  chapterId         String
+  content           String     @db.Text
+  linkedHighlightId String?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user             User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book             Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter          Chapter    @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  linkedHighlight  Highlight? @relation(fields: [linkedHighlightId], references: [id], onDelete: SetNull)
+
+  @@index([userId, updatedAt])
+  @@index([bookId, chapterId])
+  @@index([linkedHighlightId])
+}
+
+/// One reading-progress row per user and book keeps resume logic simple.
+/// chapterId stores the latest chapter context within that book.
+model ReadingProgress {
+  id              String   @id @default(cuid())
+  userId          String
+  bookId          String
+  chapterId       String
+  progressPercent Float    @default(0)
+  lastLocation    String?
+  updatedAt       DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book    Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([bookId])
+  @@index([chapterId])
+}
+
+/// Listening progress is tracked per audio track so the player can resume the exact
+/// segment a user left off, which is more precise than a single row per book.
+model ListeningProgress {
+  id                 String    @id @default(cuid())
+  userId             String
+  bookId             String
+  audioTrackId       String
+  currentTimeSeconds Int       @default(0)
+  updatedAt          DateTime  @updatedAt
+
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book       Book       @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  audioTrack AudioTrack @relation(fields: [audioTrackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, audioTrackId])
+  @@index([userId, bookId])
+  @@index([bookId])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  createdAt DateTime @default(now())
+
+  books Book[]
+
+  @@index([createdAt])
+}
+
+model AIGenerationLog {
+  id        String           @id @default(cuid())
+  adminId   String
+  type      AIGenerationType
+  prompt    String           @db.Text
+  output    String?          @db.Text
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  admin User @relation("AdminGenerationLogs", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId, createdAt])
+  @@index([type, createdAt])
+}
+
+model Referral {
+  id                  String         @id @default(cuid())
+  referrerId          String
+  referredUserId      String         @unique
+  status              ReferralStatus @default(PENDING)
+  rewardAmount        Float          @default(0)
+  rewardCoins         Int            @default(0)
+  rewardCredits       Int            @default(0)
+  rewardGiven         Boolean        @default(false)
+  referredUniqueReaders Int          @default(0)
+  rejectionReason     String?
+  createdAt           DateTime       @default(now())
+  completedAt         DateTime?
+  updatedAt           DateTime       @updatedAt
+
+  referrer            User           @relation("ReferrerReferrals", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUser        User           @relation("ReferredUserReferral", fields: [referredUserId], references: [id], onDelete: Cascade)
+
+  @@index([referrerId, status])
+  @@index([status, createdAt])
+}
+
+/// Tracks books a user has saved/bookmarked to their shelf.
+model SavedBook {
+  id        String   @id @default(cuid())
+  userId    String
+  bookId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book Book @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId, createdAt])
+  @@index([bookId])
+}
+
+/// One payout method per writer. Stores masked/display details only — no raw account numbers.
+model PayoutMethod {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  method    String   // "stripe" | "paypal" | "bank"
+  label     String   // e.g. "Stripe · **** 4291"
+  details   String   // JSON with masked display info
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Payout/withdrawal requests submitted by writers.
+model PayoutRequest {
+  id        String   @id @default(cuid())
+  userId    String
+  amount    Float
+  status    String   @default("PENDING") // PENDING | PAID | REJECTED
+  method    String
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+/// Persisted chat messages for global, book, and DM rooms.
+/// roomId is: "global", "book:<bookId>", or sorted "<userId>:<userId>" for DMs.
+model ChatMessage {
+  id        String   @id @default(cuid())
+  roomId    String
+  userId    String
+  userName  String
+  text      String   @db.Text
+  createdAt DateTime @default(now())
+
+  reactions ChatReaction[]
+
+  @@index([roomId, createdAt])
+}
+
+/// Chat rooms (book discussion rooms) saved by a user. Completely separate from
+/// the library SavedBook feature — this tracks which chat rooms they want pinned.
+model ChatSavedRoom {
+  id         String   @id @default(cuid())
+  userId     String
+  bookId     String
+  bookTitle  String
+  bookCover  String?
+  bookAuthor String?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId])
+  @@index([userId])
+}
+
+/// Emoji reactions on chat messages. One row per (message, user, emoji).
+model ChatReaction {
+  id        String      @id @default(cuid())
+  messageId String
+  userId    String
+  emoji     String
+  createdAt DateTime    @default(now())
+
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
+}
+
+/// Singleton monetization settings row. Always upserted with id = "global".
+/// Controls chapter locking, coin pricing, reader access, and writer earnings
+/// across reader and writer dashboards.
+model MonetizationSettings {
+  id String @id @default("global")
+
+  // ── Chapter Access ──────────────────────────────────────────────────────────
+  freeChapters          Int     @default(3)
+  paidFrom              Int     @default(4)
+  autoLock              Boolean @default(true)
+  schedUnlock           Boolean @default(false)
+  schedUnlockFrequency  String  @default("Weekly")
+
+  // ── Coin Pricing ─────────────────────────────────────────────────────────────
+  chapterUnlockCost     Int     @default(10)
+  audiobookUnlockCost   Int     @default(25)
+  referralRewardCoins   Int     @default(100)
+  dailyStreakReward      Int     @default(5)
+  adWatchReward         Int     @default(3)
+  welcomeBonusCoins     Int     @default(50)
+
+  // ── Reader Access ─────────────────────────────────────────────────────────────
+  freeReadLimit         Int     @default(20)
+  subUnlimited          Boolean @default(true)
+  aiPremiumOnly         Boolean @default(true)
+  offlinePremiumOnly    Boolean @default(true)
+  publicDomainFree      Boolean @default(true)
+  subOnlyBooks          Boolean @default(false)
+  earlyAccess           Boolean @default(false)
+  earlyAccessHours      Int     @default(24)
+
+  // ── Writer Earnings ───────────────────────────────────────────────────────────
+  writerRevenueShare        Int     @default(70)
+  minPayoutThreshold        Float   @default(20)
+  payoutSchedule            String  @default("Monthly")
+  perfBonusThreshold        Float   @default(500)
+  perfBonusAmount           Float   @default(50)
+  minPublishedChapters      Int     @default(5)
+  minReadCount              Int     @default(500)
+  requireIdVerify           Boolean @default(true)
+  requireTaxInfo            Boolean @default(true)
+  newWriterProbationDays    Int     @default(30)
+
+  // ── System Flags ──────────────────────────────────────────────────────────────
+  coinSystemEnabled         Boolean @default(true)
+  subscriptionsEnabled      Boolean @default(true)
+  referralProgramEnabled    Boolean @default(true)
+  adRewardEnabled           Boolean @default(true)
+  writerPayoutsEnabled      Boolean @default(true)
+  monetizationMaintMode     Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Email OTP verification store for secure one-time codes.
+model EmailOtp {
+  id            String   @id @default(cuid())
+  email         String   @unique
+  otpHash       String
+  expiresAt     DateTime
+  cooldownUntil DateTime
+  attempts      Int      @default(0)
+  lastSentAt    DateTime @default(now())
+  verifiedAt    DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([expiresAt])
+  @@index([cooldownUntil])
+}

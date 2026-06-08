@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Earnings - Novara Writer Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/writer/writer-monetization-ai.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+</head>
+<body>
+<div class="layout">
+  <main class="main">
+    <div class="top-bar">
+      <div class="top-bar-tabs">
+        <button class="top-bar-tab">Reader Dashboard</button>
+        <button class="top-bar-tab active">Writer Dashboard</button>
+      </div>
+
+      <div class="top-bar-right">
+        <select class="period-select">
+          <option value="7d">Last 7 days</option>
+          <option value="30d" selected>Last 30 days</option>
+          <option value="90d">Last 90 days</option>
+          <option value="1y">This year</option>
+          <option value="all">All time</option>
+        </select>
+        <button class="btn btn-outline" onclick="exportData()">Export CSV</button>
+        <button class="btn btn-green" onclick="requestPayout()">Request Payout</button>
+      </div>
+    </div>
+
+    <div class="page-header">
+      <div class="section-eyebrow">Monetization</div>
+      <div class="page-title">Earnings Overview</div>
+      <div class="page-subtitle">Track revenue, payouts, and performance across all your books</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon-row"><div class="stat-label">Referral Earnings</div><div class="stat-icon-pill pill-gold">$</div></div>
+        <div class="stat-value" id="statTotalEarnings">—</div>
+        <span class="stat-change neutral" id="statTotalEarningsChange">Loading…</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-row"><div class="stat-label">Coins Earned</div><div class="stat-icon-pill pill-green">C</div></div>
+        <div class="stat-value" id="statCoins">—</div>
+        <span class="stat-change neutral" id="statCoinsChange">From referrals</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-row"><div class="stat-label">Total Reads</div><div class="stat-icon-pill pill-purple">R</div></div>
+        <div class="stat-value" id="statTotalReads">—</div>
+        <span class="stat-change neutral" id="statTotalReadsChange">Across all books</span>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon-row"><div class="stat-label">Published Books</div><div class="stat-icon-pill pill-blue">B</div></div>
+        <div class="stat-value" id="statPublished">—</div>
+        <span class="stat-change neutral" id="statPublishedChange">Loading…</span>
+      </div>
+    </div>
+
+    <div class="row row-3">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Revenue Over Time</span>
+          <div class="chart-tabs">
+            <div class="chart-tab active" onclick="switchChart('revenue',this)">Revenue</div>
+            <div class="chart-tab" onclick="switchChart('reads',this)">Reads</div>
+            <div class="chart-tab" onclick="switchChart('unlocks',this)">Unlocks</div>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Revenue Sources</span></div>
+        <div style="position:relative;height:144px;margin-bottom:14px;"><canvas id="donutChart"></canvas></div>
+        <div class="breakdown-list">
+          <div class="breakdown-item">
+            <div class="breakdown-meta"><span class="breakdown-label">Referral Earnings</span><span class="breakdown-amount" id="revSource1Amount">—</span></div>
+            <div class="breakdown-bar"><div class="breakdown-fill" id="revSource1Fill" style="width:0%;background:var(--gold2);"></div></div>
+          </div>
+          <div class="breakdown-item">
+            <div class="breakdown-meta"><span class="breakdown-label">Coins Earned</span><span class="breakdown-amount" id="revSource2Amount">—</span></div>
+            <div class="breakdown-bar"><div class="breakdown-fill" id="revSource2Fill" style="width:0%;background:var(--purple);"></div></div>
+          </div>
+          <div class="breakdown-item">
+            <div class="breakdown-meta"><span class="breakdown-label">AI Credits</span><span class="breakdown-amount" id="revSource3Amount">—</span></div>
+            <div class="breakdown-bar"><div class="breakdown-fill" id="revSource3Fill" style="width:0%;background:var(--rust);"></div></div>
+          </div>
+          <div class="breakdown-item">
+            <div class="breakdown-meta"><span class="breakdown-label">Total Reads</span><span class="breakdown-amount" id="revSource4Amount">—</span></div>
+            <div class="breakdown-bar"><div class="breakdown-fill" id="revSource4Fill" style="width:0%;background:var(--green);"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row row-2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">Top Books by Reads</span><a class="card-action" href="/writer/writer-dashboard.html?section=stories">View all</a></div>
+        <div class="book-list" id="topBooksContainer">
+          <div class="book-item">
+            <div class="book-rank top">1</div>
+            <div class="book-cover" style="background:linear-gradient(135deg,#3a1a5e,#7b3fa0);">MI</div>
+            <div class="book-info"><div class="book-title">Midnight Inheritance</div><div class="book-meta">Fantasy · 47 ch · 12.4k reads</div></div>
+            <div><div class="book-earnings">$1,842</div><div class="book-trend up">+22%</div></div>
+          </div>
+          <div class="book-item">
+            <div class="book-rank top">2</div>
+            <div class="book-cover" style="background:linear-gradient(135deg,#1a2e3a,#2a7a8a);">AP</div>
+            <div class="book-info"><div class="book-title">The Abyssal Pact</div><div class="book-meta">Dark Romance · 32 ch · 9.1k reads</div></div>
+            <div><div class="book-earnings">$1,204</div><div class="book-trend up">+8%</div></div>
+          </div>
+          <div class="book-item">
+            <div class="book-rank">3</div>
+            <div class="book-cover" style="background:linear-gradient(135deg,#3a2010,#a05020);">EA</div>
+            <div class="book-info"><div class="book-title">Ember &amp; Ash</div><div class="book-meta">Romance · 28 ch · 7.3k reads</div></div>
+            <div><div class="book-earnings">$917</div><div class="book-trend down">-3%</div></div>
+          </div>
+          <div class="book-item">
+            <div class="book-rank">4</div>
+            <div class="book-cover" style="background:linear-gradient(135deg,#1a3a2a,#2a8a5a);">CT</div>
+            <div class="book-info"><div class="book-title">Crown of Thorns</div><div class="book-meta">Epic Fantasy · 21 ch · 4.8k reads</div></div>
+            <div><div class="book-earnings">$858</div><div class="book-trend up">+41%</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><span class="card-title">Monthly Goals</span><span class="badge badge-green" id="goalsMetBadge">— Met</span></div>
+        <div class="goals-list">
+          <div class="goal-item">
+            <div class="goal-header"><span class="goal-name">Published Books</span><span class="goal-progress" id="goal1Progress">—</span></div>
+            <div class="goal-bar"><div class="goal-fill" id="goal1Fill" style="width:0%;background:var(--gold2);"></div></div>
+          </div>
+          <div class="goal-item">
+            <div class="goal-header"><span class="goal-name">Chapters Written</span><span class="goal-progress" id="goal2Progress">—</span></div>
+            <div class="goal-bar"><div class="goal-fill" id="goal2Fill" style="width:0%;background:var(--purple);"></div></div>
+          </div>
+          <div class="goal-item">
+            <div class="goal-header"><span class="goal-name">Total Reads</span><span class="goal-progress" id="goal3Progress">—</span></div>
+            <div class="goal-bar"><div class="goal-fill" id="goal3Fill" style="width:0%;background:var(--blue);"></div></div>
+          </div>
+          <div class="goal-item">
+            <div class="goal-header"><span class="goal-name">Favorites</span><span class="goal-progress" id="goal4Progress">—</span></div>
+            <div class="goal-bar"><div class="goal-fill" id="goal4Fill" style="width:0%;background:var(--teal);"></div></div>
+          </div>
+          <div class="goal-item">
+            <div class="goal-header"><span class="goal-name">Referrals</span><span class="goal-progress" id="goal5Progress">—</span></div>
+            <div class="goal-bar"><div class="goal-fill" id="goal5Fill" style="width:0%;background:var(--rust);"></div></div>
+          </div>
+        </div>
+        <hr class="divider" style="margin-top:16px;">
+        <div class="card-title" style="font-size:12px;margin-bottom:10px;">Milestone Rewards</div>
+        <div>
+          <div class="milestone-row"><span style="color:var(--text2)">1k Readers</span><span class="badge" id="milestone1Badge">—</span></div>
+          <div class="milestone-row">
+            <span style="color:var(--text2)">$100 Earned</span>
+            <div style="display:flex;align-items:center;gap:5px;"><span style="font-size:11px;color:var(--text3)" id="milestone2Progress">— / $100</span><span class="badge badge-purple" id="milestone2Pct">—</span></div>
+          </div>
+          <div class="milestone-row"><span style="color:var(--text2)">5 Referrals</span><span class="badge" id="milestone3Badge">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row row-3">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Transactions</span>
+          <select class="period-select" style="font-size:11px;padding:4px 9px;" onchange="filterTxns(this.value)">
+            <option value="all">All types</option>
+            <option value="unlock">Unlocks</option>
+            <option value="sub">Subscription</option>
+            <option value="bonus">Bonuses</option>
+            <option value="payout">Payouts</option>
+          </select>
+        </div>
+        <table class="txn-table">
+          <thead><tr><th>Date</th><th>Type</th><th>Book</th><th>Amount</th></tr></thead>
+          <tbody id="txnBody"></tbody>
+        </table>
+        <div style="text-align:center;margin-top:12px;">
+          <a class="card-action" style="font-size:11.5px;" onclick="loadMoreTxns()">Load more transactions</a>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Writing Assistant</span><span class="badge badge-purple" id="aiPlanBadge">—</span></div>
+          <div class="ai-meter">
+            <div class="ai-meter-header"><span class="ai-meter-label">AI Credits Available</span><span class="ai-meter-value" id="aiCreditsValue">—</span></div>
+            <div class="ai-meter-bar"><div class="ai-meter-fill" id="aiCreditsFill" style="width:0%;background:var(--purple);"></div></div>
+          </div>
+          <div class="ai-meter">
+            <div class="ai-meter-header"><span class="ai-meter-label">Chapters Published</span><span class="ai-meter-value" id="aiChaptersValue">—</span></div>
+            <div class="ai-meter-bar"><div class="ai-meter-fill" id="aiChaptersFill" style="width:0%;background:var(--blue);"></div></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:6px;">
+            <span style="color:var(--text2)">Total Reads</span><span style="color:var(--text);font-weight:600;" id="aiTotalReadsValue">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;">
+            <span style="color:var(--text2)">Referral Earnings</span><span style="color:var(--green);font-weight:600;" id="aiRoiValue">—</span>
+          </div>
+          <div class="ai-insight" id="aiInsightText">Loading your writing stats…</div>
+        </div>
+
+        <div class="card" id="payoutCard">
+          <div class="card-header"><span class="card-title">Payout</span></div>
+          <div class="payout-balance">
+            <div>
+              <div class="payout-balance-label">Available to withdraw</div>
+              <div class="payout-balance-amount" id="payoutBalanceAmount">—</div>
+            </div>
+            <button class="btn btn-green" id="withdrawBtn" onclick="openWithdrawOrSetup()">Withdraw</button>
+          </div>
+          <!-- no-method warning (shown when method not connected) -->
+          <div id="noMethodWarning" style="display:none;background:#fffbe6;border:1px solid #e8c84a;border-radius:8px;padding:10px 14px;font-size:12.5px;color:#7a6010;margin-top:8px;">
+            ⚠️ No payout method connected. <a href="#" style="color:var(--gold2);font-weight:600;" onclick="openPayoutSetup(); return false;">Set up your payout info</a> to enable withdrawals.
+          </div>
+          <!-- connected method display -->
+          <div id="payoutMethodDisplay" style="display:none;" class="payout-method">
+            <div class="payout-method-icon" id="payoutMethodIcon">?</div>
+            <div>
+              <div style="font-size:12.5px;color:var(--text);font-weight:500;" id="payoutMethodLabel">—</div>
+              <div style="font-size:11px;color:var(--text3);">Pays to <span id="payoutMethodType">account</span></div>
+            </div>
+            <a class="card-action" style="margin-left:auto;" onclick="openPayoutSetup()">Change</a>
+          </div>
+          <div id="payoutHistory"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><span class="card-title">Referral Program</span><span class="badge badge-gold">Moved</span></div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px;">
+        Referrals now have a dedicated page with milestone rewards, sharing actions, and referral activity history.
+      </div>
+      <a class="btn btn-green" href="/writer/writer-referrals.html">Open Referrals Page</a>
+    </div>
+  </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     PAYOUT SETUP MODAL  (3-step wizard)
+═══════════════════════════════════════════════════════ -->
+<div id="payoutSetupOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;display:none;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border-radius:16px;width:min(460px,94vw);padding:28px 28px 24px;box-shadow:0 12px 40px rgba(0,0,0,.22);position:relative;">
+    <!-- step indicators -->
+    <div style="display:flex;gap:8px;margin-bottom:22px;">
+      <div class="setup-step-dot active" id="dot1"></div>
+      <div class="setup-step-dot" id="dot2"></div>
+      <div class="setup-step-dot" id="dot3"></div>
+    </div>
+    <button onclick="closePayoutSetup()" style="position:absolute;top:18px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);">&times;</button>
+
+    <!-- Step 1: Choose method -->
+    <div id="setupStep1">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Set up payout method</div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:18px;">Choose how you'd like to receive your earnings.</div>
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        <label class="method-option" id="methodOptStripe">
+          <input type="radio" name="payoutMethod" value="stripe" style="accent-color:var(--gold2);margin-right:10px;">
+          <div>
+            <span style="font-size:14px;font-weight:600;">Stripe</span>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">You'll be redirected to Stripe to connect your bank account securely.</div>
+          </div>
+        </label>
+        <label class="method-option" id="methodOptPaypal">
+          <input type="radio" name="payoutMethod" value="paypal" style="accent-color:var(--gold2);margin-right:10px;">
+          <span style="font-size:14px;font-weight:600;">PayPal</span>
+          <span style="font-size:11px;color:var(--text3);margin-left:6px;">Instant to PayPal balance</span>
+        </label>
+        <label class="method-option" id="methodOptBank">
+          <input type="radio" name="payoutMethod" value="bank" style="accent-color:var(--gold2);margin-right:10px;">
+          <span style="font-size:14px;font-weight:600;">Bank Transfer</span>
+          <span style="font-size:11px;color:var(--text3);margin-left:6px;">3-5 business days</span>
+        </label>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+        <button class="btn btn-green" id="setupStep1Btn" onclick="setupGoStep2()">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 2: Fill details -->
+    <div id="setupStep2" style="display:none;">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Account details</div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:18px;">Enter your <span id="setupMethodName">payment</span> account information.</div>
+      <!-- PayPal fields -->
+      <div id="fieldsPaypal" style="display:none;">
+        <label class="setup-label">PayPal email<input class="setup-input" id="paypalEmail" type="email" placeholder="you@paypal.com"></label>
+      </div>
+      <!-- Bank fields -->
+      <div id="fieldsBank" style="display:none;">
+        <label class="setup-label">Routing number<input class="setup-input" id="bankRouting" type="text" maxlength="9" placeholder="021000021"></label>
+        <label class="setup-label" style="margin-top:10px;">Account number<input class="setup-input" id="bankAccount" type="text" maxlength="17" placeholder="000123456789"></label>
+      </div>
+      <div id="setupStep2Error" style="color:#c0392b;font-size:12px;margin-top:10px;display:none;"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:20px;">
+        <button class="btn" style="background:var(--bg2);color:var(--text);" onclick="setupGoStep1()">Back</button>
+        <button class="btn btn-green" onclick="setupGoStep3()">Review</button>
+      </div>
+    </div>
+
+    <!-- Step 3: Confirm -->
+    <div id="setupStep3" style="display:none;">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:6px;">Review &amp; confirm</div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:18px;">Double-check your payout details before saving.</div>
+      <div style="background:var(--bg2);border-radius:10px;padding:14px 16px;font-size:13px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;"><span style="color:var(--text3);">Method</span><span style="font-weight:600;color:var(--text);" id="reviewMethod">—</span></div>
+        <div style="display:flex;justify-content:space-between;"><span style="color:var(--text3);">Account</span><span style="font-weight:600;color:var(--text);" id="reviewAccount">—</span></div>
+      </div>
+      <div id="setupStep3Error" style="color:#c0392b;font-size:12px;margin-top:10px;display:none;"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:20px;">
+        <button class="btn" style="background:var(--bg2);color:var(--text);" onclick="setupGoStep2()">Back</button>
+        <button class="btn btn-green" id="confirmSetupBtn" onclick="confirmPayoutSetup()">Save &amp; Connect</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════
+     WITHDRAW MODAL
+═══════════════════════════════════════════════════════ -->
+<div id="withdrawOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:var(--card);border-radius:16px;width:min(400px,94vw);padding:28px 28px 24px;box-shadow:0 12px 40px rgba(0,0,0,.22);position:relative;">
+    <button onclick="closeWithdrawModal()" style="position:absolute;top:18px;right:20px;background:none;border:none;font-size:20px;cursor:pointer;color:var(--text3);">&times;</button>
+    <!-- Normal state -->
+    <div id="withdrawForm">
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px;">Withdraw Earnings</div>
+      <div style="font-size:12.5px;color:var(--text2);margin-bottom:18px;">Available: <strong id="withdrawAvailLabel">—</strong></div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <button class="btn" style="flex:1;background:var(--bg2);color:var(--text);font-size:12px;" onclick="setWithdrawAmount(100)">$100</button>
+        <button class="btn" style="flex:1;background:var(--bg2);color:var(--text);font-size:12px;" onclick="setWithdrawAmount(500)">$500</button>
+        <button class="btn" style="flex:1;background:var(--bg2);color:var(--text);font-size:12px;" onclick="setWithdrawAmountMax()">Max</button>
+      </div>
+      <input id="withdrawAmountInput" class="setup-input" type="number" min="20" step="0.01" placeholder="Enter amount (e.g. 50.00)">
+      <div id="withdrawError" style="color:#c0392b;font-size:12px;margin-top:8px;display:none;"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px;">
+        <button class="btn" style="background:var(--bg2);color:var(--text);" onclick="closeWithdrawModal()">Cancel</button>
+        <button class="btn btn-green" onclick="submitWithdraw()">Confirm Withdraw</button>
+      </div>
+    </div>
+    <!-- Success state -->
+    <div id="withdrawSuccess" style="display:none;text-align:center;padding:10px 0;">
+      <div style="font-size:36px;margin-bottom:12px;">&#10003;</div>
+      <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:8px;">Withdrawal Requested!</div>
+      <div style="font-size:13px;color:var(--text2);margin-bottom:20px;" id="withdrawSuccessMsg">Your payout is on its way.</div>
+      <button class="btn btn-green" onclick="closeWithdrawModal()">Done</button>
+    </div>
+  </div>
+</div>
+
+<style>
+.setup-step-dot{width:8px;height:8px;border-radius:50%;background:var(--bg3);transition:background .2s;}
+.setup-step-dot.active{background:var(--gold2);}
+.method-option{display:flex;align-items:center;background:var(--bg2);border:1.5px solid transparent;border-radius:10px;padding:12px 14px;cursor:pointer;transition:border-color .15s;}
+.method-option:has(input:checked){border-color:var(--gold2);}
+.setup-label{display:block;font-size:12px;color:var(--text2);font-weight:500;}
+.setup-input{width:100%;box-sizing:border-box;margin-top:5px;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg2);color:var(--text);font-size:13px;outline:none;}
+.setup-input:focus{border-color:var(--gold2);}
+</style>
+
+<script src="/js/shared/novara-session.js"></script>
+<script src="/js/writer/writer-monetization-ai.js"></script>
+</body>
+</html>

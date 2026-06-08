@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Novara Writer Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & tokens ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+button,input,select,textarea{font-family:inherit}
+:root{
+  --green:       #1A3D2E;
+  --green-mid:   #2A5A44;
+  --green-lt:    #3D7A5A;
+  --green-pale:  #EAF2EE;
+  --green-tint:  #F2F8F5;
+  --sage:        #C8D8CC;
+  --gold:        #C9973A;
+  --gold-pale:   #FBF3E2;
+  --page:        #F5F4F0;
+  --surface:     #FFFFFF;
+  --border:      #E4E2DC;
+  --border-mid:  #D0CDCA;
+  --ink:         #1A1916;
+  --ink-60:      #4A4840;
+  --ink-40:      #7A7870;
+  --ink-20:      #B0AEA8;
+  --r-sm:        8px;
+  --r-md:        12px;
+  --r-lg:        16px;
+  --r-xl:        20px;
+  --ease:        cubic-bezier(.4,0,.2,1);
+  --sidebar:     220px;
+}
+html{-webkit-font-smoothing:antialiased}
+body{font-family:'DM Sans',sans-serif;background:var(--page);color:var(--ink);min-height:100vh;display:flex}
+
+/* ── Sidebar ── */
+.sidebar{
+  width:var(--sidebar);flex-shrink:0;
+  background:var(--surface);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;height:100vh;
+  z-index:20;
+}
+.sidebar-brand{
+  display:flex;align-items:center;gap:10px;
+  padding:20px 18px 16px;
+  border-bottom:1px solid var(--border);
+}
+.brand-icon{
+  width:34px;height:34px;border-radius:8px;
+  background:var(--green);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Lora',serif;font-size:16px;font-weight:600;color:#fff;
+}
+.brand-name{font-family:'Lora',serif;font-size:18px;font-weight:600;color:var(--ink)}
+
+.nav-section{padding:14px 10px 4px}
+.nav-section-label{
+  font-size:10px;font-weight:600;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-20);
+  padding:0 8px;margin-bottom:4px;
+}
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:8px 10px;border-radius:var(--r-sm);
+  font-size:13.5px;color:var(--ink-60);
+  cursor:pointer;transition:all .15s;
+  margin-bottom:1px;
+  border:none;background:none;width:100%;text-align:left;
+}
+.nav-item:hover{background:var(--page);color:var(--ink)}
+.nav-item.active{background:var(--green);color:#fff}
+.nav-item .nav-icon{font-size:16px;width:18px;text-align:center;flex-shrink:0}
+
+.sidebar-spacer{flex:1}
+.user-block{
+  padding:14px 14px 16px;
+  border-top:1px solid var(--border);
+}
+.user-card{
+  background:var(--green-tint);
+  border:1px solid var(--green-pale);
+  border-radius:var(--r-md);
+  padding:12px;
+}
+.user-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.user-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--green);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:600;color:#fff;flex-shrink:0;
+}
+.user-name{font-size:13px;font-weight:600;color:var(--ink)}
+.user-role{font-size:11px;color:var(--ink-40)}
+.user-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--gold-pale);color:var(--gold);
+  border:1px solid rgba(201,151,58,.2);
+  border-radius:50px;padding:3px 10px;
+  font-size:11px;font-weight:600;margin-top:2px;
+}
+
+/* ── Main area ── */
+.main{
+  margin-left:var(--sidebar);
+  flex:1;display:flex;flex-direction:column;min-height:100vh;
+}
+
+/* ── Page visibility ── */
+.page{display:none}
+.page.active{display:flex;flex-direction:column;flex:1}
+
+/* ── Top banner (green) ── */
+.top-banner{
+  background:var(--green);
+  padding:22px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.banner-title{
+  font-family:'Lora',serif;font-size:22px;font-weight:500;color:#fff;
+}
+.banner-sub{font-size:13px;color:rgba(255,255,255,.55);margin-top:2px}
+.banner-btn{
+  display:inline-flex;align-items:center;gap:7px;
+  background:rgba(255,255,255,.15);color:#fff;
+  border:1px solid rgba(255,255,255,.25);border-radius:50px;
+  padding:9px 20px;font-size:13px;font-weight:500;cursor:pointer;
+  transition:all .2s var(--ease);
+}
+.banner-btn:hover{background:rgba(255,255,255,.25)}
+
+/* ── Content wrapper ── */
+.content{padding:28px 32px;flex:1}
+
+/* ── Stat cards ── */
+.stat-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:16px;
+  margin-bottom:28px;
+}
+.stat-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:20px 22px;
+  display:flex;flex-direction:column;gap:8px;
+  position:relative;overflow:hidden;
+}
+.stat-card::before{
+  content:'';position:absolute;
+  top:12px;right:14px;width:28px;height:28px;
+  border-radius:6px;background:var(--page);
+}
+.stat-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-40)}
+.stat-val{font-family:'Lora',serif;font-size:30px;font-weight:500;color:var(--ink);letter-spacing:-.5px}
+.stat-sub{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--ink-40)}
+.stat-sub .up{color:#2A7A4A;font-weight:500}
+.stat-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--green-pale);color:#2A5A44;
+  border-radius:50px;padding:3px 10px;font-size:11px;font-weight:500;
+}
+
+/* ── Search bar ── */
+.search-bar{
+  display:flex;align-items:center;gap:10px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-lg);padding:11px 16px;
+  margin-bottom:22px;cursor:text;
+  transition:border-color .15s;
+}
+.search-bar:focus-within{border-color:var(--green)}
+.search-input{
+  flex:1;border:none;outline:none;font-size:14px;
+  color:var(--ink);background:transparent;
+}
+.search-input::placeholder{color:var(--ink-20)}
+.search-icon{font-size:17px;color:var(--ink-20)}
+
+/* ── Filter tabs ── */
+.filter-row{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:22px;
+}
+.tabs{
+  display:flex;gap:4px;
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:50px;padding:3px;
+}
+.tab{
+  padding:6px 18px;border-radius:50px;
+  font-size:13px;font-weight:500;color:var(--ink-40);
+  cursor:pointer;transition:all .2s;border:none;background:none;
+}
+.tab:hover{color:var(--ink)}
+.tab.active{background:var(--green);color:#fff}
+.sort-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-40)}
+.sort-sel{
+  border:1px solid var(--border);border-radius:8px;
+  padding:6px 12px;font-size:13px;font-family:'DM Sans',sans-serif;
+  color:var(--ink);background:var(--surface);outline:none;cursor:pointer;
+}
+
+/* ── Book grid ── */
+.book-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));
+  gap:20px;
+}
+
+/* ── Book card ── */
+.book-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:all .25s var(--ease);cursor:pointer;
+}
+.book-card:hover{
+  border-color:var(--green-lt);
+  box-shadow:0 8px 28px rgba(26,61,46,.12);
+  transform:translateY(-2px);
+}
+.book-cover{
+  width:100%;aspect-ratio:16/9;
+  background:#EAE6DC;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;
+}
+.cover-emoji{font-size:52px;filter:drop-shadow(0 4px 12px rgba(0,0,0,.15))}
+.draft-badge{
+  position:absolute;top:10px;left:10px;
+  background:rgba(255,255,255,.88);
+  border:1px solid var(--border);border-radius:50px;
+  padding:3px 10px;font-size:11px;font-weight:600;color:var(--ink-60);
+  backdrop-filter:blur(4px);
+}
+.pub-badge{
+  background:rgba(42,90,68,.9);color:#C8D8CC;border-color:rgba(200,216,204,.2);
+}
+.sch-badge{
+  background:rgba(201,151,58,.9);color:#FBF3E2;border-color:rgba(201,151,58,.3);
+}
+
+.book-body{padding:16px 16px 14px;flex:1;display:flex;flex-direction:column;gap:10px}
+.book-genre{font-size:11px;color:var(--ink-40);display:flex;align-items:center;gap:5px}
+.genre-dot{width:5px;height:5px;border-radius:50%;background:var(--green-lt);flex-shrink:0}
+.book-title{font-family:'Lora',serif;font-size:17px;font-weight:500;color:var(--ink);line-height:1.25}
+.book-meta{display:flex;flex-wrap:wrap;gap:10px}
+.meta-it{font-size:12px;color:var(--ink-40)}
+.prog-wrap{display:flex;flex-direction:column;gap:4px}
+.prog-track{height:3px;background:var(--page);border-radius:3px;overflow:hidden}
+.prog-fill{height:100%;background:var(--green);border-radius:3px;transition:width .6s var(--ease)}
+.book-actions{display:flex;gap:7px;margin-top:2px}
+
+/* ── Buttons ── */
+.btn{
+  display:inline-flex;align-items:center;gap:6px;
+  border-radius:var(--r-sm);font-size:13px;font-weight:500;
+  cursor:pointer;transition:all .2s var(--ease);
+  padding:8px 14px;border:1px solid var(--border);
+  background:var(--surface);color:var(--ink-60);
+}
+.btn:hover{background:var(--page);color:var(--ink);border-color:var(--border-mid)}
+.btn-primary{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-primary:hover{background:var(--green-mid);border-color:var(--green-mid)}
+.btn-full{width:100%;justify-content:center}
+.btn-lg{padding:11px 22px;font-size:14px;border-radius:var(--r-md)}
+.btn-sm{padding:6px 12px;font-size:12px}
+.btn-danger{background:#fff1f0;color:#A32D2D;border-color:#fcc}
+.btn-danger:hover{background:#ffe0de;border-color:#f99}
+
+/* ── New book card ── */
+.new-card{
+  background:transparent;border:1.5px dashed var(--border-mid);
+  border-radius:var(--r-xl);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:40px 20px;cursor:pointer;
+  transition:all .25s var(--ease);min-height:260px;text-align:center;
+}
+.new-card:hover{border-color:var(--green-lt);background:var(--green-tint)}
+.new-icon{
+  width:42px;height:42px;border-radius:12px;
+  background:var(--page);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;transition:all .25s;
+}
+.new-card:hover .new-icon{background:var(--green-pale);border-color:var(--green-lt)}
+.new-title{font-size:14px;font-weight:500;color:var(--ink-40)}
+
+/* ═══════════════════════════════════════════
+   EDIT STORY PAGE
+═══════════════════════════════════════════ */
+.page-header{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:18px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.header-back{
+  display:flex;align-items:center;gap:8px;
+  font-size:13.5px;color:var(--ink-40);cursor:pointer;
+  padding:7px 12px;border-radius:var(--r-sm);
+  border:none;background:none;transition:all .15s;
+}
+.header-back:hover{background:var(--page);color:var(--ink)}
+.header-title{font-family:'Lora',serif;font-size:18px;font-weight:500;color:var(--ink)}
+.header-actions{display:flex;gap:8px}
+
+.edit-grid{display:grid;grid-template-columns:1fr 320px;gap:24px;padding:28px 32px}
+
+.form-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:24px;
+}
+.form-card + .form-card{margin-top:16px}
+.form-card-title{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:16px;
+  padding-bottom:12px;border-bottom:1px solid var(--border)}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+.field-label{font-size:12.5px;font-weight:500;color:var(--ink-60)}
+.field-input{
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:10px 14px;font-size:14px;font-family:'DM Sans',sans-serif;
+  color:var(--ink);background:var(--surface);outline:none;
+  transition:border-color .15s;
+}
+.field-input:focus{border-color:var(--green)}
+.field-textarea{resize:vertical;min-height:80px;line-height:1.55}
+.field-select{cursor:pointer}
+.field-hint{font-size:11.5px;color:var(--ink-20)}
+
+.cover-upload{
+  border:2px dashed var(--border-mid);border-radius:var(--r-lg);
+  padding:28px;text-align:center;cursor:pointer;
+  transition:all .2s;background:var(--page);
+}
+.cover-upload:hover{border-color:var(--green-lt);background:var(--green-tint)}
+.cover-upload-icon{font-size:28px;margin-bottom:8px}
+.cover-upload-title{font-size:13.5px;font-weight:500;color:var(--ink-60)}
+.cover-upload-sub{font-size:12px;color:var(--ink-20);margin-top:3px}
+.cover-preview{
+  border-radius:var(--r-lg);overflow:hidden;
+  background:#EAE6DC;aspect-ratio:3/4;
+  display:flex;align-items:center;justify-content:center;
+  font-size:56px;margin-bottom:12px;border:1px solid var(--border);
+}
+
+.tag-input-wrap{
+  border:1px solid var(--border);border-radius:var(--r-sm);
+  padding:8px 10px;display:flex;flex-wrap:wrap;gap:6px;
+  cursor:text;transition:border-color .15s;
+}
+.tag-input-wrap:focus-within{border-color:var(--green)}
+.tag-pill{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--green-pale);color:var(--green);
+  border-radius:50px;padding:3px 10px;font-size:12px;font-weight:500;
+}
+.tag-x{cursor:pointer;opacity:.6}
+.tag-x:hover{opacity:1}
+.tag-real-input{border:none;outline:none;font-size:13px;flex:1;min-width:80px;background:transparent}
+
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--border);
+}
+.toggle-row:last-child{border-bottom:none}
+.toggle-info{}
+.toggle-title{font-size:13.5px;font-weight:500;color:var(--ink)}
+.toggle-sub{font-size:12px;color:var(--ink-40);margin-top:1px}
+.toggle{
+  position:relative;width:40px;height:22px;flex-shrink:0;cursor:pointer;
+}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;inset:0;
+  background:var(--border-mid);border-radius:50px;transition:.25s;
+}
+.toggle-slider::before{
+  content:'';position:absolute;
+  width:16px;height:16px;border-radius:50%;
+  background:#fff;top:3px;left:3px;transition:.25s;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.toggle input:checked + .toggle-slider{background:var(--green)}
+.toggle input:checked + .toggle-slider::before{transform:translateX(18px)}
+
+/* ═══════════════════════════════════════════
+   ADD CHAPTER PAGE
+═══════════════════════════════════════════ */
+.chapter-layout{display:grid;grid-template-columns:1fr 280px;gap:0;flex:1;min-height:0}
+.editor-area{
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+}
+.editor-toolbar{
+  background:var(--surface);border-bottom:1px solid var(--border);
+  padding:10px 20px;display:flex;align-items:center;gap:4px;flex-wrap:wrap;
+}
+.tool-btn{
+  width:32px;height:32px;border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;cursor:pointer;border:none;background:none;
+  color:var(--ink-60);transition:all .15s;
+}
+.tool-btn:hover{background:var(--page);color:var(--ink)}
+.tool-btn.active{background:var(--green-pale);color:var(--green)}
+.tool-sep{width:1px;height:20px;background:var(--border);margin:0 6px}
+.tool-label{font-size:12px;padding:4px 10px;border-radius:6px;cursor:pointer;border:none;background:none;color:var(--ink-60)}
+.tool-label:hover{background:var(--page);color:var(--ink)}
+
+.chapter-title-input{
+  border:none;outline:none;
+  font-family:'Lora',serif;font-size:26px;font-weight:500;
+  color:var(--ink);padding:24px 28px 8px;
+  background:transparent;width:100%;
+}
+.chapter-title-input::placeholder{color:var(--ink-20)}
+.chapter-body-input{
+  flex:1;border:none;outline:none;resize:none;
+  font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.8;
+  color:var(--ink);padding:8px 28px 28px;background:transparent;
+  min-height:400px;
+}
+.chapter-body-input::placeholder{color:var(--ink-20)}
+
+.chapter-sidebar{background:var(--surface);display:flex;flex-direction:column}
+.chapter-sidebar-inner{padding:20px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:16px}
+.cs-card{
+  background:var(--page);border:1px solid var(--border);
+  border-radius:var(--r-md);padding:14px;
+}
+.cs-label{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-40);margin-bottom:10px}
+.word-count{font-family:'Lora',serif;font-size:28px;font-weight:500;color:var(--ink)}
+.word-sub{font-size:12px;color:var(--ink-40);margin-top:2px}
+.cs-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:4px 0;border-bottom:1px solid var(--border)}
+.cs-row:last-child{border-bottom:none}
+.cs-row-lbl{color:var(--ink-40)}
+.cs-row-val{font-weight:500;color:var(--ink)}
+.chapter-sidebar-footer{padding:16px;border-top:1px solid var(--border)}
+
+/* ── Publish modal overlay ── */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(26,25,22,.45);
+  display:none;align-items:center;justify-content:center;z-index:50;
+}
+.modal-overlay.open{display:flex}
+.modal{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r-xl);padding:32px;
+  max-width:420px;width:94%;
+  box-shadow:0 20px 60px rgba(26,61,46,.18);
+}
+.modal-title{font-family:'Lora',serif;font-size:20px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.modal-sub{font-size:13px;color:var(--ink-40);margin-bottom:20px;line-height:1.55}
+.modal-divider{height:1px;background:var(--border);margin:16px 0}
+.modal-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0}
+.modal-row-lbl{font-size:13.5px;color:var(--ink-60);font-weight:500}
+.modal-actions{display:flex;gap:10px;margin-top:22px}
+.modal-actions .btn{flex:1;justify-content:center}
+
+/* Preview card in modal */
+.preview-mini{
+  border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;margin-bottom:16px;
+}
+.preview-mini-cover{
+  height:80px;background:#EAE6DC;
+  display:flex;align-items:center;justify-content:center;font-size:32px;
+}
+.preview-mini-body{padding:10px 12px}
+.preview-mini-title{font-family:'Lora',serif;font-size:14px;font-weight:500;color:var(--ink)}
+.preview-mini-meta{font-size:11.5px;color:var(--ink-40);margin-top:2px}
+
+/* Notification */
+.notif{
+  position:fixed;bottom:24px;right:24px;
+  background:var(--green);color:#fff;
+  border-radius:var(--r-md);padding:12px 18px;
+  font-size:13.5px;font-weight:500;
+  display:none;align-items:center;gap:10px;
+  box-shadow:0 8px 24px rgba(26,61,46,.35);
+  z-index:100;animation:slideIn .3s var(--ease);
+}
+.notif.show{display:flex}
+@keyframes slideIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Entry animations ── */
+.stat-card{animation:fadeUp .4s var(--ease) both}
+.stat-card:nth-child(1){animation-delay:.04s}
+.stat-card:nth-child(2){animation-delay:.09s}
+.stat-card:nth-child(3){animation-delay:.14s}
+.stat-card:nth-child(4){animation-delay:.19s}
+.book-card,.new-card{animation:fadeUp .45s var(--ease) both}
+.book-card:nth-child(1){animation-delay:.22s}
+.book-card:nth-child(2){animation-delay:.28s}
+.new-card{animation-delay:.34s}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     SIDEBAR (shared)
+══════════════════════════════════════════ -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-icon">N</div>
+    <div class="brand-name">Novara</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Writer Studio</div>
+    <button class="nav-item" onclick="window.location.href='/writer/writer-dashboard.html'">
+      <span class="nav-icon">🏠</span> Home
+    </button>
+    <button class="nav-item active" id="nav-books">
+      <span class="nav-icon">📚</span> My Books
+    </button>
+    <button class="nav-item" onclick="showPage('chapter')">
+      <span class="nav-icon">✨</span> AI Assistant
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Monetization</div>
+    <button class="nav-item">
+      <span class="nav-icon">💰</span> Earnings
+    </button>
+    <button class="nav-item">
+      <span class="nav-icon">👥</span> Referrals
+    </button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Account</div>
+    <button class="nav-item">
+      <span class="nav-icon">⚙️</span> Settings
+    </button>
+    <button class="nav-item">
+      <span class="nav-icon">🔔</span> Notifications
+    </button>
+  </div>
+
+  <div class="sidebar-spacer"></div>
+
+  <div class="user-block">
+    <div class="user-card">
+      <div class="user-top">
+        <div class="user-avatar" id="sidebarAvatar">SR</div>
+        <div>
+          <div class="user-name" id="sidebarName">Sapana Rajbahak</div>
+          <div class="user-role">Author</div>
+        </div>
+      </div>
+      <div class="user-badge">⭐ Gold Writer</div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<div class="main">
+
+<!-- ══════════════════════════════════════════
+     PAGE 1 — EDIT STORY (default active)
+══════════════════════════════════════════ -->
+<div class="page active" id="page-edit">
+  <div class="page-header">
+    <button class="header-back" onclick="window.location.href='/writer/writer-dashboard.html'">← My Books</button>
+    <div class="header-title" id="editPageTitle">Edit Story</div>
+    <div class="header-actions">
+      <button class="btn" id="saveDraftBtn">Save draft</button>
+      <button class="btn btn-primary" onclick="openPublishModal()">Publish →</button>
+    </div>
+  </div>
+
+  <div class="edit-grid">
+    <!-- Left column -->
+    <div>
+      <div class="form-card">
+        <div class="form-card-title">Story details</div>
+
+        <div class="field">
+          <label class="field-label">Title *</label>
+          <input class="field-input" id="storyTitle" placeholder="Enter your story title…">
+        </div>
+
+        <div class="field">
+          <label class="field-label">Description</label>
+          <textarea class="field-input field-textarea" id="storyDescription" placeholder="Write a compelling synopsis that hooks readers…"></textarea>
+          <span class="field-hint">Readers see this on your story page. Aim for 100–200 words.</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div class="field">
+            <label class="field-label">Genre</label>
+            <select class="field-input field-select" id="storyGenre">
+              <option>Mystery</option>
+              <option>Fantasy</option>
+              <option>Romance</option>
+              <option>Thriller</option>
+              <option>Sci-Fi</option>
+              <option>Horror</option>
+              <option>Drama</option>
+              <option>Comedy</option>
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label">Language</label>
+            <select class="field-input field-select">
+              <option>English</option>
+              <option>Spanish</option>
+              <option>Hindi</option>
+              <option>French</option>
+              <option>Portuguese</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Tags</label>
+          <div class="tag-input-wrap">
+            <span class="tag-pill">mystery <span class="tag-x" onclick="this.parentElement.remove()">×</span></span>
+            <span class="tag-pill">thriller <span class="tag-x" onclick="this.parentElement.remove()">×</span></span>
+            <input class="tag-real-input" placeholder="Add a tag…">
+          </div>
+          <span class="field-hint">Add up to 5 tags to help readers find your story.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">Audience</label>
+          <select class="field-input field-select">
+            <option>Everyone (13+)</option>
+            <option>Teen (13–17)</option>
+            <option>Young adult (16+)</option>
+            <option>Mature (18+)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-card" style="margin-top:16px">
+        <div class="form-card-title">Settings &amp; visibility</div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">Public story</div>
+            <div class="toggle-sub">Visible to all Novara readers</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">Allow comments</div>
+            <div class="toggle-sub">Readers can leave feedback</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">Monetise chapters</div>
+            <div class="toggle-sub">Lock premium chapters for coins</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <div class="toggle-title">Notify followers on publish</div>
+            <div class="toggle-sub">Send a notification to your followers</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div>
+      <div class="form-card">
+        <div class="form-card-title">Cover image</div>
+        <div class="cover-preview" id="coverPreview">🌿</div>
+        <button class="btn btn-full" style="margin-bottom:8px">📷 Upload cover</button>
+        <button class="btn btn-full">🎨 Use emoji cover</button>
+        <p style="font-size:11.5px;color:var(--ink-20);margin-top:10px;text-align:center">Recommended: 600×900px JPG or PNG</p>
+      </div>
+
+      <div class="form-card" style="margin-top:16px">
+        <div class="form-card-title">Story stats</div>
+        <div class="cs-row">
+          <span class="cs-row-lbl">Status</span>
+          <span id="storyStatusBadge" class="cs-row-val" style="background:var(--gold-pale);color:var(--gold);border-radius:50px;padding:2px 10px;font-size:12px">Draft</span>
+        </div>
+        <div class="cs-row">
+          <span class="cs-row-lbl">Chapters</span>
+          <span class="cs-row-val" id="storyChapterCount">0</span>
+        </div>
+        <div class="cs-row">
+          <span class="cs-row-lbl">Total reads</span>
+          <span class="cs-row-val" id="storyReads">0</span>
+        </div>
+        <div class="cs-row">
+          <span class="cs-row-lbl">Created</span>
+          <span class="cs-row-val" id="storyCreated">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     PAGE 2 — ADD CHAPTER
+══════════════════════════════════════════ -->
+<div class="page" id="page-chapter">
+  <div class="page-header">
+    <button class="header-back" onclick="showPage('edit')">← Edit Story</button>
+    <div class="header-title">New Chapter</div>
+    <div class="header-actions">
+      <button class="btn" onclick="showNotif('Chapter draft saved')">Save draft</button>
+      <button class="btn btn-primary" onclick="showNotif('Chapter published!')">Publish chapter</button>
+    </div>
+  </div>
+
+  <div class="chapter-layout" style="flex:1">
+    <!-- Editor -->
+    <div class="editor-area">
+      <div class="editor-toolbar">
+        <button class="tool-btn active" title="Bold"><b>B</b></button>
+        <button class="tool-btn" title="Italic"><i>I</i></button>
+        <button class="tool-btn" title="Underline"><u>U</u></button>
+        <div class="tool-sep"></div>
+        <button class="tool-label" title="Heading 1">H1</button>
+        <button class="tool-label" title="Heading 2">H2</button>
+        <button class="tool-label" title="Heading 3">H3</button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" title="Bullet list">≡</button>
+        <button class="tool-btn" title="Numbered list">1≡</button>
+        <button class="tool-btn" title="Quote">❝</button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" title="Link">🔗</button>
+        <button class="tool-btn" title="Image">🖼</button>
+        <div class="tool-sep"></div>
+        <button class="tool-btn" title="Undo">↩</button>
+        <button class="tool-btn" title="Redo">↪</button>
+      </div>
+
+      <input
+        class="chapter-title-input"
+        placeholder="Chapter title…"
+        id="chapterTitle"
+        oninput="updateWordCount()">
+      <textarea
+        class="chapter-body-input"
+        placeholder="Begin writing your chapter here…&#10;&#10;The cursor is yours. Take your time."
+        id="chapterBody"
+        oninput="updateWordCount()"></textarea>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="chapter-sidebar">
+      <div class="chapter-sidebar-inner">
+        <div class="cs-card">
+          <div class="cs-label">Word count</div>
+          <div class="word-count" id="wordCountDisplay">0</div>
+          <div class="word-sub" id="readTimeDisplay">0 min read</div>
+        </div>
+
+        <div class="cs-card">
+          <div class="cs-label">Chapter info</div>
+          <div class="cs-row">
+            <span class="cs-row-lbl">Story</span>
+            <span class="cs-row-val" id="chapterStoryName">—</span>
+          </div>
+          <div class="cs-row">
+            <span class="cs-row-lbl">Chapter #</span>
+            <span class="cs-row-val">Ch. 1</span>
+          </div>
+          <div class="cs-row">
+            <span class="cs-row-lbl">Status</span>
+            <span class="cs-row-val" style="color:var(--gold)">Draft</span>
+          </div>
+        </div>
+
+        <div class="cs-card">
+          <div class="cs-label">Access type</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <input type="radio" name="access" value="free" checked style="accent-color:var(--green)"> Free for everyone
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+              <input type="radio" name="access" value="paid" style="accent-color:var(--green)"> Premium (10 coins)
+            </label>
+          </div>
+        </div>
+
+        <div class="cs-card">
+          <div class="cs-label">Schedule release</div>
+          <div class="toggle-row" style="padding:4px 0">
+            <span style="font-size:13px;color:var(--ink-60)">Schedule for later</span>
+            <label class="toggle">
+              <input type="checkbox" id="schedToggle" onchange="toggleSched()">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+          <div id="schedDate" style="display:none;margin-top:10px">
+            <input type="datetime-local" class="field-input" style="width:100%;font-size:12px">
+          </div>
+        </div>
+
+        <div class="cs-card">
+          <div class="cs-label">Author's note</div>
+          <textarea
+            class="field-input field-textarea"
+            style="font-size:12.5px;min-height:60px;background:var(--surface)"
+            placeholder="Add a note to your readers…"></textarea>
+        </div>
+      </div>
+
+      <div class="chapter-sidebar-footer">
+        <button class="btn btn-primary btn-full btn-lg" onclick="showNotif('Chapter published successfully!')">
+          Publish chapter
+        </button>
+        <button class="btn btn-full" style="margin-top:8px" onclick="showNotif('Draft saved')">
+          Save as draft
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- ══════════════════════════════════════════
+     PUBLISH MODAL
+══════════════════════════════════════════ -->
+<div class="modal-overlay" id="publishModal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-title">Ready to publish?</div>
+    <div class="modal-sub">Review your story details before it goes live. Your followers will be notified.</div>
+
+    <div class="preview-mini">
+      <div class="preview-mini-cover" id="modalCover">🌿</div>
+      <div class="preview-mini-body">
+        <div class="preview-mini-title" id="modalTitle">—</div>
+        <div class="preview-mini-meta" id="modalMeta">—</div>
+      </div>
+    </div>
+
+    <div class="modal-row">
+      <span class="modal-row-lbl">Visibility</span>
+      <select class="sort-sel" style="font-size:12.5px">
+        <option>Public</option>
+        <option>Followers only</option>
+        <option>Unlisted</option>
+      </select>
+    </div>
+    <div class="modal-row">
+      <span class="modal-row-lbl">Notify followers</span>
+      <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+    </div>
+    <div class="modal-row">
+      <span class="modal-row-lbl">Publish time</span>
+      <select class="sort-sel" style="font-size:12.5px">
+        <option>Now</option><option>Schedule…</option>
+      </select>
+    </div>
+
+    <div class="modal-divider"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closePublishModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmPublish()">✓ Publish now</button>
+    </div>
+  </div>
+</div>
+
+<!-- Notification toast -->
+<div class="notif" id="notif">
+  <span id="notif-icon">✓</span>
+  <span id="notif-text">Done!</span>
+</div>
+
+<script>
+// ── Read storyId from URL
+const params = new URLSearchParams(window.location.search);
+const storyId = params.get('storyId') || '';
+
+// ── Page navigation
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+}
+
+// ── Load story data from API
+async function loadStory() {
+  if (!storyId) return;
+  try {
+    const res = await fetch(`/api/writer/stories/${encodeURIComponent(storyId)}`, { credentials: 'include' });
+    const data = await res.json();
+    if (!data.success || !data.data) return;
+    const s = data.data;
+
+    document.getElementById('storyTitle').value = s.title || '';
+    document.getElementById('storyDescription').value = s.description || s.synopsis || '';
+    document.getElementById('editPageTitle').textContent = s.title || 'Edit Story';
+    document.getElementById('chapterStoryName').textContent = s.title || '—';
+    document.getElementById('modalTitle').textContent = s.title || '—';
+
+    const chapters = s._count ? (s._count.chapters || 0) : (s.chapters || 0);
+    document.getElementById('storyChapterCount').textContent = chapters;
+    document.getElementById('storyReads').textContent = s.reads || s._count?.readingProgress || 0;
+    document.getElementById('storyCreated').textContent = s.createdAt ? new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+    const statusMap = { PUBLISHED: 'Published', DRAFT: 'Draft', SCHEDULED: 'Scheduled' };
+    document.getElementById('storyStatusBadge').textContent = statusMap[s.status] || s.status || 'Draft';
+
+    const genre = s.genre || 'General';
+    document.getElementById('modalMeta').textContent = `${genre} · ${chapters} chapters · ${statusMap[s.status] || 'Draft'}`;
+
+    const genreSelect = document.getElementById('storyGenre');
+    for (const opt of genreSelect.options) {
+      if (opt.value.toLowerCase() === genre.toLowerCase()) { opt.selected = true; break; }
+    }
+  } catch (e) { /* silent */ }
+}
+
+// ── Save draft
+document.getElementById('saveDraftBtn').addEventListener('click', async () => {
+  if (!storyId) { showNotif('No story loaded'); return; }
+  const title = document.getElementById('storyTitle').value.trim();
+  const description = document.getElementById('storyDescription').value.trim();
+  const genre = document.getElementById('storyGenre').value;
+  try {
+    const res = await fetch(`/api/writer/stories/${encodeURIComponent(storyId)}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, synopsis: description, genre })
+    });
+    const data = await res.json();
+    if (data.success) { showNotif('Draft saved'); document.getElementById('editPageTitle').textContent = title || 'Edit Story'; }
+    else showNotif(data.error || 'Could not save');
+  } catch (e) { showNotif('Could not save right now'); }
+});
+
+// ── Delete story
+document.getElementById('deleteStoryBtn').addEventListener('click', async () => {
+  if (!storyId || !confirm('Delete this story? This cannot be undone.')) return;
+  try {
+    const res = await fetch(`/api/writer/stories/${encodeURIComponent(storyId)}`, { method: 'DELETE', credentials: 'include' });
+    const data = await res.json();
+    if (data.success) window.location.href = '/writer/writer-dashboard.html';
+    else showNotif(data.error || 'Could not delete');
+  } catch (e) { showNotif('Could not delete right now'); }
+});
+
+// ── Publish modal
+function openPublishModal() {
+  document.getElementById('publishModal').classList.add('open');
+}
+function closePublishModal() {
+  document.getElementById('publishModal').classList.remove('open');
+}
+function closeModal(e) {
+  if (e.target === document.getElementById('publishModal')) closePublishModal();
+}
+async function confirmPublish() {
+  if (!storyId) { closePublishModal(); showNotif('No story loaded'); return; }
+  try {
+    const res = await fetch(`/api/writer/stories/${encodeURIComponent(storyId)}/publish`, { method: 'POST', credentials: 'include' });
+    const data = await res.json();
+    closePublishModal();
+    if (data.success) { showNotif('Story published successfully!'); loadStory(); }
+    else showNotif(data.error || 'Could not publish');
+  } catch (e) { closePublishModal(); showNotif('Could not publish right now'); }
+}
+
+// ── Schedule toggle
+function toggleSched() {
+  const on = document.getElementById('schedToggle').checked;
+  document.getElementById('schedDate').style.display = on ? 'block' : 'none';
+}
+
+// ── Word count
+function updateWordCount() {
+  const title = document.getElementById('chapterTitle').value;
+  const body = document.getElementById('chapterBody').value;
+  const text = (title + ' ' + body).trim();
+  const words = text ? text.split(/\s+/).length : 0;
+  document.getElementById('wordCountDisplay').textContent = words.toLocaleString();
+  const mins = Math.max(1, Math.round(words / 200));
+  document.getElementById('readTimeDisplay').textContent = mins + ' min read';
+}
+
+// ── Notification toast
+let notifTimer;
+function showNotif(msg) {
+  clearTimeout(notifTimer);
+  const n = document.getElementById('notif');
+  document.getElementById('notif-text').textContent = msg;
+  n.classList.add('show');
+  notifTimer = setTimeout(() => n.classList.remove('show'), 3000);
+}
+
+// ── Init
+loadStory();
+</script>
+</body>
+</html>

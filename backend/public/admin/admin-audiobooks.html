@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Audiobook Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/admin/admin-audiobooks.css" />
+</head>
+<body>
+  <div class="admin-shell">
+    <aside class="admin-sidebar" aria-label="Admin Navigation">
+      <a href="/admin/admin.html" class="brand">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>Novara Admin</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        <a href="/admin/admin.html">Dashboard</a>
+        <a href="/admin/admin-books.html">Books</a>
+        <a href="/admin/admin-upload.html">Upload Book</a>
+            <h1>Audio Track Management</h1>
+        <a href="/admin/admin-audiobooks.html" class="active">Audiobooks</a>
+        <a href="/admin/admin-ai.html">AI Generator</a>
+        <a href="/admin/admin-users.html">Users</a>
+        <a href="/admin/admin-analytics.html">Analytics</a>
+        <a href="/admin/admin-settings.html">Settings</a>
+      </nav>
+            <span>Select Book</span>
+      <button type="button" id="logoutBtn" class="logout-btn">Logout</button>
+    </aside>
+          <div class="field compact compact-actions">
+            <button type="button" id="refreshBtn" class="text-btn">Refresh Tracks</button>
+            <span id="pageMessage" class="hint" aria-live="polite">Choose a book to manage tracks.</span>
+          </div>
+        </label>
+
+        <div class="field">
+          <section class="panel editor-panel" aria-label="Audio track form">
+          <div class="dropzone" id="fullDropzone">
+              <h2 id="formHeading">Create Audio Track</h2>
+              <span id="formMode" class="hint">Create mode</span>
+            <small id="fullAudioName">No file selected</small>
+
+            <form id="trackForm" class="meta-grid" novalidate>
+              <label class="field" for="trackTitleInput">
+                <span>Title</span>
+                <input id="trackTitleInput" type="text" maxlength="140" required />
+              </label>
+
+              <label class="field" for="audioUrlInput">
+                <span>Audio URL</span>
+                <input id="audioUrlInput" type="url" placeholder="https://... or /uploads/..." required />
+              </label>
+
+              <label class="field" for="orderInput">
+                <span>Order</span>
+                <input id="orderInput" type="number" min="0" step="1" required />
+              </label>
+
+              <label class="field" for="durationInput">
+                <span>Duration (seconds)</span>
+                <input id="durationInput" type="number" min="1" step="1" placeholder="Optional" />
+              </label>
+
+              <label class="field" for="chapterIdSelect">
+                <span>Chapter (optional)</span>
+                <select id="chapterIdSelect"></select>
+              </label>
+
+              <div class="field compact form-actions">
+                <button type="submit" id="saveTrackBtn" class="btn">Create Track</button>
+                <button type="button" id="cancelEditBtn" class="text-btn" disabled>Cancel Edit</button>
+              </div>
+            </form>
+
+            <p id="formMessage" class="hint" aria-live="polite"></p>
+          </section>
+
+          <section class="panel chapter-panel" aria-label="Existing audio tracks">
+            <section class="panel subpanel" aria-labelledby="tracksHeading">
+              <input id="narratorInput" type="text" maxlength="80" placeholder="Narrator name" />
+                <h3 id="tracksHeading">Tracks (Ordered)</h3>
+                <span id="trackSummary" class="hint">0 tracks</span>
+
+            <label class="field" for="durationInput">
+              <span>Duration (Placeholder)</span>
+              <input id="durationInput" type="text" maxlength="20" placeholder="00:00" />
+            </label>
+                      <th>Order</th>
+                      <th>Title</th>
+                      <th>Chapter</th>
+                      <th>Duration</th>
+                      <th>Audio URL</th>
+                      <th>Status</th>
+          <div class="actions">
+            <button type="button" id="saveMetaBtn" class="btn">Save Track Metadata</button>
+            <span id="message" class="hint" aria-live="polite"></span>
+          </div>
+
+          <section class="panel subpanel" aria-labelledby="tracksHeading">
+            <div class="panel-head">
+          </section>
+                  </tr>
+                </thead>
+                <tbody id="tracksTableBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel subpanel" aria-labelledby="previewHeading">
+            <div class="panel-head">
+              <h3 id="previewHeading">Preview Player</h3>
+            </div>
+            <div class="preview-wrap">
+              <audio id="previewPlayer" controls preload="none"></audio>
+              <p id="previewInfo" class="hint">Select a chapter track with a file to preview.</p>
+            </div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script src="/js/admin/admin-audiobooks.js"></script>
+</body>
+</html>

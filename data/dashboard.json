@@ -1,0 +1,39 @@
+{
+  "continueReading": [
+    { "id": "book-last-lantern", "title": "The Last Lantern", "author": "M. K. Vale", "genre": "Mystery", "progress": 68 },
+    { "id": "book-echoes-dawn", "title": "Echoes at Dawn", "author": "Nira Sol", "genre": "Fantasy", "progress": 34 },
+    { "id": "book-code-silence", "title": "Code of Silence", "author": "Leah Warren", "genre": "Thriller", "progress": 82 }
+  ],
+  "trendingNovels": [
+    { "id": "book-midnight-atlas", "title": "Midnight Atlas", "author": "Jonas Reed", "genre": "Adventure" },
+    { "id": "book-glass-orchard", "title": "The Glass Orchard", "author": "Emi Hart", "genre": "Romance" },
+    { "id": "book-ashes-winter", "title": "Ashes of Winter", "author": "R. T. Crow", "genre": "Epic" },
+    { "id": "book-velvet-constellations", "title": "Velvet Constellations", "author": "Ira Bloom", "genre": "Sci-Fi" }
+  ],
+  "newReleases": [
+    { "id": "book-paper-moons", "title": "Paper Moons", "author": "Talia Mercer", "genre": "Contemporary" },
+    { "id": "book-ninth-listener", "title": "The Ninth Listener", "author": "Miko Hale", "genre": "Horror" },
+    { "id": "book-whisperline", "title": "Whisperline", "author": "Ana Flores", "genre": "Drama" }
+  ],
+  "recommendedForYou": [
+    { "id": "book-quiet-waters", "title": "Below Quiet Waters", "author": "Adrian Poe", "genre": "Mystery", "progress": 12 },
+    { "id": "book-sun-attic", "title": "Sun in the Attic", "author": "Hazel Nyx", "genre": "Historical" },
+    { "id": "book-clockmaker-signal", "title": "The Clockmaker's Signal", "author": "Noah Pierce", "genre": "Steampunk", "progress": 49 }
+  ],
+  "audiobooks": [
+    { "id": "book-wild-meridian", "title": "Wild Meridian", "author": "Sara Quinn", "genre": "Audiobook" },
+    { "id": "book-house-wind", "title": "A House of Wind", "author": "Peter Lane", "genre": "Audiobook", "progress": 55 },
+    { "id": "book-poets-harbor", "title": "The Poet's Harbor", "author": "Jamie Cross", "genre": "Audiobook" }
+  ],
+  "categoriesGenres": [
+    "Fantasy",
+    "Romance",
+    "Mystery",
+    "Sci-Fi",
+    "Historical",
+    "Self Growth",
+    "Young Adult",
+    "Dark Academia"
+  ],
+  "recentlyAdded": []
+}

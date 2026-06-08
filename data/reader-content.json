@@ -1,0 +1,83 @@
+{
+  "books": [
+    {
+      "id": "book-last-lantern",
+      "title": "The Last Lantern",
+      "author": "M. K. Vale",
+      "format": "structured",
+      "hasAudiobook": true,
+      "audiobookTracks": [
+        { "number": 1, "title": "Track 1 - A Light on the Water" },
+        { "number": 2, "title": "Track 2 - Old Harbor Notes" },
+        { "number": 3, "title": "Track 3 - The Keeper's Name" }
+      ],
+      "chapters": [
+        {
+          "number": 1,
+          "title": "A Light on the Water",
+          "paragraphs": [
+            "The lantern had been dark for twelve years, but tonight a seam of light cut through the fog as if the tower had remembered its own pulse.",
+            "Mara stood at the end of Pier Seven with her coat collar raised, watching the beam sweep over the moored trawlers and the broken clock on the fish market roof.",
+            "In this town, people trusted old stone before they trusted each other. If the lighthouse had spoken, someone had gone to great lengths to make sure she heard it.",
+            "She checked her notebook again: two missing ledger books, one anonymous postcard, and a key that smelled of salt and machine oil.",
+            "By the time the foghorn sounded, Mara knew she would not sleep. The light had called her by name."
+          ]
+        },
+        {
+          "number": 2,
+          "title": "Old Harbor Notes",
+          "paragraphs": [
+            "The archive room in Harbor Hall was colder than the docks. Files were stacked in steel cabinets labeled with years no one wanted to revisit.",
+            "Mara found the lighthouse registry bound in green cloth and brittle tape. The page for winter storms had been cut cleanly from the spine.",
+            "She copied a sequence of tide marks into her notebook: 5.2, 4.8, 6.1. Beneath them was a phrase written in graphite: keepers lie in pairs.",
+            "When she looked up, the janitor was standing at the doorway with a ring of keys and a face that refused surprise.",
+            "He said only one thing before leaving: check the bell tower before sunrise."
+          ]
+        },
+        {
+          "number": 3,
+          "title": "The Keeper's Name",
+          "paragraphs": [
+            "The bell tower steps spiraled upward in narrow circles. Dust rose with each footfall, and each footfall sounded like a second hand hitting glass.",
+            "On the landing beneath the bell, Mara found a brass plate with a name she had crossed out years ago in her own reports.",
+            "The name belonged to Jonas Keen, lighthouse keeper, presumed drowned. The brass was warm despite the morning cold.",
+            "Wedged into a crack behind the plate sat a folded map of the harbor with one buoy marked in red ink.",
+            "When the bell rang six times, the map slipped from her hand like it was trying to be read."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "book-echoes-dawn",
+      "title": "Echoes at Dawn",
+      "author": "Nira Sol",
+      "format": "structured",
+      "hasAudiobook": false,
+      "audiobookTracks": [],
+      "chapters": [
+        {
+          "number": 1,
+          "title": "Sun before Storm",
+          "paragraphs": [
+            "The first rule of dawn-song was simple: never sing the final note before the sun touched stone.",
+            "Arin had broken that rule once, and the village still carried the echo in cracked windows and restless sleep.",
+            "At the edge of the pass, she tightened the silk around her wrist and listened for the choir hidden in the wind.",
+            "Somewhere above the ridge, bells answered in a key no human throat could hold.",
+            "By noon, she would have to choose between silence and becoming the voice she feared."
+          ]
+        },
+        {
+          "number": 2,
+          "title": "The Broken Violin",
+          "paragraphs": [
+            "The violin case had no handle, only scorched marks where one used to be.",
+            "Inside, the wood looked split beyond repair until Arin noticed the fractures moving like ink in water.",
+            "Each crack traced a path between songs she had never learned and names she did not remember speaking.",
+            "Master Vel warned her that instruments were doors pretending to be objects.",
+            "At dusk she placed the bow on the strings and felt the room hold its breath."
+          ]
+        }
+      ]
+    }
+  ]
+}

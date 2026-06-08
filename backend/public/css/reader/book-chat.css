@@ -1,0 +1,392 @@
+/* ── Book Chat 2-Panel Layout ───────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Ensure [hidden] is respected even when component CSS sets display:flex */
+.bc-chat[hidden],
+.bc-welcome[hidden] { display: none !important; }
+
+/* Full-viewport 2-column grid */
+.bc-layout {
+  display: grid;
+  grid-template-columns: 270px 1fr;
+  height: 100dvh;
+  overflow: hidden;
+  background: var(--surface, #faf9f7);
+  font-family: var(--font-body, 'Manrope', sans-serif);
+  color: var(--text, #1a1a1a);
+}
+
+/* ── LEFT SIDEBAR ────────────────────────────────────────── */
+.bc-sidebar {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-soft, #f3f1ec);
+  border-right: 1px solid var(--border, #e0dbd3);
+  overflow: hidden;
+}
+
+.bc-sidebar-top {
+  padding: 1rem 1rem 0;
+  flex-shrink: 0;
+}
+
+.bc-sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+}
+
+.bc-sidebar-title {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.bc-back-link {
+  font-size: 1rem;
+  color: var(--muted, #888);
+  text-decoration: none;
+  padding: 0.2rem 0.4rem;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.12s;
+}
+.bc-back-link:hover { color: var(--text, #1a1a1a); }
+
+.bc-sidebar-search input {
+  width: 100%;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--border, #e0dbd3);
+  border-radius: 8px;
+  background: var(--surface, #faf9f7);
+  color: var(--text, #1a1a1a);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.12s;
+  margin-bottom: 1rem;
+}
+.bc-sidebar-search input:focus { border-color: var(--accent, #c0813a); }
+
+/* Rooms scroll area */
+.bc-rooms-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 0.5rem;
+  scrollbar-width: thin;
+}
+
+.bc-section-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--muted, #999);
+  padding: 0.2rem 0.5rem 0.4rem;
+  margin: 0;
+}
+
+.bc-room-list {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.bc-room-loading {
+  font-size: 0.82rem;
+  color: var(--muted, #999);
+  padding: 0.4rem 0.6rem;
+}
+
+.bc-room-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.6rem;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.12s, border-color 0.12s;
+}
+.bc-room-item:hover { background: color-mix(in srgb, var(--accent, #c0813a) 8%, transparent); }
+.bc-room-item.active {
+  background: color-mix(in srgb, var(--accent, #c0813a) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent, #c0813a) 30%, transparent);
+}
+
+.bc-room-cover {
+  width: 36px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--border, #e0dbd3);
+}
+
+.bc-room-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.bc-room-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-room-count {
+  font-size: 0.73rem;
+  color: var(--muted, #999);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+/* Sidebar footer */
+.bc-sidebar-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--border, #e0dbd3);
+  flex-shrink: 0;
+}
+
+.bc-foot-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--accent, #c0813a);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.bc-foot-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.bc-foot-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-foot-status {
+  font-size: 0.72rem;
+  color: var(--muted, #999);
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+/* Green online dot (shared) */
+.bc-online-dot {
+  display: inline-block;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: #4caf50;
+  flex-shrink: 0;
+}
+
+/* ── MAIN AREA ────────────────────────────────────────────── */
+.bc-main {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Welcome splash */
+.bc-welcome {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bc-welcome-inner {
+  text-align: center;
+  color: var(--muted, #999);
+}
+
+.bc-welcome-icon {
+  font-size: 3rem;
+  display: block;
+  margin-bottom: 0.75rem;
+}
+
+.bc-welcome-inner h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 0.4rem;
+  color: var(--text, #1a1a1a);
+}
+
+.bc-welcome-inner p {
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+/* Chat container */
+.bc-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Chat header with book info */
+.bc-chat-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.8rem 1.2rem;
+  border-bottom: 1px solid var(--border, #e0dbd3);
+  background: var(--surface, #faf9f7);
+  flex-shrink: 0;
+}
+
+.bc-book-cover {
+  width: 36px;
+  height: 52px;
+  object-fit: cover;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: var(--border, #e0dbd3);
+}
+
+.bc-book-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.bc-book-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-book-author {
+  font-size: 0.78rem;
+  color: var(--muted, #999);
+}
+
+.bc-online-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: color-mix(in srgb, #4caf50 12%, transparent);
+  border: 1px solid color-mix(in srgb, #4caf50 30%, transparent);
+  color: #2e7d32;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Save Room button */
+.bc-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border: 1.5px solid var(--border, #e0dbd3);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted, #888);
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.bc-save-btn:hover {
+  background: color-mix(in srgb, var(--accent, #c0813a) 8%, transparent);
+  color: var(--accent, #c0813a);
+  border-color: color-mix(in srgb, var(--accent, #c0813a) 40%, transparent);
+}
+.bc-save-btn[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--accent, #c0813a) 11%, transparent);
+  color: var(--accent, #c0813a);
+  border-color: color-mix(in srgb, var(--accent, #c0813a) 45%, transparent);
+}
+.bc-save-btn[aria-pressed="true"] svg {
+  fill: var(--accent, #c0813a);
+  stroke: var(--accent, #c0813a);
+}
+
+/* Messages area */
+.bc-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  scrollbar-width: thin;
+}
+
+/* Input row */
+.bc-input-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.2rem;
+  border-top: 1px solid var(--border, #e0dbd3);
+  background: var(--surface, #faf9f7);
+  flex-shrink: 0;
+}
+
+.bc-input-row input {
+  flex: 1;
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border, #e0dbd3);
+  border-radius: 8px;
+  background: var(--surface-soft, #f3f1ec);
+  color: var(--text, #1a1a1a);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.bc-input-row input:focus { border-color: var(--accent, #c0813a); }
+
+.bc-input-row button:not(.chat-emoji-btn) {
+  width: 38px; height: 38px;
+  border-radius: 8px;
+  background: var(--accent, #c0813a);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: opacity 0.12s;
+}
+.bc-input-row button:not(.chat-emoji-btn):hover { opacity: 0.85; }
+
+/* Override chat.css .chat-msg to work inside .bc-messages */
+.bc-messages .chat-msg { max-width: 78%; }

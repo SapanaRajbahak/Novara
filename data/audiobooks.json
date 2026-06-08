@@ -1,0 +1,38 @@
+{
+  "books": [
+    {
+      "id": "book-last-lantern",
+      "title": "The Last Lantern",
+      "author": "M. K. Vale",
+      "genre": "Mystery",
+      "tracks": [
+        { "number": 1, "title": "A Light on the Water", "durationSec": 710 },
+        { "number": 2, "title": "Old Harbor Notes", "durationSec": 654 },
+        { "number": 3, "title": "The Keeper's Name", "durationSec": 702 },
+        { "number": 4, "title": "Storm Ledger", "durationSec": 770 }
+      ]
+    },
+    {
+      "id": "book-echoes-dawn",
+      "title": "Echoes at Dawn",
+      "author": "Nira Sol",
+      "genre": "Fantasy",
+      "tracks": [
+        { "number": 1, "title": "Sun before Storm", "durationSec": 690 },
+        { "number": 2, "title": "The Broken Violin", "durationSec": 735 },
+        { "number": 3, "title": "A Debt of Silence", "durationSec": 744 }
+      ]
+    },
+    {
+      "id": "book-poets-harbor",
+      "title": "The Poet's Harbor",
+      "author": "Jamie Cross",
+      "genre": "Drama",
+      "tracks": [
+        { "number": 1, "title": "Tide Room", "durationSec": 612 },
+        { "number": 2, "title": "Lantern Reading", "durationSec": 688 },
+        { "number": 3, "title": "Homeward Script", "durationSec": 727 }
+      ]
+    }
+  ]
+}
