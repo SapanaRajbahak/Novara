@@ -378,7 +378,6 @@ function renderPlans() {
         ${plan.save ? `<div class="plan-save-badge">${plan.save}</div>` : ''}
         <div class="plan-name">${plan.name}</div>
         <div class="plan-price">${plan.priceDisplay} <sub>${plan.per}</sub></div>
-        <div class="plan-per">${plan.coins} included coins</div>
         <div class="plan-divider"></div>
         <div class="plan-perks">
           ${plan.perks.map(perk => `
