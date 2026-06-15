@@ -38,6 +38,9 @@ function buildSafeUser(user) {
     avatarUrl: user.avatarUrl || "",
     role: user.role,
     isWriter: Boolean(user.isWriter),
+    isSubscribed: Boolean(user.isSubscribed),
+    subscriptionPlan: user.subscriptionPlan || "",
+    subscriptionStatus: user.subscriptionStatus || "",
     coins: Number(user.coins || 0),
     writerProfile: {
       penName: user.penName || "",

@@ -27,6 +27,31 @@ function isPublicDomainBook(book) {
   return tags.includes("public-domain") || tags.includes("project-gutenberg");
 }
 
+function isEarlyAccessLocked(chapter, settings, isSubscriber, publicDomainBook) {
+  if (publicDomainBook) {
+    return false;
+  }
+  if (isSubscriber) {
+    return false;
+  }
+  if (settings.earlyAccess !== true) {
+    return false;
+  }
+
+  const hours = Number(settings.earlyAccessHours ?? 24);
+  if (!Number.isFinite(hours) || hours <= 0) {
+    return false;
+  }
+
+  const createdAtMs = new Date(chapter?.createdAt).getTime();
+  if (!Number.isFinite(createdAtMs)) {
+    return false;
+  }
+
+  const lockUntil = createdAtMs + hours * 60 * 60 * 1000;
+  return Date.now() < lockUntil;
+}
+
 function chapterUnlockReference(chapterId) {
   return `chapter_unlock:${chapterId}`;
 }
@@ -108,9 +133,12 @@ async function getBookChapters(req, res) {
       const chNum  = Number(chapter.chapterNumber);
       const isFree = publicDomainBook || isFreeChapter(chNum, settings);
       const isUnlocked = isAuthenticated && unlockedChapterIds.has(chapter.id);
+      const earlyAccessLocked = isEarlyAccessLocked(chapter, settings, isSubscriber, publicDomainBook);
 
       let locked = false;
-      if (!isFree) {
+      if (earlyAccessLocked) {
+        locked = true;
+      } else if (!isFree) {
         if (isSubscriber && settings.subUnlimited !== false) {
           locked = false; // subscribers bypass locks
         } else if (!isAuthenticated) {
@@ -125,6 +153,7 @@ async function getBookChapters(req, res) {
         isLocked:       locked,
         isFree,
         isUnlocked,
+        isEarlyAccessLocked: earlyAccessLocked,
         isLockedForGuest: !isAuthenticated && !isFree,
         unlockCost:     locked ? (settings.chapterUnlockCost ?? 10) : 0,
       };
@@ -179,6 +208,16 @@ async function getChapterById(req, res) {
     const isSubscriber    = isAuthenticated && Boolean(user.isSubscribed);
     const chNum           = Number(chapter.chapterNumber);
     const isFree          = publicDomainBook || isFreeChapter(chNum, settings);
+    const earlyAccessLocked = isEarlyAccessLocked(chapter, settings, isSubscriber, publicDomainBook);
+
+    if (earlyAccessLocked) {
+      return res.status(403).json({
+        success: false,
+        error: "This chapter is in early access for Pro members.",
+        code: "EARLY_ACCESS_PRO_ONLY",
+        proRequired: true,
+      });
+    }
 
     if (!isFree) {
       if (!isAuthenticated) {

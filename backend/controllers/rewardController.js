@@ -1,5 +1,6 @@
 const { prisma } = require('../config/db');
 const { updateReadingStreak } = require('../services/progressService');
+const { applyRewardBoost } = require('../services/subscriptionBenefitsService');
 
 // Helper to add coins and create transaction
 async function addCoinsAndTransaction({ userId, amount, type, description, referenceId }) {
@@ -47,7 +48,7 @@ exports.dailyCheckin = async (req, res) => {
       });
     }
 
-    const rewardAmount = 5;
+    const rewardAmount = applyRewardBoost(5, req.session.user);
 
     const user = await addCoinsAndTransaction({
       userId,
@@ -99,7 +100,7 @@ exports.chapterComplete = async (req, res) => {
       });
     }
 
-    const rewardAmount = 10;
+    const rewardAmount = applyRewardBoost(10, req.session.user);
 
     const user = await addCoinsAndTransaction({
       userId,
@@ -182,7 +183,7 @@ exports.adReward = async (req, res) => {
       });
     }
 
-    const rewardAmount = 5;
+    const rewardAmount = applyRewardBoost(5, req.session.user);
 
     const user = await addCoinsAndTransaction({
       userId,

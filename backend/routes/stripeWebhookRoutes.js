@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../config/stripe');
 const { prisma } = require('../config/db');
+const { getSignupBonusForPlan, normalizePlan } = require('../services/subscriptionBenefitsService');
 require('dotenv').config();
 
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -93,21 +94,56 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
 
       if (purchaseType === 'subscription') {
         try {
+          const normalizedPlan = normalizePlan(plan);
+          const signupBonusCoins = getSignupBonusForPlan(normalizedPlan);
+          const bonusReferenceId = `subscription_signup_bonus:${normalizedPlan || 'unknown'}:${data.id}`;
           const subscription = data.subscription
             ? await stripe.subscriptions.retrieve(data.subscription)
             : null;
 
-          await prisma.user.update({
-            where: { id: userId },
-            data: {
-              isSubscribed: true,
-              subscriptionPlan: plan,
-              subscriptionStatus: 'active',
-              stripeCustomerId: data.customer || null,
-              subscriptionCurrentPeriodEnd: subscription
-                ? new Date(subscription.current_period_end * 1000)
-                : null,
-            },
+          await prisma.$transaction(async (tx) => {
+            await tx.user.update({
+              where: { id: userId },
+              data: {
+                isSubscribed: true,
+                subscriptionPlan: normalizedPlan || plan,
+                subscriptionStatus: 'active',
+                stripeCustomerId: data.customer || null,
+                subscriptionCurrentPeriodEnd: subscription
+                  ? new Date(subscription.current_period_end * 1000)
+                  : null,
+              },
+            });
+
+            if (signupBonusCoins > 0) {
+              const existingBonus = await tx.walletTransaction.findFirst({
+                where: {
+                  userId,
+                  type: 'SUBSCRIPTION_SIGNUP_BONUS',
+                  referenceId: bonusReferenceId,
+                },
+                select: { id: true },
+              });
+
+              if (!existingBonus) {
+                await tx.user.update({
+                  where: { id: userId },
+                  data: { coins: { increment: signupBonusCoins } },
+                });
+
+                await tx.walletTransaction.create({
+                  data: {
+                    userId,
+                    type: 'SUBSCRIPTION_SIGNUP_BONUS',
+                    amount: signupBonusCoins,
+                    coins: signupBonusCoins,
+                    source: 'STRIPE',
+                    description: `${normalizedPlan || plan} plan signup bonus`,
+                    referenceId: bonusReferenceId,
+                  },
+                });
+              }
+            }
           });
 
           console.log(`[Stripe Webhook] Activated subscription for user ${userId}`);

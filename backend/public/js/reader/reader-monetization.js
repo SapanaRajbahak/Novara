@@ -47,8 +47,7 @@ const CFG = {
       per: 'per month',
       coins: 600,
       perks: [
-        '600 coins every month',
-        'No ads ever',
+        'Unlimited reading upto 100 ch per day',
         '1.5× reward boost',
         'Early chapter access',
         '+100 bonus coins on signup'
@@ -63,14 +62,12 @@ const CFG = {
       per: 'per year',
       save: 'Save 25%',
       coins: 7200,
-      bonusCoins: 500, // ✅ ADD THIS
+      bonusCoins: 1200,
       perks: [
-        '7200 coins per year',
-        '+500 bonus coins',
-        'No ads ever',
+        'Unlimited reading (150 per day)',
         '1.5× reward boost',
         'Early chapter access',
-        'Best value plan'
+        '+1,200 bonus coins'
       ],
       active: false,
     },

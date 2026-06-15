@@ -7,6 +7,9 @@ function buildSessionUser(user) {
     email: user.email,
     role: user.role,
     isWriter: Boolean(user.isWriter),
+    isSubscribed: Boolean(user.isSubscribed),
+    subscriptionPlan: user.subscriptionPlan || "",
+    subscriptionStatus: user.subscriptionStatus || "",
     writerProfile: {
       penName: user.penName || "",
       bio: user.bio || "",
