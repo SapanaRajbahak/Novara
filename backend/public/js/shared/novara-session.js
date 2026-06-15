@@ -1,6 +1,18 @@
 (function attachNovaraSession(global) {
+  const PROD_API_BASE_URL = "https://novara-6s67.onrender.com";
+  const DEV_API_PORT = 5002;
+  const DEV_API_BASE_URL = `http://localhost:${DEV_API_PORT}`;
+
   function resolveApiBaseUrl() {
-    const explicitBase = global.localStorage && global.localStorage.getItem("Novara.apiBaseUrl");
+    const configuredBase = global.APP_CONFIG && typeof global.APP_CONFIG.API_BASE_URL === "string"
+      ? global.APP_CONFIG.API_BASE_URL.trim()
+      : "";
+    if (configuredBase) {
+      return configuredBase.replace(/\/$/, "");
+    }
+
+    const explicitBase = global.localStorage
+      && (global.localStorage.getItem("Novara.apiBaseUrl") || global.localStorage.getItem("novara.apiBaseUrl"));
     if (explicitBase) {
       try {
         const parsed = new URL(explicitBase);
@@ -20,10 +32,27 @@
     const isFileProtocol = location.protocol === "file:";
     const isLocalHost = ["localhost", "127.0.0.1"].includes(location.hostname);
     if (isFileProtocol || isLocalHost) {
-      return "http://localhost:5002";
+      return DEV_API_BASE_URL;
     }
 
-    return location.origin || "http://localhost:5002";
+    return location.origin || PROD_API_BASE_URL;
+  }
+
+  function getApiBaseCandidates() {
+    const primaryBase = resolveApiBaseUrl();
+    const candidates = [primaryBase];
+    const location = global.location || {};
+    const isLocalPage = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
+
+    if (isLocalPage && !candidates.includes(DEV_API_BASE_URL)) {
+      candidates.push(DEV_API_BASE_URL);
+    }
+
+    if (!candidates.includes(PROD_API_BASE_URL)) {
+      candidates.push(PROD_API_BASE_URL);
+    }
+
+    return candidates;
   }
 
   const API_BASE_URL = resolveApiBaseUrl();
@@ -369,6 +398,10 @@ const state = {
 
   global.NovaraSession = {
     API_BASE_URL,
+    PROD_API_BASE_URL,
+    DEV_API_BASE_URL,
+    resolveApiBaseUrl,
+    getApiBaseCandidates,
     APP_ROUTES,
     fetchCurrentUser,
     getCurrentUser,

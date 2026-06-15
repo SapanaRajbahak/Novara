@@ -29,36 +29,7 @@ function migrateNovaraLocalStorage() {
 
 migrateNovaraLocalStorage();
 
-function resolveApiBaseUrl() {
-  const explicitBase = localStorage.getItem("Novara.apiBaseUrl");
-  if (explicitBase) {
-    try {
-      const parsed = new URL(explicitBase);
-      const isFilePage = window.location.protocol === "file:";
-      const isLocalPage = isFilePage || ["localhost", "127.0.0.1"].includes(window.location.hostname);
-      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
-      if (!isLocalPage || isExplicitLocal) {
-        return explicitBase.replace(/\/$/, "");
-      }
-    } catch (error) {
-      // Ignore invalid override and fall back to defaults.
-    }
-  }
-
-  if (window.NovaraSession && window.NovaraSession.API_BASE_URL) {
-    return String(window.NovaraSession.API_BASE_URL).replace(/\/$/, "");
-  }
-
-  const isFileProtocol = window.location.protocol === "file:";
-    const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-    if (isFileProtocol || isLocalHost) {
-      return "http://localhost:5002";
-    }
-
-    return window.location.origin;
-}
-
-const API_BASE_URL = resolveApiBaseUrl();
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
 const POST_LOGIN_REDIRECT_KEY = "novara.postLoginRedirect";
 
 function readerScoped(segment) {

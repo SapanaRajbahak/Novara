@@ -72,7 +72,7 @@ router.post("/payout/stripe-connect/onboard", async (req, res) => {
 			});
 		}
 
-		const appUrl = process.env.APP_URL || "http://localhost:5002";
+		const appUrl = process.env.APP_URL || "https://novara-6s67.onrender.com";
 		const returnUrl  = `${appUrl}/writer/writer-monetization-ai.html?stripe_return=1`;
 		const refreshUrl = `${appUrl}/writer/writer-monetization-ai.html?stripe_refresh=1`;
 

@@ -1,17 +1,5 @@
 const ADMIN_AUTH_KEY = "novara.admin.auth";
-function resolveApiBaseUrl() {
-  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
-  if (explicitBase) {
-    return explicitBase.replace(/\/$/, "");
-  }
-
-  const isFileProtocol = window.location.protocol === "file:";
-  const protocol = isFileProtocol ? "http:" : window.location.protocol;
-  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
-  return `${protocol}//${host}:5002`;
-}
-
-const API_BASE_URL = resolveApiBaseUrl();
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
 
 const elements = {
   widgets: document.getElementById("widgets"),

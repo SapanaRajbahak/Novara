@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const stripe = require('../config/stripe');
 const { requireAuth } = require('../middleware/auth');
+const APP_URL = (process.env.APP_URL || 'https://novara-6s67.onrender.com').replace(/\/+$/, '');
 
 // Map plan to Stripe price IDs (from env)
 const PLAN_PRICE_IDS = {
@@ -38,8 +39,8 @@ router.post('/create-subscription-checkout', requireAuth, async (req, res) => {
         purchaseType: 'subscription',
         plan,
       },
-      success_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=success',
-      cancel_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=cancel',
+      success_url: `${APP_URL}/reader/reader-monetization.html?checkout=success`,
+      cancel_url: `${APP_URL}/reader/reader-monetization.html?checkout=cancel`,
     });
     res.json({ url: session.url });
   } catch (err) {
@@ -68,8 +69,8 @@ router.post('/create-coin-checkout', requireAuth, async (req, res) => {
         pack,
         coins: packInfo.coins,
       },
-      success_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=success',
-      cancel_url: 'http://localhost:5002/reader/reader-monetization.html?checkout=cancel',
+      success_url: `${APP_URL}/reader/reader-monetization.html?checkout=success`,
+      cancel_url: `${APP_URL}/reader/reader-monetization.html?checkout=cancel`,
     });
     res.json({ url: session.url });
   } catch (err) {

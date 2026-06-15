@@ -240,7 +240,7 @@ async function startServer() {
     registerChatHandlers(io);
 
     httpServer.listen(PORT, () => {
-      console.log(`Auth server is running on http://localhost:${PORT}`);
+      console.log(`Server is running on port ${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);

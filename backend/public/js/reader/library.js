@@ -1,29 +1,4 @@
-function resolveApiBaseUrl() {
-  const explicitBase = window.localStorage.getItem("Novara.apiBaseUrl");
-  if (explicitBase) {
-    try {
-      const parsed = new URL(explicitBase);
-      const isLocalPage = window.location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(window.location.hostname);
-      const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
-
-      if (!isLocalPage || isExplicitLocal) {
-        return explicitBase.replace(/\/$/, "");
-      }
-    } catch (error) {
-      // Ignore invalid override and fall back to local default.
-    }
-  }
-
-  const isFileProtocol = window.location.protocol === "file:";
-  const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-  if (isFileProtocol || isLocalHost) {
-    return "http://localhost:5002";
-  }
-
-  return window.location.origin;
-}
-
-const API_BASE_URL = resolveApiBaseUrl();
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
 
 function readerScoped(segment) {
   if (window.NovaraSession && typeof window.NovaraSession.readerDataKey === "function") {

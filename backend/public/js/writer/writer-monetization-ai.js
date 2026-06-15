@@ -454,13 +454,7 @@ function resolveApiBaseUrl() {
   if (window.NovaraSession && window.NovaraSession.API_BASE_URL) {
     return window.NovaraSession.API_BASE_URL;
   }
-  const isFileProtocol = window.location.protocol === "file:";
-  const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-  if (isFileProtocol || isLocalHost) {
-    return "http://localhost:5002";
-  }
-
-  return window.location.origin;
+  return "https://novara-6s67.onrender.com";
 }
 
 function bindReferralCopyButton(link) {
