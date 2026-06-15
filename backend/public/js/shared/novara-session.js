@@ -18,9 +18,12 @@
 
     const location = global.location || {};
     const isFileProtocol = location.protocol === "file:";
-    const protocol = isFileProtocol ? "http:" : (location.protocol || "http:");
-    const host = !isFileProtocol && location.hostname ? location.hostname : "localhost";
-    return `${protocol}//${host}:5002`;
+    const isLocalHost = ["localhost", "127.0.0.1"].includes(location.hostname);
+    if (isFileProtocol || isLocalHost) {
+      return "http://localhost:5002";
+    }
+
+    return location.origin || "http://localhost:5002";
   }
 
   const API_BASE_URL = resolveApiBaseUrl();

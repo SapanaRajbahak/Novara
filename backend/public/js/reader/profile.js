@@ -5,9 +5,12 @@ function resolveApiBaseUrl() {
   }
 
   const isFileProtocol = window.location.protocol === "file:";
-  const protocol = isFileProtocol ? "http:" : window.location.protocol;
-  const host = !isFileProtocol && window.location.hostname ? window.location.hostname : "localhost";
-  return `${protocol}//${host}:5002`;
+  const isLocalHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+  if (isFileProtocol || isLocalHost) {
+    return "http://localhost:5002";
+  }
+
+  return window.location.origin;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -443,3 +446,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+
