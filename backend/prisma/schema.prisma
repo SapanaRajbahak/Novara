@@ -98,6 +98,8 @@ model User {
 
   payoutMethod    PayoutMethod?
   payoutRequests  PayoutRequest[]
+  giftsSent       Gift[]          @relation("GiftsSent")
+  giftsReceived   Gift[]          @relation("GiftsReceived")
 
   @@index([role])
   @@index([isWriter])
@@ -110,10 +112,10 @@ model User {
 model WalletTransaction {
   id          String   @id @default(cuid())
   userId      String
-  type        String   // "DAILY_CHECKIN", "CHAPTER_REWARD", "AD_REWARD", etc.
+  type        String   // "GIFT_SENT", "GIFT_RECEIVED", "PURCHASE", "REWARD_AD", "SUBSCRIPTION_BONUS", "REFUND", etc.
   amount      Int?
   description String?
-  referenceId String?
+  referenceId String?  // Can link to Gift ID
   createdAt   DateTime @default(now())
 
   // Legacy fields for compatibility (optional)
@@ -124,6 +126,7 @@ model WalletTransaction {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt])
+  @@index([type, createdAt])
 }
 
 /// Account and Session tables are intentionally omitted for now because the
@@ -512,4 +515,27 @@ model EmailOtp {
 
   @@index([expiresAt])
   @@index([cooldownUntil])
+}
+
+/// Gift transactions between readers and authors (social gifting feature)
+model Gift {
+  id          String   @id @default(cuid())
+  fromUserId  String
+  toAuthorId  String
+  
+  novelId     String?  // Book ID
+  chapterId   String?  // Chapter ID (optional context)
+  
+  amount      Int      // Coin amount gifted
+  message     String?  @db.Text  // Optional message from gifter
+  
+  createdAt   DateTime @default(now())
+  
+  fromUser    User     @relation("GiftsSent", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toAuthor    User     @relation("GiftsReceived", fields: [toAuthorId], references: [id], onDelete: Cascade)
+  
+  @@index([fromUserId, createdAt])
+  @@index([toAuthorId, createdAt])
+  @@index([novelId])
+  @@index([createdAt])
 }

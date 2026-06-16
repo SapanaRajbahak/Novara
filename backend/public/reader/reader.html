@@ -108,6 +108,80 @@
     <button id="addNoteBtn" type="button">Add Note</button>
   </div>
 
+  <div id="sendGiftModal" class="gift-modal" aria-hidden="true">
+    <div class="gift-modal-overlay"></div>
+    <div class="gift-modal-card">
+      <div class="gift-modal-header">
+        <h2>💖 Support the Author</h2>
+        <button type="button" class="gift-modal-close" aria-label="Close">×</button>
+      </div>
+      <div class="gift-modal-body">
+        <div class="gift-field">
+          <label>Quick Amounts</label>
+          <div class="quick-amounts">
+            <button type="button" class="quick-amount-btn" data-amount="10">10</button>
+            <button type="button" class="quick-amount-btn" data-amount="50">50</button>
+            <button type="button" class="quick-amount-btn" data-amount="100">100</button>
+            <button type="button" class="quick-amount-btn" data-amount="500">500</button>
+          </div>
+        </div>
+        <div class="gift-field">
+          <label>Or enter custom amount</label>
+          <div class="custom-amount-wrapper">
+            <input id="giftCustomAmountInput" type="number" min="1" placeholder="250" />
+            <button type="button" class="btn-max" id="maxBtn">MAX</button>
+          </div>
+        </div>
+        <div class="gift-field">
+          <label for="giftMessageInput">Message (optional)</label>
+          <input id="giftMessageInput" type="text" placeholder="Loved this chapter!" />
+        </div>
+        <div class="gift-balance-info">
+          <div class="balance-line">Current Balance: <span id="giftBalanceDisplay">0</span> coins</div>
+          <div class="balance-line gift-amount-line hidden" id="giftAmountLine">
+            You are gifting: <span id="giftAmountValue">0</span> coins
+          </div>
+          <div class="balance-line remaining-line hidden" id="remainingLine" style="color: var(--accent);">
+            Remaining: <span id="remainingValue">0</span> coins
+          </div>
+        </div>
+      </div>
+      <div class="gift-modal-footer">
+        <button type="button" class="btn btn-outline btn-md" id="cancelGiftBtn">Cancel</button>
+        <button type="button" class="btn btn-forest btn-md" id="sendGiftConfirmBtn">Send Gift 💖</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="giftConfirmModal" class="gift-modal" aria-hidden="true">
+    <div class="gift-modal-overlay"></div>
+    <div class="gift-modal-card gift-confirm-card">
+      <div class="gift-modal-header">
+        <h2>💖 Confirm Gift</h2>
+      </div>
+      <div class="gift-confirm-body">
+        <p>Send <strong id="confirmAmount">500</strong> coins to <strong id="confirmTarget">this author</strong>?</p>
+      </div>
+      <div class="gift-modal-footer">
+        <button type="button" class="btn btn-outline btn-md" id="confirmCancelBtn">Cancel</button>
+        <button type="button" class="btn btn-forest btn-md" id="confirmSendBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="giftSuccessModal" class="gift-modal" aria-hidden="true">
+    <div class="gift-modal-overlay"></div>
+    <div class="gift-modal-card gift-success-card">
+      <div class="gift-success-content">
+        <div class="success-emoji">🎉</div>
+        <h2>Gift Sent!</h2>
+        <p><span id="successAmount">250</span> coins gifted</p>
+        <p class="thank-you">Thank you for supporting the author!</p>
+        <button type="button" class="btn btn-forest btn-md" id="successCloseBtn">Done</button>
+      </div>
+    </div>
+  </div>
+
   <div id="settingsModal" class="settings-modal" aria-hidden="true">
     <div class="settings-card">
       <h2>Reader Settings</h2>

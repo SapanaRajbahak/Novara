@@ -39,6 +39,7 @@ const chatRoutes = require('./routes/chatRoutes');
 const friendRoutes = require('./routes/friendRoutes');
 const adminMonetizationRoutes = require("./routes/adminMonetizationRoutes");
 const monetizationRoutes = require("./routes/monetizationRoutes");
+const giftRoutes = require("./routes/giftRoutes");
 
 
 const app = express();
@@ -121,6 +122,7 @@ app.use("/api/profile", savedBooksRoutes);
 const walletRoutes = require("./routes/walletRoutes");
 app.use("/api/wallet", walletRoutes);
 app.use("/api/rewards", rewardRoutes);
+app.use("/api/gift", giftRoutes);
 app.use("/api/chat",    chatRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/admin", adminMonetizationRoutes);

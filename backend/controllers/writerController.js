@@ -92,6 +92,8 @@ async function getWriterDashboard(req, res) {
       listeningProgressRows,
       noteRows,
       bookmarkRows,
+      giftSummary,
+      giftRows,
       referralSummary,
     ] = await Promise.all([
       prisma.book.findMany({
@@ -178,6 +180,27 @@ async function getWriterDashboard(req, res) {
           book: { select: { title: true } },
         },
       }),
+      prisma.gift.aggregate({
+        where: { toAuthorId: String(userId) },
+        _sum: { amount: true },
+        _count: { id: true },
+      }),
+      prisma.gift.findMany({
+        where: { toAuthorId: String(userId) },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          amount: true,
+          message: true,
+          createdAt: true,
+          novelId: true,
+          chapterId: true,
+          fromUser: {
+            select: { id: true, name: true, penName: true, email: true },
+          },
+        },
+      }),
       getReferrerSummary(userId),
     ]);
 
@@ -257,6 +280,10 @@ async function getWriterDashboard(req, res) {
       )
       : 0;
 
+    const giftCoinsEarned = Number(giftSummary?._sum?.amount || 0);
+    const giftCount = Number(giftSummary?._count?.id || 0);
+    const bookTitleById = new Map(books.map((book) => [book.id, book.title]));
+
     const mergedActivity = [
       ...noteRows.map((row) => ({
         title: `New comment-style note on ${row.book?.title || "your story"}`,
@@ -277,6 +304,11 @@ async function getWriterDashboard(req, res) {
         title: `Chapter unlock activity in ${row.book?.title || "your story"}`,
         note: "A listener resumed your audiobook content.",
         date: row.updatedAt,
+      })),
+      ...giftRows.map((gift) => ({
+        title: `Gift received from ${gift.fromUser?.penName || gift.fromUser?.name || gift.fromUser?.email || "a reader"}`,
+        note: `+${Number(gift.amount || 0)} coins for ${bookTitleById.get(gift.novelId) || "your story"}${gift.message ? ` · ${gift.message}` : ""}`,
+        date: gift.createdAt,
       })),
     ]
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
@@ -334,6 +366,8 @@ async function getWriterDashboard(req, res) {
         monetization: {
           coinsEarned: referralSummary ? referralSummary.stats.totalCoinsEarned : 0,
           estimatedRevenue: referralSummary ? referralSummary.stats.totalEarned : 0,
+          giftCoinsEarned,
+          giftCount,
           paidChaptersUnlocked: 0,
           subscriptionReaders: 0,
           isActive: false,

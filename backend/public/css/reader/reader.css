@@ -362,9 +362,19 @@ a {
   margin-top: 1.2rem;
   padding-top: 0.9rem;
   border-top: 1px solid var(--border);
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   gap: 0.6rem;
-  justify-content: space-between;
+  align-items: center;
+  justify-items: center;
+}
+
+.chapter-end-nav button:first-child {
+  justify-self: start;
+}
+
+.chapter-end-nav button:last-child {
+  justify-self: end;
 }
 
 .chapter-end-nav .icon-btn {
@@ -720,4 +730,375 @@ a {
     left: 28%;
     right: 28%;
   }
+}
+
+/* Gift Modal Styles */
+.gift-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: none;
+  place-items: center;
+  background: rgba(9, 8, 6, 0.48);
+  padding: 1rem;
+}
+
+.gift-modal[aria-hidden="false"] {
+  display: grid;
+}
+
+.gift-modal-overlay {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+}
+
+.gift-modal-card {
+  position: relative;
+  z-index: 1;
+  width: min(500px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 1.2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.gift-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.gift-modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-family: "Fraunces", serif;
+}
+
+.gift-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text);
+  padding: 0;
+  width: 2rem;
+  height: 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.gift-modal-close:hover {
+  background: var(--border);
+}
+
+.gift-modal-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.gift-field {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.gift-field label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.custom-amount-wrapper {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.custom-amount-wrapper input {
+  flex: 1;
+}
+
+.btn-max {
+  padding: 0.6rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.btn-max:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.gift-balance-info {
+  padding: 0.8rem;
+  background: var(--bg);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+
+.balance-line {
+  margin: 0.3rem 0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.balance-line span {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.gift-amount-line span,
+.remaining-line span {
+  color: var(--accent);
+}
+
+.balance-line.hidden {
+  display: none;
+}
+
+.gift-confirm-card {
+  text-align: center;
+}
+
+.gift-confirm-body {
+  padding: 1.5rem 1rem;
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.gift-confirm-body p {
+  margin: 0.5rem 0;
+}
+
+.gift-success-card {
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.gift-success-content {
+  padding: 2rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  align-items: center;
+}
+
+.success-emoji {
+  font-size: 3rem;
+  animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  margin-bottom: 0.5rem;
+}
+
+.gift-success-content h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: var(--text);
+}
+
+.gift-success-content p {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--muted);
+}
+
+.gift-success-content .thank-you {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+@keyframes popIn {
+  0% {
+    transform: scale(0) rotate(-30deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes coinBurst {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(var(--tx), var(--ty)) scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-150px) scale(0.5) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+@keyframes floatUpLeft {
+  0% {
+    transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-180px) translateX(-80px) scale(0.3) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes floatUpRight {
+  0% {
+    transform: translateY(0) translateX(0) scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-180px) translateX(80px) scale(0.3) rotate(180deg);
+    opacity: 0;
+  }
+}
+
+.coin-particle {
+  position: fixed;
+  font-size: 1.5rem;
+  pointer-events: none;
+  animation: coinBurst 0.8s ease-out forwards;
+}
+
+.heart-particle {
+  position: fixed;
+  font-size: 1.8rem;
+  pointer-events: none;
+  animation: floatUp 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.heart-particle.left {
+  animation: floatUpLeft 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.heart-particle.right {
+  animation: floatUpRight 2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+.quick-amounts {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+}
+
+.quick-amount-btn {
+  padding: 0.6rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.quick-amount-btn:hover {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.quick-amount-btn.selected {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.gift-field input,
+.gift-field textarea {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0.6rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  width: 100%;
+}
+
+.gift-field input:focus,
+.gift-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(48, 81, 68, 0.1);
+}
+
+.gift-balance {
+  padding: 0.8rem;
+  background: var(--bg);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: var(--text);
+  text-align: center;
+  font-weight: 500;
+}
+
+.gift-balance span {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.gift-modal-footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.8rem;
+}
+
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-forest {
+  background: var(--accent);
+  color: white;
+}
+
+.btn-forest:hover {
+  background: color-mix(in oklab, var(--accent) 85%, black);
+}
+
+.btn-outline {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.btn-outline:hover {
+  background: var(--bg);
 }

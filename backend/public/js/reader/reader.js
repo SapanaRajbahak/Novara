@@ -1678,6 +1678,8 @@ function renderChapterEndNavigation() {
   if (isAtStart) {
     return `
       <div class="chapter-end-nav" aria-label="Chapter navigation">
+        <div></div>
+        <button type="button" class="icon-btn" id="sendGiftBtn" data-chapter-end-nav="gift">💖 Send Gift</button>
         <button type="button" class="icon-btn" data-chapter-end-nav="next" ${isAtEnd ? "disabled" : ""}>Next</button>
       </div>
     `;
@@ -1686,6 +1688,7 @@ function renderChapterEndNavigation() {
   return `
     <div class="chapter-end-nav" aria-label="Chapter navigation">
       <button type="button" class="icon-btn" data-chapter-end-nav="prev" ${isAtStart ? "disabled" : ""}>Prev</button>
+      <button type="button" class="icon-btn" id="sendGiftBtn" data-chapter-end-nav="gift">💖 Send Gift</button>
       <button type="button" class="icon-btn" data-chapter-end-nav="next" ${isAtEnd ? "disabled" : ""}>Next</button>
     </div>
   `;
@@ -2351,8 +2354,13 @@ function bindEvents() {
   elements.readerContent.addEventListener("click", (event) => {
     const endNavButton = event.target.closest("button[data-chapter-end-nav]");
     if (endNavButton) {
-      const direction = endNavButton.dataset.chapterEndNav === "prev" ? -1 : 1;
-      moveByPage(direction);
+      const action = endNavButton.dataset.chapterEndNav;
+      if (action === "gift") {
+        openGiftModal();
+      } else {
+        const direction = action === "prev" ? -1 : 1;
+        moveByPage(direction);
+      }
       return;
     }
 
@@ -2447,6 +2455,296 @@ function bindEvents() {
       URL.revokeObjectURL(state.localFileUrl);
     }
   });
+
+  // Gift modal event handlers
+  const giftModal = document.getElementById("sendGiftModal");
+  const giftConfirmModal = document.getElementById("giftConfirmModal");
+  const giftSuccessModal = document.getElementById("giftSuccessModal");
+  const giftCustomAmountInput = document.getElementById("giftCustomAmountInput");
+  const maxBtn = document.getElementById("maxBtn");
+  const quickAmountBtns = document.querySelectorAll(".quick-amount-btn");
+  const giftModalClose = document.querySelector(".gift-modal-close");
+  const giftModalOverlay = document.querySelector(".gift-modal-overlay");
+  const cancelGiftBtn = document.getElementById("cancelGiftBtn");
+  const sendGiftConfirmBtn = document.getElementById("sendGiftConfirmBtn");
+  const confirmCancelBtn = document.getElementById("confirmCancelBtn");
+  const confirmSendBtn = document.getElementById("confirmSendBtn");
+  const successCloseBtn = document.getElementById("successCloseBtn");
+
+  // Quick amount buttons
+  quickAmountBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const amount = btn.dataset.amount;
+      giftCustomAmountInput.value = amount;
+      quickAmountBtns.forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      updateGiftBalanceDisplay();
+    });
+  });
+
+  // MAX button
+  if (maxBtn) {
+    maxBtn.addEventListener("click", () => {
+      const maxCoins = state.currentUser?.coins || 0;
+      giftCustomAmountInput.value = maxCoins;
+      quickAmountBtns.forEach((b) => b.classList.remove("selected"));
+      updateGiftBalanceDisplay();
+    });
+  }
+
+  // Clear quick amount selection and update balance when user types in custom input
+  if (giftCustomAmountInput) {
+    giftCustomAmountInput.addEventListener("input", () => {
+      quickAmountBtns.forEach((b) => b.classList.remove("selected"));
+      updateGiftBalanceDisplay();
+    });
+  }
+
+  if (giftModalClose) {
+    giftModalClose.addEventListener("click", closeGiftModal);
+  }
+
+  if (giftModalOverlay) {
+    giftModalOverlay.addEventListener("click", closeGiftModal);
+  }
+
+  if (cancelGiftBtn) {
+    cancelGiftBtn.addEventListener("click", closeGiftModal);
+  }
+
+  if (sendGiftConfirmBtn) {
+    sendGiftConfirmBtn.addEventListener("click", validateAndProceedGift);
+  }
+
+  if (confirmCancelBtn) {
+    confirmCancelBtn.addEventListener("click", closeConfirmModal);
+  }
+
+  if (confirmSendBtn) {
+    confirmSendBtn.addEventListener("click", sendGift);
+  }
+
+  if (successCloseBtn) {
+    successCloseBtn.addEventListener("click", closeSuccessModal);
+  }
+}
+
+function updateGiftBalanceDisplay() {
+  const balanceDisplay = document.getElementById("giftBalanceDisplay");
+  const amountInput = document.getElementById("giftCustomAmountInput");
+  const amountLine = document.getElementById("giftAmountLine");
+  const remainingLine = document.getElementById("remainingLine");
+  const amountValue = document.getElementById("giftAmountValue");
+  const remainingValue = document.getElementById("remainingValue");
+
+  const userCoins = state.currentUser?.coins || 0;
+  if (balanceDisplay) {
+    balanceDisplay.textContent = userCoins;
+  }
+
+  const amount = Number(amountInput?.value || 0);
+  if (amount > 0) {
+    if (amountLine) amountLine.classList.remove("hidden");
+    if (remainingLine) remainingLine.classList.remove("hidden");
+    if (amountValue) amountValue.textContent = amount;
+    if (remainingValue) remainingValue.textContent = Math.max(0, userCoins - amount);
+  } else {
+    if (amountLine) amountLine.classList.add("hidden");
+    if (remainingLine) remainingLine.classList.add("hidden");
+  }
+}
+
+function openGiftModal() {
+  if (!state.currentUser) {
+    showToast("Login required to send gifts");
+    return;
+  }
+
+  const giftModal = document.getElementById("sendGiftModal");
+  if (giftModal) {
+    updateGiftBalanceDisplay();
+    giftModal.setAttribute("aria-hidden", "false");
+  }
+}
+
+function closeGiftModal() {
+  const giftModal = document.getElementById("sendGiftModal");
+  if (giftModal) {
+    giftModal.setAttribute("aria-hidden", "true");
+    document.getElementById("giftCustomAmountInput").value = "";
+    document.getElementById("giftMessageInput").value = "";
+    // Clear quick amount selection
+    document.querySelectorAll(".quick-amount-btn").forEach((btn) => {
+      btn.classList.remove("selected");
+    });
+    // Hide balance display
+    document.getElementById("giftAmountLine").classList.add("hidden");
+    document.getElementById("remainingLine").classList.add("hidden");
+  }
+}
+
+function validateAndProceedGift() {
+  const amount = Number(document.getElementById("giftCustomAmountInput").value || 0);
+
+  // Validate amount
+  if (!Number.isFinite(amount) || amount < 1) {
+    showToast("Please enter an amount of at least 1 coin");
+    return;
+  }
+
+  // Check balance
+  const userCoins = state.currentUser?.coins || 0;
+  if (amount > userCoins) {
+    showToast(`Not enough coins. You have ${userCoins} coins.`);
+    return;
+  }
+
+  // Show confirmation for large gifts (500+)
+  if (amount >= 500) {
+    showConfirmModal(amount);
+  } else {
+    // For small gifts, send directly
+    sendGift(amount);
+  }
+}
+
+function showConfirmModal(amount) {
+  const confirmModal = document.getElementById("giftConfirmModal");
+  const confirmOverlay = document.querySelector("#giftConfirmModal .gift-modal-overlay");
+  if (confirmModal) {
+    document.getElementById("confirmAmount").textContent = amount;
+    document.getElementById("confirmTarget").textContent = state.currentBook?.author || state.currentBook?.authorName || "this author";
+    confirmModal.setAttribute("aria-hidden", "false");
+    // Store values for confirmation
+    confirmModal.dataset.amount = amount;
+  }
+  if (confirmOverlay) {
+    confirmOverlay.addEventListener("click", closeConfirmModal, { once: true });
+  }
+}
+
+function closeConfirmModal() {
+  const confirmModal = document.getElementById("giftConfirmModal");
+  if (confirmModal) {
+    confirmModal.setAttribute("aria-hidden", "true");
+    delete confirmModal.dataset.amount;
+  }
+}
+
+function showSuccessModal(amount) {
+  const successModal = document.getElementById("giftSuccessModal");
+  if (successModal) {
+    document.getElementById("successAmount").textContent = amount;
+    successModal.setAttribute("aria-hidden", "false");
+  }
+}
+
+function closeSuccessModal() {
+  const successModal = document.getElementById("giftSuccessModal");
+  if (successModal) {
+    successModal.setAttribute("aria-hidden", "true");
+  }
+}
+
+function createCoinBurstAnimation() {
+  const giftModal = document.getElementById("giftSuccessModal");
+  if (!giftModal) return;
+
+  const rect = giftModal.getBoundingClientRect();
+  const centerX = rect.left + rect.width / 2;
+  const centerY = rect.top + rect.height / 2;
+
+  // Create coin burst (quick, outward)
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const distance = 150;
+    const tx = Math.cos(angle) * distance;
+    const ty = Math.sin(angle) * distance;
+
+    const particle = document.createElement("div");
+    particle.className = "coin-particle";
+    particle.textContent = "💰";
+    particle.style.left = centerX + "px";
+    particle.style.top = centerY + "px";
+    particle.style.setProperty("--tx", tx + "px");
+    particle.style.setProperty("--ty", ty + "px");
+    document.body.appendChild(particle);
+
+    setTimeout(() => particle.remove(), 800);
+  }
+
+  // Create floating hearts (slow, upward with curves)
+  const heartEmojis = ["💖", "💕", "💗", "💓"];
+  for (let i = 0; i < 12; i++) {
+    const delay = i * 80; // Stagger the hearts
+    const emoji = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
+    const positionVariant = i % 3; // 0 = center, 1 = left, 2 = right
+
+    const particle = document.createElement("div");
+    particle.className = "heart-particle";
+    if (positionVariant === 1) particle.classList.add("left");
+    if (positionVariant === 2) particle.classList.add("right");
+
+    particle.textContent = emoji;
+    particle.style.left = centerX + "px";
+    particle.style.top = centerY + "px";
+    particle.style.animationDelay = delay + "ms";
+    document.body.appendChild(particle);
+
+    setTimeout(() => particle.remove(), 2000 + delay);
+  }
+}
+
+async function sendGift(fallbackAmount) {
+  const confirmModal = document.getElementById("giftConfirmModal");
+  const amount = Number(confirmModal?.dataset.amount || fallbackAmount || document.getElementById("giftCustomAmountInput").value || 0);
+  const message = document.getElementById("giftMessageInput").value.trim();
+  const bookId = state.currentBook?.id || "";
+  const chapterId = state.currentChapter?.id || "";
+
+  closeConfirmModal();
+
+  // Validate amount
+  if (!Number.isFinite(amount) || amount < 10 || amount > 10000) {
+    showToast("Please enter an amount between 10 and 10,000 coins");
+    return;
+  }
+
+  if (!bookId) {
+    showToast("Unable to determine the current book");
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/gift/send`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        bookId,
+        chapterId,
+        amount,
+        message
+      })
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+      showToast(`Gift of ${amount} coins sent to the author!`);
+      if (state.currentUser) {
+        state.currentUser.coins = data.coinsRemaining || (state.currentUser.coins - amount);
+      }
+      closeGiftModal();
+    } else {
+      showToast(data.error || "Failed to send gift. Please try again.");
+    }
+  } catch (error) {
+    console.error("Gift send error:", error);
+    showToast("Error sending gift. Please check your connection.");
+  }
 }
 
 function applyIncomingMode(mode) {

@@ -131,9 +131,11 @@ async function loadWriterEarningsData() {
     }
 
     if (payload.success && payload.data && payload.data.monetization) {
-      sectionContent.innerHTML = renderWriterEarningsSection(payload.data.monetization, platformSettings);
+      sectionContent.innerHTML = renderWriterEarningsSection(payload.data, platformSettings);
+      injectGiftEarnedCard(payload.data);
     } else {
       sectionContent.innerHTML = renderWriterEarningsSection({}, platformSettings);
+      injectGiftEarnedCard({});
     }
   } catch (e) {
     sectionContent.innerHTML = '<div class="error">Unable to load earnings data.</div>';
@@ -615,7 +617,9 @@ async function loadWriterStoriesSectionData() {
   }
 }
 
-function renderWriterEarningsSection(monetization, platformSettings) {
+function renderWriterEarningsSection(data, platformSettings) {
+  const monetization = data?.monetization || data || {};
+  const recentActivity = Array.isArray(data?.recentActivity) ? data.recentActivity : [];
   const ps = platformSettings || {};
   const revenueShare   = ps.writerRevenueShare  ?? 70;
   const minPayout      = ps.minPayoutThreshold  ?? 20;
@@ -624,6 +628,8 @@ function renderWriterEarningsSection(monetization, platformSettings) {
   const payoutsOn      = ps.writerPayoutsEnabled !== false;
   const referralOn     = ps.referralProgramEnabled !== false;
   const coinSystemOn   = ps.coinSystemEnabled    !== false;
+  const giftCoinsEarned = Number(monetization.giftCoinsEarned || 0);
+  const giftCount = Number(monetization.giftCount || 0);
 
   const platformInfoBar = `
     <div class="platform-rules-bar" style="display:flex;flex-wrap:wrap;gap:10px;padding:12px 16px;background:var(--card2,#f5f0e8);border:1px solid var(--border,#e8e2d8);border-radius:10px;margin-bottom:16px;font-size:12.5px;">
@@ -667,6 +673,34 @@ function renderWriterEarningsSection(monetization, platformSettings) {
           <div class="stat-icon-row"><div class="stat-label">Available to Withdraw</div><div class="stat-icon-pill pill-blue">âœ“</div></div>
           <div class="stat-value">$384</div>
           <span class="stat-change up">â–² Threshold met</span>
+        </div>
+      </div>
+      <div class="row row-2">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Gift Activity</span></div>
+          <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">
+            Gift total: <strong>${Number(monetization.giftCoinsEarned || 0).toLocaleString()} coins</strong>
+            from <strong>${Number(monetization.giftCount || 0).toLocaleString()}</strong> gift${Number(monetization.giftCount || 0) === 1 ? "" : "s"}
+          </div>
+          <div class="activity-list">
+            ${recentActivity.filter((item) => /gift/i.test(`${item?.title || ""} ${item?.note || ""}`)).slice(0, 5).map((item) => `
+              <article class="activity-item wd-activity-row">
+                <span class="wd-activity-dot dot-red" aria-hidden="true"></span>
+                <div class="wd-activity-body">
+                  <strong>${item.title}</strong>
+                  <p>${item.note}${item.dateLabel ? ` · ${item.dateLabel}` : ""}</p>
+                </div>
+              </article>
+            `).join("") || `
+              <article class="activity-item wd-activity-row">
+                <span class="wd-activity-dot dot-green" aria-hidden="true"></span>
+                <div class="wd-activity-body">
+                  <strong>No gift activity yet</strong>
+                  <p>Reader gifts will appear here once your audience starts sending support.</p>
+                </div>
+              </article>
+            `}
+          </div>
         </div>
       </div>
       <div class="row row-3">
@@ -866,6 +900,56 @@ function renderWriterAnalyticsSection() {
       <h2>Analytics (Coming Soon)</h2>
       <div class="analytics-placeholder">Deeper insights, engagement charts, and growth metrics will appear here.</div>
     </section>
+  `;
+}
+
+function injectGiftEarnedCard(monetization) {
+  const card = sectionContent?.querySelector?.(".writer-earnings .card .card-title");
+  if (!card || card.textContent !== "Gift Activity") {
+    return;
+  }
+
+  const giftCoinsEarned = Number(monetization?.monetization?.giftCoinsEarned || monetization?.giftCoinsEarned || 0);
+  const giftCount = Number(monetization?.monetization?.giftCount || monetization?.giftCount || 0);
+  const recentActivity = Array.isArray(monetization?.recentActivity) ? monetization.recentActivity : [];
+  const gifts = recentActivity.filter((item) => /gift/i.test(`${item?.title || ""} ${item?.note || ""}`)).slice(0, 5);
+  const parentCard = card.closest(".card");
+  if (!parentCard) {
+    return;
+  }
+
+  parentCard.innerHTML = `
+    <div class="card-header"><span class="card-title">Gift earning</span></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px;">
+      Current Balance: <strong>${giftCoinsEarned.toLocaleString()} coins</strong>
+    </div>
+    <div style="font-size:11.5px;color:var(--text3);margin-bottom:10px;">
+      ${giftCount > 0 ? `${giftCount} gift${giftCount === 1 ? "" : "s"} received` : "No gifts yet"}
+    </div>
+    <div style="font-size:12px;color:var(--text2);margin:0 0 10px;font-weight:600;">Recent Gifts</div>
+    <div class="activity-list">
+      ${
+        gifts.length
+          ? gifts.map((item) => `
+            <article class="activity-item wd-activity-row">
+              <span class="wd-activity-dot dot-red" aria-hidden="true"></span>
+              <div class="wd-activity-body">
+                <strong>${item.title || "Gift received"}</strong>
+                <p>${item.note || ""}${item.dateLabel ? ` · ${item.dateLabel}` : ""}</p>
+              </div>
+            </article>
+          `).join("")
+          : `
+            <article class="activity-item wd-activity-row">
+              <span class="wd-activity-dot dot-green" aria-hidden="true"></span>
+              <div class="wd-activity-body">
+                <strong>No recent gifts yet</strong>
+                <p>Reader gifts will show up here once they start sending support.</p>
+              </div>
+            </article>
+          `
+      }
+    </div>
   `;
 }
 
@@ -1998,6 +2082,3 @@ async function loadDashboard() {
     return true;
   }
 }
-
-
-

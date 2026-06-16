@@ -47,7 +47,7 @@ const CFG = {
       per: 'per month',
       coins: 600,
       perks: [
-        'Unlimited reading upto 100 ch per day',
+        'Unlimited reading (100 per day)',
         '1.5× reward boost',
         'Early chapter access',
         '+100 bonus coins on signup'
