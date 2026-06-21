@@ -70,6 +70,32 @@
     </div>
   </div>
 
+  <!-- Checkout confirmation -->
+  <div class="overlay" id="checkoutOverlay">
+    <div class="modal checkout-modal">
+      <div class="modal-icon">💳</div>
+      <div class="modal-title" id="checkoutModalTitle">Before checkout</div>
+      <div class="modal-sub" id="checkoutModalSub">Review billing information before continuing to Stripe.</div>
+
+      <div class="checkout-legal">
+        <div class="checkout-legal-links">
+          <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+          <a href="/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+        </div>
+        <p class="checkout-legal-note" id="checkoutLegalNote">By continuing, you agree to our billing terms.</p>
+        <label class="checkout-legal-check" id="checkoutLegalCheckWrap" hidden>
+          <input type="checkbox" id="checkoutBillingAgree" />
+          <span>I agree to the billing terms and understand recurring charges</span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-forest btn-md btn-full" id="checkoutConfirmBtn">Continue to Checkout</button>
+        <button class="btn btn-outline btn-sm btn-full" data-close-overlay="checkoutOverlay">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Book Completion Modal -->
   <div class="overlay" id="bookOverlay">
     <div class="modal">

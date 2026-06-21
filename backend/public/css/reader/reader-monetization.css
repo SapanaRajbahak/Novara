@@ -1371,6 +1371,64 @@ body::after {
   gap: 10px;
 }
 
+.checkout-legal {
+  margin: 18px 0 4px;
+  padding: 14px;
+  border: 1px solid var(--ink-05);
+  border-radius: 12px;
+  background: var(--ink-02);
+  text-align: left;
+}
+
+.checkout-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.checkout-legal-links a {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--forest);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.checkout-legal-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink-60);
+  line-height: 1.5;
+}
+
+.checkout-legal-check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.55rem;
+  align-items: start;
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkout-legal-check input {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.15rem;
+  accent-color: var(--forest);
+}
+
+.checkout-legal-check span {
+  font-size: 0.82rem;
+  color: var(--ink-60);
+  line-height: 1.45;
+}
+
+#checkoutConfirmBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .ring-wrap {
   position: relative;
   width: 108px;

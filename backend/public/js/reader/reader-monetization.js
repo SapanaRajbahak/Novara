@@ -107,6 +107,8 @@ const state = {
   history: [], // No fake coin pack purchases or demo entries
 };
 
+let pendingCheckout = null;
+
 function getPaywallParams() {
   const params = new URLSearchParams(window.location.search);
   return {
@@ -262,13 +264,13 @@ function bindEvents() {
 
     const packBtn = e.target.closest('[data-pack-id]');
     if (packBtn) {
-      buyPack(packBtn.dataset.packId);
+      openCheckoutModal('coins', packBtn.dataset.packId);
       return;
     }
 
     const planBtn = e.target.closest('[data-plan-id]');
     if (planBtn) {
-      subscribePlan(planBtn.dataset.planId);
+      openCheckoutModal('subscription', planBtn.dataset.planId);
       return;
     }
 
@@ -300,6 +302,8 @@ function bindEvents() {
 
   document.getElementById('cancelAdBtn')?.addEventListener('click', cancelAd);
   document.getElementById('unlockConfirmBtn')?.addEventListener('click', confirmUnlock);
+  document.getElementById('checkoutConfirmBtn')?.addEventListener('click', confirmCheckout);
+  document.getElementById('checkoutBillingAgree')?.addEventListener('change', updateCheckoutConfirmState);
   document.getElementById('completeBookBtn')?.addEventListener('click', completeBook);
   document.getElementById('startNextBookBtn')?.addEventListener('click', startNextBook);
   document.getElementById('watchBonusAdBtn')?.addEventListener('click', () => {
@@ -598,10 +602,80 @@ function renderChapters() {
 }
 
 
+function openCheckoutModal(type, id) {
+  const pack = type === 'coins' ? CFG.COIN_PACKS.find((p) => p.id === id) : null;
+  const plan = type === 'subscription' ? CFG.PLANS.find((p) => p.id === id) : null;
+
+  if (type === 'coins' && !pack) return;
+  if (type === 'subscription' && !plan) return;
+  if (type === 'subscription' && state.activePlanId === id) {
+    toast('This plan is already active', '⭐', 'purple');
+    return;
+  }
+
+  pendingCheckout = { type, id };
+
+  const titleEl = document.getElementById('checkoutModalTitle');
+  const subEl = document.getElementById('checkoutModalSub');
+  const noteEl = document.getElementById('checkoutLegalNote');
+  const checkWrap = document.getElementById('checkoutLegalCheckWrap');
+  const agreeInput = document.getElementById('checkoutBillingAgree');
+
+  if (type === 'coins') {
+    titleEl.textContent = 'Buy coin pack';
+    subEl.textContent = `${pack.coins} coins for ${pack.priceDisplay} — one-time purchase via Stripe.`;
+    noteEl.hidden = false;
+    noteEl.textContent = 'By continuing to checkout, you agree to our billing terms.';
+    checkWrap.hidden = true;
+    if (agreeInput) agreeInput.checked = false;
+  } else {
+    titleEl.textContent = 'Subscribe to Pro';
+    subEl.textContent = `${plan.name} — ${plan.priceDisplay} ${plan.per}. Renews automatically until cancelled.`;
+    noteEl.hidden = true;
+    checkWrap.hidden = false;
+    if (agreeInput) agreeInput.checked = false;
+  }
+
+  updateCheckoutConfirmState();
+  openOverlay('checkoutOverlay');
+}
+
+function updateCheckoutConfirmState() {
+  const confirmBtn = document.getElementById('checkoutConfirmBtn');
+  const agreeInput = document.getElementById('checkoutBillingAgree');
+  if (!confirmBtn || !pendingCheckout) return;
+
+  if (pendingCheckout.type === 'subscription') {
+    confirmBtn.disabled = !(agreeInput && agreeInput.checked);
+  } else {
+    confirmBtn.disabled = false;
+  }
+}
+
+async function confirmCheckout() {
+  if (!pendingCheckout) return;
+
+  if (pendingCheckout.type === 'subscription') {
+    const agreeInput = document.getElementById('checkoutBillingAgree');
+    if (!agreeInput || !agreeInput.checked) {
+      toast('Please agree to the billing terms to continue.', '⚠️', 'warn');
+      return;
+    }
+    closeOverlay('checkoutOverlay');
+    toast('Redirecting to Stripe subscription…', '💳', 'info');
+    await subscribePlan(pendingCheckout.id);
+  } else {
+    closeOverlay('checkoutOverlay');
+    toast('Redirecting to Stripe checkout…', '💳', 'info');
+    await buyPack(pendingCheckout.id);
+  }
+
+  pendingCheckout = null;
+}
+
 async function buyPack(packId) {
   const pack = CFG.COIN_PACKS.find(p => p.id === packId);
   if (!pack) return;
-  toast('Redirecting to Stripe checkout…', '💳', 'info');
   try {
     const res = await fetch('/api/billing/create-coin-checkout', {
       method: 'POST',
@@ -965,6 +1039,11 @@ function openOverlay(id) {
 
 function closeOverlay(id) {
   document.getElementById(id)?.classList.remove('open');
+  if (id === 'checkoutOverlay') {
+    pendingCheckout = null;
+    const agreeInput = document.getElementById('checkoutBillingAgree');
+    if (agreeInput) agreeInput.checked = false;
+  }
 }
 
 function updateAdRing(remaining) {

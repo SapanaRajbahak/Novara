@@ -166,7 +166,18 @@
           <span>Password</span>
           <input type="password" name="password" minlength="8" pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}" required title="At least 8 characters with uppercase, lowercase, number, and special character" />
         </label>
-        <button type="submit" class="solid-btn auth-submit">Create Account</button>
+        <div class="auth-agreement" aria-labelledby="signupAgreementHeading">
+          <p id="signupAgreementHeading" class="auth-agreement-lead">Before continuing, please review and accept:</p>
+          <div class="auth-agreement-docs">
+            <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms of Service</a>
+            <a href="/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+          </div>
+          <label class="auth-agreement-check">
+            <input type="checkbox" id="signupLegalAgree" name="legalAgree" required />
+            <span>I agree to the <a href="/terms/" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a></span>
+          </label>
+        </div>
+        <button type="submit" class="solid-btn auth-submit" id="signupSubmitBtn">Create Account</button>
       </form>
       <form id="signupOtpForm" class="auth-form" hidden>
         <p class="otp-help">Enter the 6-digit code sent to <strong id="signupOtpEmail">your email</strong>.</p>

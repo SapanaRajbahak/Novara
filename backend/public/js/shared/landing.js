@@ -32,6 +32,8 @@ const elements = {
   signupOtpEmail: document.getElementById("signupOtpEmail"),
   signupOtpResendBtn: document.getElementById("signupOtpResendBtn"),
   signupOtpBackBtn: document.getElementById("signupOtpBackBtn"),
+  signupLegalAgree: document.getElementById("signupLegalAgree"),
+  signupSubmitBtn: document.getElementById("signupSubmitBtn"),
   startWriterJourneyBtn: document.getElementById("startWriterJourneyBtn"),
   writerCtaBtn: document.getElementById("writerCtaBtn"),
   startReadingBtn: document.getElementById("startReadingBtn"),
@@ -143,7 +145,18 @@ function setAuthTab(mode) {
     elements.signupOtpForm.hidden = true;
   }
   pendingSignupState = null;
+  if (elements.signupLegalAgree) {
+    elements.signupLegalAgree.checked = false;
+  }
+  updateSignupSubmitState();
   setAuthMessage("", "");
+}
+
+function updateSignupSubmitState() {
+  if (!elements.signupSubmitBtn || !elements.signupLegalAgree) {
+    return;
+  }
+  elements.signupSubmitBtn.disabled = !elements.signupLegalAgree.checked;
 }
 
 function showSignupOtpStep(email, password) {
@@ -713,11 +726,16 @@ async function submitSignup(formData) {
   const name = String(formData.get("name") || "").trim();
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
+  const legalAgree = formData.get("legalAgree");
   const referralRef = String(
     localStorage.getItem(REFERRAL_STORAGE_KEY) ||
     localStorage.getItem(LEGACY_REFERRAL_STORAGE_KEY) ||
     ""
   ).trim();
+
+  if (!legalAgree) {
+    throw new Error("Please agree to the Terms of Service and Privacy Policy to continue.");
+  }
 
   if (!validateStrongPassword(password)) {
     throw new Error("Password must be at least 8 characters and include uppercase, lowercase, number, and special character.");
@@ -929,6 +947,11 @@ function bindEvents() {
   }
 
   if (elements.signupForm) {
+    if (elements.signupLegalAgree) {
+      elements.signupLegalAgree.addEventListener("change", updateSignupSubmitState);
+      updateSignupSubmitState();
+    }
+
     elements.signupForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       setAuthMessage("Creating your account...", "");
