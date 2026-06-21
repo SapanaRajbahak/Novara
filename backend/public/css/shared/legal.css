@@ -1,0 +1,417 @@
+/* Novara legal & support pages — extends landing.css */
+
+:root {
+  --legal-sidebar-width: 240px;
+  --legal-max: 1120px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141311;
+    --surface: #1c1a18;
+    --surface-soft: #24211e;
+    --text: #f4efe6;
+    --muted: #b5aa9c;
+    --primary: #8ab5a0;
+    --accent: #dfa063;
+    --border: #3a3530;
+    --shadow-soft: 0 16px 45px rgba(0, 0, 0, 0.35);
+    --shadow-card: 0 12px 34px rgba(0, 0, 0, 0.4);
+  }
+
+  body {
+    background: linear-gradient(180deg, #1a1816 0%, var(--bg) 100%);
+  }
+
+  .landing-bg {
+    background:
+      radial-gradient(circle at 8% 12%, rgba(223, 160, 99, 0.12), transparent 28%),
+      radial-gradient(circle at 88% 4%, rgba(138, 181, 160, 0.14), transparent 26%),
+      radial-gradient(circle at 40% 82%, rgba(120, 100, 80, 0.1), transparent 30%);
+  }
+
+  .legal-toc a.is-active {
+    background: color-mix(in oklab, var(--primary) 22%, var(--surface));
+    color: var(--text);
+  }
+}
+
+.legal-page {
+  width: min(var(--legal-max), calc(100% - 2rem));
+  margin: 0 auto 2rem;
+  padding-top: 0.5rem;
+}
+
+.legal-hero {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 92%, transparent);
+  box-shadow: var(--shadow-soft);
+  padding: 1.4rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.legal-hero .eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.legal-hero h1 {
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.15;
+}
+
+.legal-hero .meta {
+  margin: 0.65rem 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.legal-layout {
+  display: grid;
+  grid-template-columns: var(--legal-sidebar-width) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.legal-toc {
+  position: sticky;
+  top: 5.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+  padding: 0.85rem;
+  max-height: calc(100vh - 7rem);
+  overflow: auto;
+}
+
+.legal-toc h2 {
+  font-family: "Sora", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 0.55rem;
+}
+
+.legal-toc nav {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.legal-toc a {
+  display: block;
+  padding: 0.42rem 0.55rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.35;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.legal-toc a:hover,
+.legal-toc a:focus-visible {
+  background: var(--surface-soft);
+  color: var(--text);
+  outline: none;
+}
+
+.legal-toc a.is-active {
+  background: color-mix(in oklab, var(--primary) 14%, var(--surface));
+  color: var(--text);
+  font-weight: 600;
+}
+
+.legal-content {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+  padding: 1.25rem 1.35rem;
+}
+
+.legal-section {
+  scroll-margin-top: 6rem;
+  padding-bottom: 1.35rem;
+  margin-bottom: 1.35rem;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 80%, transparent);
+}
+
+.legal-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.legal-section h2 {
+  font-size: 1.45rem;
+  margin-bottom: 0.55rem;
+}
+
+.legal-section h3 {
+  font-family: "Sora", sans-serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 1rem 0 0.4rem;
+}
+
+.legal-section p,
+.legal-section li {
+  color: var(--muted);
+  line-height: 1.75;
+  font-size: 0.92rem;
+}
+
+.legal-section p {
+  margin: 0 0 0.75rem;
+}
+
+.legal-section ul,
+.legal-section ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.legal-section li {
+  margin-bottom: 0.35rem;
+}
+
+.legal-section a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.legal-header-nav a.active {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* Contact page */
+
+.contact-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.support-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.support-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 0.85rem;
+}
+
+.support-card h3 {
+  font-family: "Sora", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  margin: 0 0 0.35rem;
+}
+
+.support-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.support-card a {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.contact-form-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-soft);
+  padding: 1.1rem;
+}
+
+.contact-form-card h2 {
+  font-size: 1.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.contact-form-card > p {
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.contact-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.contact-form label {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.contact-form label span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.contact-form input,
+.contact-form textarea,
+.contact-form select {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-soft);
+  color: var(--text);
+  padding: 0.56rem 0.65rem;
+}
+
+.contact-form textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.form-message {
+  min-height: 1.2rem;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.form-message.success {
+  color: #24654e;
+}
+
+.form-message.error {
+  color: #9b412f;
+}
+
+.faq-section {
+  margin-top: 1rem;
+}
+
+.faq-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.faq-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  overflow: hidden;
+}
+
+.faq-item summary {
+  cursor: pointer;
+  padding: 0.75rem 0.85rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: "+";
+  float: right;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.faq-item[open] summary::after {
+  content: "−";
+}
+
+.faq-item p {
+  margin: 0;
+  padding: 0 0.85rem 0.85rem;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+/* Settings legal links */
+
+.legal-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.legal-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 0.62rem 0.72rem;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  transition: background 0.15s ease;
+}
+
+.legal-links a:hover {
+  background: var(--surface-2);
+}
+
+.legal-links a::after {
+  content: "→";
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Compact public footer variant */
+
+.landing-footer--legal .footer-links a {
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .legal-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .legal-toc {
+    position: static;
+    max-height: none;
+  }
+
+  .contact-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .legal-page {
+    width: calc(100% - 1rem);
+  }
+
+  .legal-content,
+  .legal-hero,
+  .contact-form-card {
+    border-radius: 16px;
+    padding: 1rem;
+  }
+}

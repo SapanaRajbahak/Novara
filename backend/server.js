@@ -40,6 +40,7 @@ const friendRoutes = require('./routes/friendRoutes');
 const adminMonetizationRoutes = require("./routes/adminMonetizationRoutes");
 const monetizationRoutes = require("./routes/monetizationRoutes");
 const giftRoutes = require("./routes/giftRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 
 
 const app = express();
@@ -69,6 +70,29 @@ app.use(
     },
   })
 );
+
+const LEGAL_CANONICAL_PATHS = {
+  "/privacy": "/privacy/",
+  "/privacy/index.html": "/privacy/",
+  "/terms": "/terms/",
+  "/terms/index.html": "/terms/",
+  "/contact": "/contact/",
+  "/contact/index.html": "/contact/",
+};
+
+app.use((req, res, next) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    return next();
+  }
+
+  const target = LEGAL_CANONICAL_PATHS[req.path.toLowerCase()];
+  if (target) {
+    return res.redirect(301, target);
+  }
+
+  return next();
+});
+
 // Static files (ONE instance)
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/books", express.static(path.join(__dirname, "books")));
@@ -127,6 +151,7 @@ app.use("/api/chat",    chatRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/admin", adminMonetizationRoutes);
 app.use("/api/monetization", monetizationRoutes);
+app.use("/api/contact", contactRoutes);
 const PORT = process.env.PORT || 5002;
 app.use((error, req, res, next) => {
   if (error && error.type === "entity.too.large") {
@@ -216,7 +241,7 @@ app.get("/join/:code", (req, res) => {
 });
 
 // SPA fallback (after all API and page routes, before 404)
-app.get(/^\/(?!api|css|js|assets|books)(.*)/, (req, res) => {
+app.get(/^\/(?!api|css|js|assets|books|privacy|terms|contact)(.*)/, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
 });
 

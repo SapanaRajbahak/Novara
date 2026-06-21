@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Collection — Novara</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/css/shared/style.css" />
+  <link rel="stylesheet" href="/css/reader/my-collection.css" />
+</head>
+<body>
+  <div class="hub-shell">
+    <aside class="hub-sidebar" aria-label="Primary">
+      <a class="hub-brand" href="/reader/reader-dashboard.html">
+        <span class="brand-dot" aria-hidden="true"></span>
+        <span>Novara</span>
+      </a>
+      <nav class="hub-nav">
+        <a href="/reader/reader-dashboard.html">Home</a>
+        <a href="/reader/library.html">Library</a>
+        <a href="/reader/my-collection.html" class="active">📚 My Collection</a>
+        <a href="/reader/discover.html">Discover</a>
+        <a href="/reader/audiobook.html">Audiobooks</a>
+        <a href="/reader/reader-monetization.html" id="walletNavLink">Wallet</a>
+        <span class="hub-nav-label">Community</span>
+        <a href="/reader/global-chat.html">🌍 Global Chat</a>
+        <a href="/reader/book-chat.html">📖 Book Chat</a>
+        <span class="hub-nav-label">Messages</span>
+        <a href="/reader/messages.html">💌 Private DMs</a>
+      </nav>
+    </aside>
+
+    <div class="hub-main">
+      <header class="hub-topbar">
+        <div class="hub-topbar-left">
+          <h1>My Collection</h1>
+          <p>Your private library — EPUB, PDF, and TXT files stored locally on this device.</p>
+        </div>
+
+        <label class="hub-search" for="collectionSearchInput">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 4a6 6 0 1 0 3.8 10.6l4.8 4.8 1.4-1.4-4.8-4.8A6 6 0 0 0 10 4zm0 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8z" />
+          </svg>
+          <input id="collectionSearchInput" type="search" placeholder="Search your collection..." />
+        </label>
+
+        <div class="hub-topbar-right">
+          <button id="uploadBtn" class="solid-btn" type="button">
+            <span style="margin-right: 6px;">+</span>
+            Upload
+          </button>
+          <input id="fileInput" type="file" accept=".epub,.pdf,.txt" multiple hidden />
+        </div>
+      </header>
+
+      <main class="hub-content">
+        <!-- Recently Added Section -->
+        <section class="hub-section" id="recentSection">
+          <div class="section-head">
+            <h3>Recently Added</h3>
+          </div>
+          <div class="rail" id="recentRow" aria-live="polite"></div>
+        </section>
+
+        <!-- Main Collection Grid -->
+        <section class="hub-section" id="collectionSection">
+          <div class="section-head">
+            <h3 id="collectionHeading">All Books</h3>
+            <span id="collectionCount" class="meta-count"></span>
+          </div>
+          <div class="collection-grid" id="collectionGrid" aria-live="polite"></div>
+        </section>
+
+        <!-- Empty State (shown when no books) -->
+        <section class="hub-section empty-collection" id="emptyState" hidden>
+          <div class="empty-collection-inner">
+            <div class="empty-icon">📚</div>
+            <h2>Your collection is empty</h2>
+            <p>Upload EPUB, PDF, or TXT files to build your personal library.<br/>All files stay private on this device.</p>
+            <button id="emptyUploadBtn" class="solid-btn" type="button">
+              <span style="margin-right: 6px;">+</span>
+              Upload Your First Book
+            </button>
+          </div>
+        </section>
+
+        <!-- Upload Progress Modal -->
+        <div id="uploadProgressModal" class="col-modal" aria-hidden="true">
+          <div class="col-modal-overlay"></div>
+          <div class="col-modal-card">
+            <div class="col-modal-header">
+              <h2>Importing Books</h2>
+            </div>
+            <div class="col-modal-body">
+              <div id="uploadProgressList" class="upload-progress-list"></div>
+              <div class="upload-progress-bar-track">
+                <div id="uploadProgressBar" class="upload-progress-bar-fill" style="width: 0%"></div>
+              </div>
+              <p id="uploadProgressText" class="upload-progress-text">Processing...</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="col-modal" aria-hidden="true">
+          <div class="col-modal-overlay"></div>
+          <div class="col-modal-card col-modal-card--sm">
+            <div class="col-modal-header">
+              <h2>Delete Book</h2>
+              <button type="button" class="col-modal-close" id="deleteModalClose">×</button>
+            </div>
+            <div class="col-modal-body">
+              <p>Are you sure you want to delete <strong id="deleteBookTitle">this book</strong>?<br/>This action cannot be undone.</p>
+            </div>
+            <div class="col-modal-footer">
+              <button type="button" class="btn btn-outline" id="deleteCancelBtn">Cancel</button>
+              <button type="button" class="btn btn-danger" id="deleteConfirmBtn">Delete Forever</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="/js/shared/novara-session.js?v=20260322a"></script>
+  <script src="/js/shared/app.js"></script>
+  <script src="/js/reader/lib/my-collection-db.js"></script>
+  <script src="/js/reader/lib/epub-parser.js"></script>
+  <script src="/js/reader/my-collection.js"></script>
+</body>
+</html>

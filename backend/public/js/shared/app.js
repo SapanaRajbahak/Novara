@@ -552,6 +552,10 @@ function bindDiscoveryEvents() {
 }
 
 function setupProfileMenu() {
+  if (!elements.profileMenuBtn || !elements.profileDropdown || !elements.profileSignOutLink) {
+    return;
+  }
+
   elements.profileMenuBtn.addEventListener("click", () => {
     const isOpen = elements.profileDropdown.classList.toggle("show");
     elements.profileMenuBtn.setAttribute("aria-expanded", String(isOpen));

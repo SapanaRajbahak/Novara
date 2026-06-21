@@ -283,7 +283,8 @@ function getParams() {
     bookId: params.get("bookId") || params.get("book") || "",
     chapterId: params.get("chapterId") || "",
     chapter: Number.isFinite(chapterFromQuery) ? chapterFromQuery : 1,
-    mode: params.get("mode") || "read"
+    mode: params.get("mode") || "read",
+    source: params.get("source") || ""
   };
 }
 
@@ -2759,6 +2760,17 @@ function applyIncomingMode(mode) {
 }
 
 function setupBackLink(bookId) {
+  const params = getParams();
+  if (params.source === 'collection' || String(bookId).startsWith('local_')) {
+    elements.backButton.href = '/reader/my-collection.html';
+    elements.backButton.textContent = '← My Collection';
+    const bookChatBtn = document.getElementById('bookChatBtn');
+    if (bookChatBtn) bookChatBtn.style.display = 'none';
+    // Hide gift modal for private books
+    const giftModal = document.getElementById('sendGiftModal');
+    if (giftModal) giftModal.setAttribute('aria-hidden', 'true');
+    return;
+  }
   elements.backButton.href = `/reader/book.html?id=${encodeURIComponent(bookId)}`;
   const bookChatBtn = document.getElementById('bookChatBtn');
   if (bookChatBtn) {
@@ -2820,8 +2832,8 @@ async function bootstrap() {
       throw new Error('Missing required DOM elements. See console for details.');
     }
 
-    const { bookId, chapterId, chapter, mode } = getParams();
-    console.debug('[reader] Parsed URL params:', { bookId, chapterId, chapter, mode });
+    const { bookId, chapterId, chapter, mode, source } = getParams();
+    console.debug('[reader] Parsed URL params:', { bookId, chapterId, chapter, mode, source });
     if (!bookId) {
       renderErrorState("Missing bookId in URL.");
       console.error('[reader] No bookId in URL params');
@@ -2870,53 +2882,91 @@ async function bootstrap() {
     let chapters = [];
     let audioTracks = [];
     let bookSource = 'api';
-    try {
-      // 1. Try API
-      const [bookMeta, apiChapters, apiAudioTracks] = await Promise.all([
-        fetchBookMetadata(bookId),
-        fetchChapterList(bookId),
-        fetchBookAudioTracks(bookId).catch(() => []),
-      ]);
-      book = normalizeBookObj(bookMeta);
-      chapters = Array.isArray(apiChapters) ? apiChapters.map(normalizeChapterObj) : [];
-      audioTracks = Array.isArray(apiAudioTracks) ? apiAudioTracks : [];
-      bookSource = 'api';
-      if (!book || !chapters.length) throw new Error('API book/chapters missing');
-    } catch (apiErr) {
-      console.warn('[reader] API book/chapters failed:', apiErr);
-      // 2. Try local app dataset (window.allBooks or window.books)
-      let localBooks = window.allBooks || window.books || [];
-      if (!Array.isArray(localBooks)) localBooks = [];
-      book = normalizeBookObj(localBooks.find(b => (b.id || b.bookId) == bookId));
-      if (book && Array.isArray(book.chapters) && book.chapters.length) {
-        chapters = book.chapters.map(normalizeChapterObj);
-        bookSource = 'localApp';
-      } else {
-        // 3. Try localStorage continue-reading/library
-        try {
-          const cr = JSON.parse(localStorage.getItem(readerScoped('continueReading')) || '[]');
-          const libRaw = localStorage.getItem(readerScoped('savedBooks'));
-          let lib = [];
+
+    // 0. Try My Collection (IndexedDB) if source=collection or bookId starts with "local_"
+    if (source === 'collection' || String(bookId).startsWith('local_')) {
+      console.debug('[reader] Attempting to load from My Collection (IndexedDB)');
+      try {
+        if (window.MyCollectionDB) {
+          const db = window.MyCollectionDB;
+          const dbBook = await db.getBook(bookId);
+          if (dbBook) {
+            const dbChapters = await db.getChapters(bookId);
+            book = normalizeBookObj({
+              id: dbBook.id,
+              title: dbBook.title,
+              author: dbBook.author,
+              genre: dbBook.genre || 'General',
+              coverUrl: dbBook.coverDataUri || '',
+              chapters: dbChapters.map(normalizeChapterObj),
+              hasAudiobook: false,
+              audiobookTracks: [],
+            });
+            chapters = dbChapters.map(normalizeChapterObj);
+            bookSource = 'collection';
+            book.format = dbBook.format || 'txt';
+            // If the book is a PDF with stored file data, create a blob URL for rendering
+            if (dbBook.format === 'pdf' && dbBook.fileData) {
+              if (state.localFileUrl) URL.revokeObjectURL(state.localFileUrl);
+              state.localFileUrl = URL.createObjectURL(new Blob([dbBook.fileData], { type: 'application/pdf' }));
+            }
+            console.debug('[reader] Loaded from My Collection:', book.title);
+          }
+        }
+      } catch (dbErr) {
+        console.error('[reader] IndexedDB book load failed:', dbErr);
+      }
+    }
+
+    if (!book) {
+      try {
+        // 1. Try API
+        const [bookMeta, apiChapters, apiAudioTracks] = await Promise.all([
+          fetchBookMetadata(bookId),
+          fetchChapterList(bookId),
+          fetchBookAudioTracks(bookId).catch(() => []),
+        ]);
+        book = normalizeBookObj(bookMeta);
+        chapters = Array.isArray(apiChapters) ? apiChapters.map(normalizeChapterObj) : [];
+        audioTracks = Array.isArray(apiAudioTracks) ? apiAudioTracks : [];
+        bookSource = 'api';
+        if (!book || !chapters.length) throw new Error('API book/chapters missing');
+      } catch (apiErr) {
+        console.warn('[reader] API book/chapters failed:', apiErr);
+        // 2. Try local app dataset (window.allBooks or window.books)
+        let localBooks = window.allBooks || window.books || [];
+        if (!Array.isArray(localBooks)) localBooks = [];
+        book = normalizeBookObj(localBooks.find(b => (b.id || b.bookId) == bookId));
+        if (book && Array.isArray(book.chapters) && book.chapters.length) {
+          chapters = book.chapters.map(normalizeChapterObj);
+          bookSource = 'localApp';
+        } else {
+          // 3. Try localStorage continue-reading/library
           try {
-            const parsed = libRaw ? JSON.parse(libRaw) : [];
-            lib = Array.isArray(parsed) ? parsed : [];
-            if (lib.length && typeof lib[0] === 'string') {
-              lib = lib.map((id) => ({ bookId: id }));
+            const cr = JSON.parse(localStorage.getItem(readerScoped('continueReading')) || '[]');
+            const libRaw = localStorage.getItem(readerScoped('savedBooks'));
+            let lib = [];
+            try {
+              const parsed = libRaw ? JSON.parse(libRaw) : [];
+              lib = Array.isArray(parsed) ? parsed : [];
+              if (lib.length && typeof lib[0] === 'string') {
+                lib = lib.map((id) => ({ bookId: id }));
+              }
+            } catch (e) {
+              lib = [];
             }
-          } catch (e) {
-            lib = [];
-          }
-          const all = [...cr, ...lib];
-          const found = all.find(e => (e.bookId || e.id) == bookId);
-          if (found) {
-            book = normalizeBookObj(found);
-            if (Array.isArray(book.chapters) && book.chapters.length) {
-              chapters = book.chapters.map(normalizeChapterObj);
-              bookSource = 'localStorage';
+            const all = [...cr, ...lib];
+            const found = all.find(e => (e.bookId || e.id) == bookId);
+            if (found) {
+              book = normalizeBookObj(found);
+              if (Array.isArray(book.chapters) && book.chapters.length) {
+                chapters = book.chapters.map(normalizeChapterObj);
+                bookSource = 'localStorage';
+              }
             }
+          } catch (lsErr) {
+            console.error('[reader] localStorage parse error:', lsErr);
           }
-        } catch (lsErr) {
-          console.error('[reader] localStorage parse error:', lsErr);
         }
       }
     }
@@ -3010,6 +3060,13 @@ async function bootstrap() {
       // Book/chapter titles
       elements.toolbarBookTitle.textContent = state.currentBook.title;
       elements.toolbarChapterTitle.textContent = `Chapter ${chapter.number}: ${chapter.title}`;
+      // PDF books: render via iframe using the stored blob URL
+      if (state.currentBook.format === 'pdf' && state.localFileUrl) {
+        elements.readerContent.innerHTML = `<div style="width:100%;height:85vh;"><iframe src="${state.localFileUrl}" style="width:100%;height:100%;border:none;" title="PDF Document"></iframe></div>`;
+        clearLoadingState();
+        console.debug('[reader] render completed (PDF)');
+        return;
+      }
       // Main content
       let content = chapter.content || chapter.text || chapter.body || '';
       if (!content.trim()) {
@@ -3027,28 +3084,33 @@ async function bootstrap() {
 
     renderChaptersList();
 
-    // Fetch full chapter content before rendering
-    try {
-      console.debug('[reader] fetching chapter content for id:', resolvedChapter.id);
-      const fullChapter = await fetchChapterById(resolvedChapter.id);
-      console.debug('[reader] fetch success for chapter id:', resolvedChapter.id);
-      const chapterWithContent = {
-        ...resolvedChapter,
-        content: fullChapter.content || ''
-      };
-      renderChapter(chapterWithContent);
-    } catch (err) {
-      console.error('[reader] Failed to load chapter:', err);
-      if (err && (err.code === "CHAPTER_LOCKED" || err.status === 403 || err.loginRequired)) {
-        if (state.currentUser && !err.loginRequired) {
-          await requestPaymentForChapterAccess(resolvedChapter);
-        } else {
-          requestLoginForChapterAccess(resolvedChapter);
+    // For local collection books, chapter content is already in IndexedDB.
+    if (bookSource === 'collection' || bookSource === 'localApp' || bookSource === 'localStorage') {
+      renderChapter(resolvedChapter);
+    } else {
+      // API books: fetch the canonical chapter payload.
+      try {
+        console.debug('[reader] fetching chapter content for id:', resolvedChapter.id);
+        const fullChapter = await fetchChapterById(resolvedChapter.id);
+        console.debug('[reader] fetch success for chapter id:', resolvedChapter.id);
+        const chapterWithContent = {
+          ...resolvedChapter,
+          content: fullChapter.content || ''
+        };
+        renderChapter(chapterWithContent);
+      } catch (err) {
+        console.error('[reader] Failed to load chapter:', err);
+        if (err && (err.code === "CHAPTER_LOCKED" || err.status === 403 || err.loginRequired)) {
+          if (state.currentUser && !err.loginRequired) {
+            await requestPaymentForChapterAccess(resolvedChapter);
+          } else {
+            requestLoginForChapterAccess(resolvedChapter);
+          }
+          return;
         }
-        return;
+        elements.readerContent.innerHTML = '<p>Failed to load chapter.</p>';
+        clearLoadingState();
       }
-      elements.readerContent.innerHTML = '<p>Failed to load chapter.</p>';
-      clearLoadingState();
     }
 
     renderNotes && renderNotes();

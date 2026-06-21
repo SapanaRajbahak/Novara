@@ -328,7 +328,7 @@ async function bootstrap() {
   elements.shareWhatsAppBtn.addEventListener("click", shareWhatsApp);
   elements.shareNativeBtn.addEventListener("click", shareNative);
   elements.viewTermsBtn.addEventListener("click", () => {
-    window.alert("Referral terms will be connected here next.");
+    window.location.href = "/terms/";
   });
   if (elements.signOutBtn) {
     elements.signOutBtn.addEventListener("click", async () => {

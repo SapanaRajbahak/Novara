@@ -147,6 +147,44 @@ a {
   margin-bottom: 0.55rem;
 }
 
+.panel-head p {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.legal-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.legal-links a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  padding: 0.62rem 0.72rem;
+  color: var(--text);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.legal-links a:hover {
+  background: var(--surface-2);
+}
+
+.legal-links a::after {
+  content: "→";
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .fields {
   display: grid;
   gap: 0.55rem;
