@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://readnovara.ca/sitemap.xml
