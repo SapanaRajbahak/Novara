@@ -661,15 +661,14 @@ async function confirmCheckout() {
       toast('Please agree to the billing terms to continue.', '⚠️', 'warn');
       return;
     }
-    closeOverlay('checkoutOverlay');
     toast('Redirecting to Stripe subscription…', '💳', 'info');
     await subscribePlan(pendingCheckout.id);
   } else {
-    closeOverlay('checkoutOverlay');
     toast('Redirecting to Stripe checkout…', '💳', 'info');
     await buyPack(pendingCheckout.id);
   }
 
+  closeOverlay('checkoutOverlay');
   pendingCheckout = null;
 }
 
