@@ -143,6 +143,8 @@ app.use("/api/admin", adminUserRoutes);
 app.use("/api/admin", adminAnalyticsRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/profile", savedBooksRoutes);
+const settingsRoutes = require("./routes/settingsRoutes");
+app.use("/api/settings", settingsRoutes);
 const walletRoutes = require("./routes/walletRoutes");
 app.use("/api/wallet", walletRoutes);
 app.use("/api/rewards", rewardRoutes);

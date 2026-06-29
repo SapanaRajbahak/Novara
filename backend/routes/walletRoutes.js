@@ -168,6 +168,31 @@ router.post("/unlock-chapter", requireAuth, async (req, res) => {
           },
         });
 
+        // Credit the writer (book author) with the coins earned
+        const book = await tx.book.findUnique({
+          where: { id: chapter.bookId },
+          select: { createdBy: true, title: true },
+        });
+
+        if (book && book.createdBy) {
+          await tx.user.update({
+            where: { id: book.createdBy },
+            data: { coins: { increment: coinCost } },
+          });
+
+          await tx.walletTransaction.create({
+            data: {
+              userId: book.createdBy,
+              type: "CHAPTER_UNLOCK_EARNINGS",
+              amount: coinCost,
+              coins: coinCost,
+              source: "reader",
+              description: `Earned ${coinCost} coins from chapter ${chapter.chapterNumber} unlock in ${book.title}`,
+              referenceId: unlockRef,
+            },
+          });
+        }
+
         return updated;
       });
     } catch (error) {

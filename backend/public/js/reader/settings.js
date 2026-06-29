@@ -1,3 +1,15 @@
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+
+async function apiFetch(path, options = {}) {
+  const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
+  const response = await fetch(url, { credentials: "include", ...options });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data.error || data.message || "Request failed");
+  }
+  return data;
+}
+
 function accountSettingsKey() {
   if (window.NovaraSession && typeof window.NovaraSession.readerDataKey === "function") {
     return window.NovaraSession.readerDataKey("accountSettings");
@@ -55,7 +67,17 @@ const defaultSettings = {
 
 const globalMessage = document.getElementById("globalMessage");
 
-function loadSettings() {
+async function loadSettings() {
+  try {
+    const response = await apiFetch("/api/settings");
+    if (response.success && response.data) {
+      return response.data;
+    }
+  } catch (error) {
+    console.warn("Failed to load settings from backend, using localStorage fallback:", error);
+  }
+
+  // Fallback to localStorage
   try {
     const raw = localStorage.getItem(accountSettingsKey());
     if (!raw) {
@@ -68,8 +90,17 @@ function loadSettings() {
   }
 }
 
-function saveSettings(settings) {
-  localStorage.setItem(accountSettingsKey(), JSON.stringify(settings));
+async function saveSettings(settings) {
+  try {
+    await apiFetch("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    });
+  } catch (error) {
+    console.warn("Failed to save settings to backend, using localStorage fallback:", error);
+    localStorage.setItem(accountSettingsKey(), JSON.stringify(settings));
+  }
 }
 
 function setGlobalMessage(text, isError = false) {
@@ -213,7 +244,7 @@ function bindFormSubmit(formId) {
     return;
   }
 
-  form.addEventListener("submit", (event) => {
+  form.addEventListener("submit", async (event) => {
     event.preventDefault();
     clearErrors();
 
@@ -226,13 +257,13 @@ function bindFormSubmit(formId) {
       return;
     }
 
-    saveSettings(settings);
+    await saveSettings(settings);
     setGlobalMessage("Settings saved successfully.");
   });
 }
 
 async function bootstrap() {
-  let settings = loadSettings();
+  let settings = await loadSettings();
   if (window.NovaraSession && typeof window.NovaraSession.fetchCurrentUser === "function") {
     const user = await window.NovaraSession.fetchCurrentUser();
     if (user) {

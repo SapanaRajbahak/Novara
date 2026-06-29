@@ -63,11 +63,30 @@
       <div class="sidebar-bottom">
         <div class="writer-card">
           <div class="writer-avatar" id="authorAvatar">NR</div>
-          <div class="writer-name" id="writerPenName">Writer</div>
+          <div class="writer-name-wrapper">
+            <div class="writer-name" id="writerPenName">Writer</div>
+            <button type="button" class="writer-name-edit-btn" id="editPenNameBtn" title="Edit Pen Name">✎</button>
+          </div>
           <div class="writer-role">Author</div>
           <div id="writerGenres" class="writer-genre-chips"></div>
           <p id="writerBio" class="writer-bio-truncate"></p>
           <div class="writer-tier">Gold Writer</div>
+        </div>
+      </div>
+
+      <div id="penNameEditModal" class="modal-overlay" hidden>
+        <div class="modal-content">
+          <h3>Edit Pen Name</h3>
+          <p>This will update the author name on all your published books.</p>
+          <label class="field" for="penNameEditInput">
+            <span>Pen Name</span>
+            <input id="penNameEditInput" type="text" placeholder="Enter your pen name" />
+          </label>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-secondary" id="cancelPenNameEdit">Cancel</button>
+            <button type="button" class="btn" id="savePenNameEdit">Save Changes</button>
+          </div>
+          <p id="penNameEditMessage" class="helper-text"></p>
         </div>
       </div>
     </aside>

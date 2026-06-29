@@ -352,13 +352,15 @@ function bindEvents() {
         body.avatarUrl = state.pendingAvatarDataUrl;
       }
 
-      await apiFetch("/api/profile", {
+      console.log("Sending profile update:", body);
+      const response = await apiFetch("/api/profile", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
+      console.log("Profile update response:", response);
 
       await refreshProfilePage();
       elements.editProfilePanel.hidden = true;
@@ -367,6 +369,7 @@ function bindEvents() {
         window.NovaraSession.showToast("Profile updated");
       }
     } catch (error) {
+      console.error("Profile update error:", error);
       setFormMessage(error.message || "Unable to update profile.");
     }
   });

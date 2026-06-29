@@ -284,6 +284,59 @@ async function getWriterDashboard(req, res) {
     const giftCount = Number(giftSummary?._count?.id || 0);
     const bookTitleById = new Map(books.map((book) => [book.id, book.title]));
 
+    // Calculate coin earnings breakdown by type
+    const coinEarningsBreakdown = await prisma.walletTransaction.aggregate({
+      where: {
+        userId: String(userId),
+        amount: { gt: 0 }, // Only positive transactions (earnings)
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const totalCoinsEarned = Number(coinEarningsBreakdown._sum?.amount || 0);
+
+    // Breakdown by transaction type
+    const earningsByType = await prisma.walletTransaction.groupBy({
+      by: ['type'],
+      where: {
+        userId: String(userId),
+        amount: { gt: 0 },
+      },
+      _sum: {
+        amount: true,
+      },
+      _count: {
+        id: true,
+      },
+    });
+
+    const coinsByType = {
+      gifts: 0,
+      chapterUnlocks: 0,
+      referrals: 0,
+      ads: 0,
+      other: 0,
+    };
+
+    earningsByType.forEach((item) => {
+      if (item.type === 'GIFT_RECEIVED') {
+        coinsByType.gifts = Number(item._sum.amount || 0);
+      } else if (item.type === 'CHAPTER_UNLOCK_EARNINGS') {
+        coinsByType.chapterUnlocks = Number(item._sum.amount || 0);
+      } else if (item.type === 'REFERRAL_REWARD') {
+        coinsByType.referrals = Number(item._sum.amount || 0);
+      } else if (item.type === 'AD_REWARD') {
+        coinsByType.ads = Number(item._sum.amount || 0);
+      } else {
+        coinsByType.other += Number(item._sum.amount || 0);
+      }
+    });
+
     const mergedActivity = [
       ...noteRows.map((row) => ({
         title: `New comment-style note on ${row.book?.title || "your story"}`,
@@ -364,10 +417,11 @@ async function getWriterDashboard(req, res) {
           completionRate: `${avgCompletion}%`,
         },
         monetization: {
-          coinsEarned: referralSummary ? referralSummary.stats.totalCoinsEarned : 0,
+          coinsEarned: totalCoinsEarned,
           estimatedRevenue: referralSummary ? referralSummary.stats.totalEarned : 0,
           giftCoinsEarned,
           giftCount,
+          coinsByType,
           paidChaptersUnlocked: 0,
           subscriptionReaders: 0,
           isActive: false,

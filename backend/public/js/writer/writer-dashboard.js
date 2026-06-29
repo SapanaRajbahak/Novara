@@ -97,6 +97,10 @@ function switchSection(sectionKey) {
     if (section.key === "earnings") {
       loadWriterEarningsData();
     }
+
+    if (section.key === "analytics") {
+      loadWriterAnalyticsData();
+    }
   }, 180);
 }
 // Fetch real earnings data from backend and render
@@ -139,6 +143,124 @@ async function loadWriterEarningsData() {
     }
   } catch (e) {
     sectionContent.innerHTML = '<div class="error">Unable to load earnings data.</div>';
+  }
+}
+
+async function loadWriterAnalyticsData() {
+  try {
+    const base = window.NovaraSession && window.NovaraSession.API_BASE_URL ? window.NovaraSession.API_BASE_URL : "";
+    const response = await fetch(`${base}/api/writer/dashboard`, { credentials: "include" });
+    const payload = await response.json();
+
+    if (payload.success && payload.data) {
+      const data = payload.data;
+      const books = Array.isArray(data.books) ? data.books : [];
+      const stats = data.stats || {};
+
+      // Update stats cards
+      const totalReadsEl = document.getElementById("analyticsTotalReads");
+      const uniqueReadersEl = document.getElementById("analyticsUniqueReaders");
+      const totalLikesEl = document.getElementById("analyticsTotalLikes");
+      const followersEl = document.getElementById("analyticsFollowers");
+
+      if (totalReadsEl) totalReadsEl.textContent = stats.totalReads || 0;
+      if (uniqueReadersEl) uniqueReadersEl.textContent = stats.uniqueReaders || 0;
+      if (totalLikesEl) totalLikesEl.textContent = stats.totalFavorites || 0;
+      if (followersEl) followersEl.textContent = stats.totalFollowers || 0;
+
+      // Update book table
+      const tableBody = document.getElementById("analyticsBookTable");
+      if (tableBody) {
+        if (books.length === 0) {
+          tableBody.innerHTML = '<tr><td colspan="5">No books published yet</td></tr>';
+        } else {
+          tableBody.innerHTML = books.map(book => `
+            <tr>
+              <td>${book.title || 'Untitled'}</td>
+              <td>${book._count?.readingProgress || 0}</td>
+              <td>${book._count?.listeningProgress || 0}</td>
+              <td>${book._count?.bookmarks || 0}</td>
+              <td>${book._count?.notes || 0}</td>
+            </tr>
+          `).join('');
+        }
+      }
+
+      // Render chart
+      const canvas = document.getElementById("analyticsChart");
+      if (canvas && window.Chart) {
+        const readingProgress = Array.isArray(data.readingProgress) ? data.readingProgress : [];
+        const monthsBack = 6;
+        const labels = [];
+        const dataPoints = [];
+
+        for (let i = monthsBack - 1; i >= 0; i--) {
+          const date = new Date();
+          date.setMonth(date.getMonth() - i);
+          const monthLabel = date.toLocaleString(undefined, { month: 'short' });
+          labels.push(monthLabel);
+          dataPoints.push(0);
+        }
+
+        readingProgress.forEach(row => {
+          const date = new Date(row.updatedAt);
+          const monthIndex = monthsBack - 1 - ((new Date().getMonth() - date.getMonth() + 12) % 12);
+          if (monthIndex >= 0 && monthIndex < monthsBack) {
+            dataPoints[monthIndex]++;
+          }
+        });
+
+        new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Reading Progress Updates',
+              data: dataPoints,
+              borderColor: '#6366f1',
+              backgroundColor: 'rgba(99, 102, 241, 0.1)',
+              fill: true,
+              tension: 0.4
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                display: false
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  stepSize: 1
+                }
+              }
+            }
+          }
+        });
+      }
+    } else {
+      // Show empty state
+      const totalReadsEl = document.getElementById("analyticsTotalReads");
+      const uniqueReadersEl = document.getElementById("analyticsUniqueReaders");
+      const totalLikesEl = document.getElementById("analyticsTotalLikes");
+      const followersEl = document.getElementById("analyticsFollowers");
+      const tableBody = document.getElementById("analyticsBookTable");
+
+      if (totalReadsEl) totalReadsEl.textContent = "0";
+      if (uniqueReadersEl) uniqueReadersEl.textContent = "0";
+      if (totalLikesEl) totalLikesEl.textContent = "0";
+      if (followersEl) followersEl.textContent = "0";
+      if (tableBody) tableBody.innerHTML = '<tr><td colspan="5">No data available</td></tr>';
+    }
+  } catch (e) {
+    console.error("Failed to load analytics data:", e);
+    const tableBody = document.getElementById("analyticsBookTable");
+    if (tableBody) {
+      tableBody.innerHTML = '<tr><td colspan="5">Unable to load analytics data</td></tr>';
+    }
   }
 }
 
@@ -897,8 +1019,52 @@ function renderWriterAIToolsSection() {
 function renderWriterAnalyticsSection() {
   return `
     <section class="writer-analytics">
-      <h2>Analytics (Coming Soon)</h2>
-      <div class="analytics-placeholder">Deeper insights, engagement charts, and growth metrics will appear here.</div>
+      <h2>Analytics</h2>
+      <div class="analytics-grid">
+        <div class="analytics-card">
+          <h3>Total Reads</h3>
+          <div class="analytics-value" id="analyticsTotalReads">-</div>
+          <div class="analytics-label">All time</div>
+        </div>
+        <div class="analytics-card">
+          <h3>Unique Readers</h3>
+          <div class="analytics-value" id="analyticsUniqueReaders">-</div>
+          <div class="analytics-label">All time</div>
+        </div>
+        <div class="analytics-card">
+          <h3>Total Likes</h3>
+          <div class="analytics-value" id="analyticsTotalLikes">-</div>
+          <div class="analytics-label">All time</div>
+        </div>
+        <div class="analytics-card">
+          <h3>Followers</h3>
+          <div class="analytics-value" id="analyticsFollowers">-</div>
+          <div class="analytics-label">All time</div>
+        </div>
+      </div>
+
+      <div class="analytics-chart-container">
+        <h3>Reading Progress (Last 6 Months)</h3>
+        <canvas id="analyticsChart"></canvas>
+      </div>
+
+      <div class="analytics-table-container">
+        <h3>Book Performance</h3>
+        <table class="analytics-table">
+          <thead>
+            <tr>
+              <th>Book</th>
+              <th>Reads</th>
+              <th>Progress</th>
+              <th>Bookmarks</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody id="analyticsBookTable">
+            <tr><td colspan="5">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
   `;
 }
@@ -1211,6 +1377,12 @@ const elements = {
   monetizationStats: document.getElementById("monetizationStats"),
   assistantActions: document.getElementById("assistantActions"),
   heroActions: document.getElementById("heroActions"),
+  editPenNameBtn: document.getElementById("editPenNameBtn"),
+  penNameEditModal: document.getElementById("penNameEditModal"),
+  penNameEditInput: document.getElementById("penNameEditInput"),
+  cancelPenNameEdit: document.getElementById("cancelPenNameEdit"),
+  savePenNameEdit: document.getElementById("savePenNameEdit"),
+  penNameEditMessage: document.getElementById("penNameEditMessage"),
 };
 
 const uiState = {
@@ -1959,6 +2131,75 @@ function initializePageInteractions() {
         return;
       }
       window.location.href = "/index.html";
+    });
+  }
+
+  // Pen name edit modal
+  if (elements.editPenNameBtn) {
+    elements.editPenNameBtn.addEventListener("click", () => {
+      if (elements.penNameEditModal && elements.penNameEditInput) {
+        elements.penNameEditInput.value = elements.writerPenName.textContent || "";
+        elements.penNameEditModal.hidden = false;
+        if (elements.penNameEditMessage) {
+          elements.penNameEditMessage.textContent = "";
+        }
+      }
+    });
+  }
+
+  if (elements.cancelPenNameEdit) {
+    elements.cancelPenNameEdit.addEventListener("click", () => {
+      if (elements.penNameEditModal) {
+        elements.penNameEditModal.hidden = true;
+      }
+    });
+  }
+
+  if (elements.savePenNameEdit) {
+    elements.savePenNameEdit.addEventListener("click", async () => {
+      if (!elements.penNameEditInput || !elements.penNameEditModal) return;
+
+      const newPenName = elements.penNameEditInput.value.trim();
+      if (!newPenName) {
+        if (elements.penNameEditMessage) {
+          elements.penNameEditMessage.textContent = "Pen name cannot be empty.";
+        }
+        return;
+      }
+
+      try {
+        const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+        const response = await fetch(`${API_BASE_URL}/api/profile`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ penName: newPenName }),
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to update pen name");
+        }
+
+        // Update UI
+        if (elements.writerPenName) {
+          elements.writerPenName.textContent = newPenName;
+        }
+        if (elements.authorAvatar) {
+          elements.authorAvatar.textContent = extractInitials(newPenName || "Novara");
+        }
+        if (elements.penNameEditModal) {
+          elements.penNameEditModal.hidden = true;
+        }
+        if (window.NovaraSession && window.NovaraSession.showToast) {
+          window.NovaraSession.showToast("Pen name updated successfully");
+        }
+      } catch (error) {
+        console.error("Failed to update pen name:", error);
+        if (elements.penNameEditMessage) {
+          elements.penNameEditMessage.textContent = error.message || "Failed to update pen name";
+        }
+      }
     });
   }
 }

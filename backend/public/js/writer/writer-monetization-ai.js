@@ -552,6 +552,13 @@ async function loadAndApplyDashboard() {
     const publishedBooks = Number(stats.publishedBooks || 0);
     const totalBooks = Number(stats.totalBooks || 0);
     const refs = monetization.referrals || {};
+    const coinsByType = monetization.coinsByType || {
+      gifts: 0,
+      chapterUnlocks: 0,
+      referrals: 0,
+      ads: 0,
+      other: 0,
+    };
 
     _availableToWithdraw = totalEarned;
 
@@ -628,6 +635,23 @@ async function loadAndApplyDashboard() {
 
     if (el('revSource4Amount')) el('revSource4Amount').textContent = totalReads >= 1000 ? `${(totalReads / 1000).toFixed(1)}k` : totalReads.toString();
     if (el('revSource4Fill')) el('revSource4Fill').style.width = `${Math.min(100, (totalReads / readMax) * 100).toFixed(0)}%`;
+
+    // ── Coin Earnings Breakdown ─────────────────────────────────────
+    const coinMax = Math.max(coins, 1);
+    if (el('coinGiftsAmount')) el('coinGiftsAmount').textContent = `${coinsByType.gifts.toLocaleString()} coins`;
+    if (el('coinGiftsFill')) el('coinGiftsFill').style.width = `${Math.min(100, (coinsByType.gifts / coinMax) * 100).toFixed(0)}%`;
+
+    if (el('coinUnlocksAmount')) el('coinUnlocksAmount').textContent = `${coinsByType.chapterUnlocks.toLocaleString()} coins`;
+    if (el('coinUnlocksFill')) el('coinUnlocksFill').style.width = `${Math.min(100, (coinsByType.chapterUnlocks / coinMax) * 100).toFixed(0)}%`;
+
+    if (el('coinReferralsAmount')) el('coinReferralsAmount').textContent = `${coinsByType.referrals.toLocaleString()} coins`;
+    if (el('coinReferralsFill')) el('coinReferralsFill').style.width = `${Math.min(100, (coinsByType.referrals / coinMax) * 100).toFixed(0)}%`;
+
+    if (el('coinAdsAmount')) el('coinAdsAmount').textContent = `${coinsByType.ads.toLocaleString()} coins`;
+    if (el('coinAdsFill')) el('coinAdsFill').style.width = `${Math.min(100, (coinsByType.ads / coinMax) * 100).toFixed(0)}%`;
+
+    if (el('coinOtherAmount')) el('coinOtherAmount').textContent = `${coinsByType.other.toLocaleString()} coins`;
+    if (el('coinOtherFill')) el('coinOtherFill').style.width = `${Math.min(100, (coinsByType.other / coinMax) * 100).toFixed(0)}%`;
 
     if (donutChart) {
       donutChart.data.datasets[0].data = [

@@ -70,6 +70,7 @@ model User {
   streakLastReadDate  DateTime?
   streakFreezesLeft   Int       @default(1)
   chatNickname        String?   @unique
+  settings            Json?     @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

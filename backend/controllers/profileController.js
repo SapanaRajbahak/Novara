@@ -225,7 +225,16 @@ async function patchProfile(req, res) {
       if (typeof req.body.penName !== "string") {
         return res.status(400).json({ success: false, error: "Pen name must be a string" });
       }
-      updateData.penName = req.body.penName.trim() || null;
+      const newPenName = req.body.penName.trim() || null;
+      updateData.penName = newPenName;
+
+      // Update authorName on all books created by this user when pen name changes
+      if (newPenName && newPenName !== existing.penName) {
+        await prisma.book.updateMany({
+          where: { createdBy: String(req.session.user.id) },
+          data: { authorName: newPenName },
+        });
+      }
     }
 
     if (req.body.avatarUrl !== undefined) {
