@@ -52,7 +52,8 @@
       throw new Error('JSZip library is required for EPUB parsing. Load it before calling parseEpub.');
     }
 
-    const zip = await JSZip.loadAsync(arrayBuffer);
+    // Use a Uint8Array to prevent JSZip from potentially transferring the buffer
+    const zip = await JSZip.loadAsync(new Uint8Array(arrayBuffer));
     const files = zip.files;
 
     // 1. Find container.xml → rootfile
@@ -284,8 +285,10 @@
     }
 
     try {
+      // Use Uint8Array to prevent PDF.js from transferring/detaching the ArrayBuffer
+      // This allows the caller to still use the original buffer after parsing
       const loadingTask = pdfjsLib.getDocument({ 
-        data: arrayBuffer,
+        data: new Uint8Array(arrayBuffer),
         cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
         cMapPacked: true,
       });
