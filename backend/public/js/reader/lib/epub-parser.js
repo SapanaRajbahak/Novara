@@ -277,8 +277,18 @@
       throw new Error('PDF.js library is not loaded');
     }
 
+    // Ensure worker is configured
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      console.warn('[EpubParser] PDF.js worker was not configured, setting default worker URL');
+    }
+
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const loadingTask = pdfjsLib.getDocument({ 
+        data: arrayBuffer,
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+        cMapPacked: true,
+      });
       const pdf = await loadingTask.promise;
       
       const numPages = pdf.numPages;

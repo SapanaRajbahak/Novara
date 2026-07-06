@@ -17,7 +17,9 @@
     console.warn('[MyCollection] JSZip not loaded - EPUB upload will not work');
   }
   if (typeof pdfjsLib === 'undefined') {
-    console.warn('[MyCollection] PDF.js not loaded - PDF text extraction will not work');
+    console.error('[MyCollection] PDF.js not loaded - PDF uploads will fail');
+  } else {
+    console.log('[MyCollection] PDF.js loaded successfully');
   }
 
   // ─── Elements ──────────────────────────────────────────────────
@@ -298,7 +300,13 @@
 
   async function processFile(file) {
     var ext = file.name.split('.').pop().toLowerCase();
-    var arrayBuffer = await EP.readAsArrayBuffer(file);
+    
+    try {
+      var arrayBuffer = await EP.readAsArrayBuffer(file);
+    } catch (err) {
+      console.error('[MyCollection] Failed to read file:', file.name, err);
+      throw new Error('Failed to read file: ' + (err.message || 'Unknown error'));
+    }
 
     if (ext === 'epub') {
       var parsed = await EP.parseEpub(arrayBuffer);
@@ -340,23 +348,28 @@
     }
 
     if (ext === 'pdf') {
-      var pdfParsed = await EP.parsePdf(arrayBuffer);
-      var pdfTitle = pdfParsed.title || file.name.replace(/\.[^.]+$/, '');
-      var pdfAuthor = pdfParsed.author || 'Unknown Author';
-      var pdfBookMeta = {
-        title: pdfTitle,
-        author: pdfAuthor,
-        coverDataUri: '',
-        format: 'pdf',
-        genre: 'General',
-        fileSize: file.size,
-        fileName: file.name,
-        chapterCount: pdfParsed.chapters.length,
-        fileData: arrayBuffer,
-      };
-      var pdfBook = await DB.addBook(pdfBookMeta);
-      await DB.addChapters(pdfBook.id, pdfParsed.chapters);
-      return pdfBook;
+      try {
+        var pdfParsed = await EP.parsePdf(arrayBuffer);
+        var pdfTitle = pdfParsed.title || file.name.replace(/\.[^.]+$/, '');
+        var pdfAuthor = pdfParsed.author || 'Unknown Author';
+        var pdfBookMeta = {
+          title: pdfTitle,
+          author: pdfAuthor,
+          coverDataUri: '',
+          format: 'pdf',
+          genre: 'General',
+          fileSize: file.size,
+          fileName: file.name,
+          chapterCount: pdfParsed.chapters.length,
+          fileData: arrayBuffer,
+        };
+        var pdfBook = await DB.addBook(pdfBookMeta);
+        await DB.addChapters(pdfBook.id, pdfParsed.chapters);
+        return pdfBook;
+      } catch (pdfErr) {
+        console.error('[MyCollection] PDF parsing failed:', file.name, pdfErr);
+        throw new Error('PDF parsing failed: ' + (pdfErr.message || 'Unknown error'));
+      }
     }
 
     return null;

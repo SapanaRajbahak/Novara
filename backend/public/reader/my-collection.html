@@ -127,10 +127,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script>
-    // Configure PDF.js worker
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-    }
+    // Configure PDF.js worker - must be set before any PDF operations
+    window.addEventListener('DOMContentLoaded', function() {
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        console.log('[PDF.js] Worker configured:', pdfjsLib.GlobalWorkerOptions.workerSrc);
+      } else {
+        console.error('[PDF.js] pdfjsLib not loaded - PDF uploads will fail');
+      }
+    });
   </script>
   <script src="/js/shared/novara-session.js?v=20260322a"></script>
   <script src="/js/shared/app.js"></script>
