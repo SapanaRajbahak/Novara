@@ -309,7 +309,11 @@
     }
 
     if (ext === 'epub') {
-      var parsed = await EP.parseEpub(arrayBuffer);
+      // Create two independent copies to prevent detachment issues
+      var parseBuffer = arrayBuffer.slice(0);
+      var storageBuffer = arrayBuffer.slice(0);
+      
+      var parsed = await EP.parseEpub(parseBuffer);
       var bookMeta = {
         title: parsed.title || file.name.replace(/\.[^.]+$/, ''),
         author: parsed.author || 'Unknown Author',
@@ -320,7 +324,7 @@
         fileName: file.name,
         description: parsed.description || '',
         chapterCount: parsed.chapters.length,
-        fileData: arrayBuffer, // keep raw for PDF rendering
+        fileData: storageBuffer,
       };
       var book = await DB.addBook(bookMeta);
       await DB.addChapters(book.id, parsed.chapters);
@@ -349,7 +353,13 @@
 
     if (ext === 'pdf') {
       try {
-        var pdfParsed = await EP.parsePdf(arrayBuffer);
+        // Create two independent copies to prevent detachment issues
+        // parseBuffer: for PDF.js to parse and potentially detach
+        // storageBuffer: safe copy for IndexedDB storage
+        var parseBuffer = arrayBuffer.slice(0);
+        var storageBuffer = arrayBuffer.slice(0);
+        
+        var pdfParsed = await EP.parsePdf(parseBuffer);
         var pdfTitle = pdfParsed.title || file.name.replace(/\.[^.]+$/, '');
         var pdfAuthor = pdfParsed.author || 'Unknown Author';
         var pdfBookMeta = {
@@ -361,7 +371,8 @@
           fileSize: file.size,
           fileName: file.name,
           chapterCount: pdfParsed.chapters.length,
-          fileData: arrayBuffer,
+          // TEMPORARILY NULL - testing if buffer detachment still occurs
+          fileData: null,
         };
         var pdfBook = await DB.addBook(pdfBookMeta);
         await DB.addChapters(pdfBook.id, pdfParsed.chapters);
