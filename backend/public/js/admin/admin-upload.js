@@ -250,6 +250,60 @@ async function createBookPayload() {
   };
 }
 
+async function uploadPdfBook() {
+  const tags = elements.tags.value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  // Create FormData for multipart upload
+  const formData = new FormData();
+  formData.append("pdf", elements.mainFileInput.files[0]);
+  formData.append("title", elements.title.value.trim());
+  formData.append("author", elements.author.value.trim());
+  formData.append("description", elements.description.value.trim());
+  formData.append("genre", elements.genre.value);
+  formData.append("tags", JSON.stringify(tags));
+  formData.append("status", mapStatus(elements.status.value));
+
+  // Add cover image if provided
+  if (elements.coverInput.files?.[0]) {
+    const coverUrl = await readFileAsDataUrl(elements.coverInput.files[0]);
+    formData.append("coverUrl", coverUrl);
+  }
+
+  // Upload PDF using the specialized endpoint
+  const response = await fetch(`${API_BASE_URL}/api/admin/books/upload-pdf`, {
+    method: "POST",
+    credentials: "include",
+    body: formData,
+  });
+
+  const result = await response.json().catch(() => ({ success: false }));
+
+  if (response.status === 401 || response.status === 403) {
+    localStorage.removeItem(ADMIN_AUTH_KEY);
+    const next = encodeURIComponent("/admin/admin-upload.html");
+    window.location.href = `/admin/admin-login.html?next=${next}`;
+    throw new Error("Authentication required");
+  }
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.error || `HTTP ${response.status}`);
+  }
+
+  currentBookDraftId = result.data.id;
+  currentBookStatus = result.data.status;
+  currentChapters = [];
+
+  elements.chapterBuilder.classList.add("hidden");
+  showToast("PDF book uploaded successfully!");
+  
+  window.setTimeout(() => {
+    window.location.href = "/admin/admin-books.html";
+  }, 900);
+}
+
 function updateMainFileHint() {
   const type = elements.bookType.value;
   const config = getBookTypeConfig(type);
@@ -329,6 +383,12 @@ function bindEvents() {
       }
 
       try {
+        // Use specialized PDF upload endpoint for PDF files
+        if (elements.bookType.value === "pdf") {
+          await uploadPdfBook();
+          return;
+        }
+
         const { payload, audiobookUrl } = await createBookPayload();
         const createResult = await apiFetch("/api/admin/books", {
           method: "POST",

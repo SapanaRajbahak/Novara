@@ -85,6 +85,7 @@ const state = {
   chapterCache: {},
   currentChapter: null,
   currentChapterIndex: 0,
+  bookSource: 'api',
   progressApiEnabled: true,
   progressApiAuthMissingNotified: false,
   resumeApplied: false,
@@ -1930,10 +1931,24 @@ async function loadAndRenderChapterByIndex(index) {
 
   elements.readerContent.innerHTML = "<p>Loading chapter...</p>";
 
-  const chapter = await fetchChapterById(chapterMeta.id);
+  // For collection books, chapters already have content loaded from IndexedDB
+  const isLocalBook = state.bookSource === 'collection' || state.bookSource === 'localApp' || state.bookSource === 'localStorage';
+  
+  let chapterContent;
+  if (isLocalBook && chapterMeta.content) {
+    // Use content already loaded from IndexedDB
+    chapterContent = chapterMeta.content;
+  } else if (!isLocalBook) {
+    // API books: fetch from server
+    const chapter = await fetchChapterById(chapterMeta.id);
+    chapterContent = chapter.content;
+  } else {
+    chapterContent = '';
+  }
+
   state.currentChapter = {
     ...chapterMeta,
-    content: chapter.content,
+    content: chapterContent,
   };
 
   const params = new URLSearchParams(window.location.search);
@@ -2881,7 +2896,7 @@ async function bootstrap() {
     let book = null;
     let chapters = [];
     let audioTracks = [];
-    let bookSource = 'api';
+    state.bookSource = 'api';
 
     // 0. Try My Collection (IndexedDB) if source=collection or bookId starts with "local_"
     if (source === 'collection' || String(bookId).startsWith('local_')) {
@@ -2903,7 +2918,7 @@ async function bootstrap() {
               audiobookTracks: [],
             });
             chapters = dbChapters.map(normalizeChapterObj);
-            bookSource = 'collection';
+            state.bookSource = 'collection';
             book.format = dbBook.format || 'txt';
             // If the book is a PDF with stored file data, create a blob URL for rendering
             if (dbBook.format === 'pdf' && dbBook.fileData) {
@@ -2929,7 +2944,7 @@ async function bootstrap() {
         book = normalizeBookObj(bookMeta);
         chapters = Array.isArray(apiChapters) ? apiChapters.map(normalizeChapterObj) : [];
         audioTracks = Array.isArray(apiAudioTracks) ? apiAudioTracks : [];
-        bookSource = 'api';
+        state.bookSource = 'api';
         if (!book || !chapters.length) throw new Error('API book/chapters missing');
       } catch (apiErr) {
         console.warn('[reader] API book/chapters failed:', apiErr);
@@ -2939,7 +2954,7 @@ async function bootstrap() {
         book = normalizeBookObj(localBooks.find(b => (b.id || b.bookId) == bookId));
         if (book && Array.isArray(book.chapters) && book.chapters.length) {
           chapters = book.chapters.map(normalizeChapterObj);
-          bookSource = 'localApp';
+          state.bookSource = 'localApp';
         } else {
           // 3. Try localStorage continue-reading/library
           try {
@@ -2961,7 +2976,7 @@ async function bootstrap() {
               book = normalizeBookObj(found);
               if (Array.isArray(book.chapters) && book.chapters.length) {
                 chapters = book.chapters.map(normalizeChapterObj);
-                bookSource = 'localStorage';
+                state.bookSource = 'localStorage';
               }
             }
           } catch (lsErr) {
@@ -3085,7 +3100,7 @@ async function bootstrap() {
     renderChaptersList();
 
     // For local collection books, chapter content is already in IndexedDB.
-    if (bookSource === 'collection' || bookSource === 'localApp' || bookSource === 'localStorage') {
+    if (state.bookSource === 'collection' || state.bookSource === 'localApp' || state.bookSource === 'localStorage') {
       renderChapter(resolvedChapter);
     } else {
       // API books: fetch the canonical chapter payload.
@@ -3122,7 +3137,7 @@ async function bootstrap() {
     try {
       addContinueReading({
         bookId: book.id,
-        source: bookSource,
+        source: state.bookSource,
         currentChapter: resolvedChapter?.id,
         progress: chapterIdx
       });

@@ -18,6 +18,11 @@ enum BookStatus {
   PUBLISHED
 }
 
+enum ReadingMode {
+  CHAPTER
+  CONTINUOUS
+}
+
 enum FileType {
   EPUB
   PDF
@@ -146,6 +151,9 @@ model Book {
   tags                 String[]
   fileUrl              String?
   fileType             FileType?
+  readingMode          ReadingMode @default(CHAPTER)
+  totalPages           Int?
+  pdfMetadata          Json?
   isAudiobookAvailable Boolean     @default(false)
   isAiGenerated        Boolean     @default(false)
   status               BookStatus  @default(DRAFT)
@@ -157,6 +165,7 @@ model Book {
   createdByUser        User                 @relation("UserBooks", fields: [createdBy], references: [id], onDelete: Cascade)
   category             Category?            @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   chapters             Chapter[]
+  pages                BookPage[]
   audioTracks          AudioTrack[]
   bookmarks            Bookmark[]
   highlights           Highlight[]
@@ -170,6 +179,7 @@ model Book {
   @@index([status])
   @@index([title])
   @@index([createdAt])
+  @@index([readingMode])
 }
 
 model Chapter {
@@ -192,6 +202,20 @@ model Chapter {
   @@unique([bookId, chapterNumber])
   @@index([bookId])
   @@index([isPublished])
+}
+
+model BookPage {
+  id           String   @id @default(cuid())
+  bookId       String
+  pageNumber   Int
+  content      String   @db.Text
+  wordCount    Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  book         Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([bookId, pageNumber])
+  @@index([bookId])
 }
 
 model AudioTrack {
@@ -276,14 +300,16 @@ model ReadingProgress {
   id              String   @id @default(cuid())
   userId          String
   bookId          String
-  chapterId       String
+  chapterId       String?
+  pageNumber      Int?
+  scrollPosition  Int      @default(0)
   progressPercent Float    @default(0)
   lastLocation    String?
   updatedAt       DateTime @updatedAt
 
-  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  book    Book    @relation(fields: [bookId], references: [id], onDelete: Cascade)
-  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book    Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+  chapter Chapter? @relation(fields: [chapterId], references: [id], onDelete: Cascade)
 
   @@unique([userId, bookId])
   @@index([bookId])

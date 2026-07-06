@@ -12,6 +12,14 @@
     return;
   }
 
+  // Check for external libraries
+  if (typeof JSZip === 'undefined') {
+    console.warn('[MyCollection] JSZip not loaded - EPUB upload will not work');
+  }
+  if (typeof pdfjsLib === 'undefined') {
+    console.warn('[MyCollection] PDF.js not loaded - PDF text extraction will not work');
+  }
+
   // ─── Elements ──────────────────────────────────────────────────
   const els = {
     searchInput: document.getElementById('collectionSearchInput'),
@@ -332,19 +340,22 @@
     }
 
     if (ext === 'pdf') {
+      var pdfParsed = await EP.parsePdf(arrayBuffer);
+      var pdfTitle = pdfParsed.title || file.name.replace(/\.[^.]+$/, '');
+      var pdfAuthor = pdfParsed.author || 'Unknown Author';
       var pdfBookMeta = {
-        title: file.name.replace(/\.[^.]+$/, ''),
-        author: 'Unknown Author',
+        title: pdfTitle,
+        author: pdfAuthor,
         coverDataUri: '',
         format: 'pdf',
         genre: 'General',
         fileSize: file.size,
         fileName: file.name,
-        chapterCount: 1,
+        chapterCount: pdfParsed.chapters.length,
         fileData: arrayBuffer,
       };
       var pdfBook = await DB.addBook(pdfBookMeta);
-      await DB.addChapters(pdfBook.id, [{ number: 1, title: 'PDF Document', content: 'PDF content is rendered via viewer.' }]);
+      await DB.addChapters(pdfBook.id, pdfParsed.chapters);
       return pdfBook;
     }
 

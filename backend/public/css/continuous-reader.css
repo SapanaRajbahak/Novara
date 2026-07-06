@@ -1,0 +1,180 @@
+/* Continuous Reader Styles */
+
+/* Container for continuous reading mode */
+.continuous-reader-container {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Individual page styling */
+.continuous-page {
+  margin-bottom: 60px;
+  padding-bottom: 40px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.continuous-page:last-of-type {
+  border-bottom: none;
+  margin-bottom: 100px; /* Space for sentinel */
+}
+
+/* Page number indicator */
+.continuous-page .page-number {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted, #666);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 20px;
+  text-align: center;
+  opacity: 0.6;
+}
+
+/* Page content */
+.continuous-page .page-content {
+  line-height: var(--line-height, 1.8);
+  font-size: var(--font-size, 18px);
+  font-family: var(--font-family, serif);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Loading indicator */
+.continuous-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  gap: 16px;
+  display: none;
+}
+
+.continuous-loader.show {
+  display: flex;
+}
+
+/* Spinner animation */
+.continuous-loader .spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid var(--spinner-bg, #f3f3f3);
+  border-top: 4px solid var(--spinner-color, #3498db);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.continuous-loader p {
+  color: var(--text-muted, #666);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* Error state */
+.reader-error {
+  background: #fee;
+  border: 1px solid #fcc;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 20px 0;
+  color: #c00;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Scroll sentinel (invisible trigger for infinite scroll) */
+#scroll-sentinel {
+  height: 1px;
+  width: 100%;
+  visibility: hidden;
+}
+
+/* Progress indicator (optional) */
+.continuous-progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--progress-bg, #e0e0e0);
+  z-index: 1000;
+}
+
+.continuous-progress-bar .progress-fill {
+  height: 100%;
+  background: var(--progress-color, #3498db);
+  transition: width 0.3s ease;
+}
+
+/* Dark theme support */
+[data-theme="dark"] .continuous-page {
+  border-bottom-color: #444;
+}
+
+[data-theme="dark"] .continuous-page .page-number {
+  color: #999;
+}
+
+[data-theme="dark"] .reader-error {
+  background: #522;
+  border-color: #844;
+  color: #faa;
+}
+
+[data-theme="dark"] .continuous-loader .spinner {
+  border-color: #444;
+  border-top-color: #5dade2;
+}
+
+[data-theme="dark"] .continuous-loader p {
+  color: #999;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .continuous-reader-container {
+    padding: 12px;
+  }
+  
+  .continuous-page {
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+  }
+  
+  .continuous-page .page-number {
+    font-size: 11px;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Hide scroll position indicator on continuous mode */
+.continuous-mode .progress-slider-wrapper {
+  display: none;
+}
+
+/* Optional: Page transition effect */
+.continuous-page {
+  animation: fadeInPage 0.4s ease-in-out;
+}
+
+@keyframes fadeInPage {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

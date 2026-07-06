@@ -268,10 +268,74 @@
     };
   }
 
+  /**
+   * Parse a PDF ArrayBuffer and extract text content.
+   * Returns { title, author, chapters: [{title, content}] }
+   */
+  async function parsePdf(arrayBuffer) {
+    if (typeof pdfjsLib === 'undefined') {
+      throw new Error('PDF.js library is not loaded');
+    }
+
+    try {
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      
+      const numPages = pdf.numPages;
+      const chapters = [];
+      const pagesPerChapter = 10; // Group pages into chapters
+      
+      for (let chapterStart = 1; chapterStart <= numPages; chapterStart += pagesPerChapter) {
+        const chapterEnd = Math.min(chapterStart + pagesPerChapter - 1, numPages);
+        let chapterText = '';
+        
+        for (let pageNum = chapterStart; pageNum <= chapterEnd; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items.map(function (item) {
+            return item.str;
+          }).join(' ');
+          
+          chapterText += pageText + '\n\n';
+        }
+        
+        if (chapterText.trim()) {
+          const chapterNumber = Math.floor((chapterStart - 1) / pagesPerChapter) + 1;
+          chapters.push({
+            number: chapterNumber,
+            title: chapterStart === chapterEnd 
+              ? 'Page ' + chapterStart
+              : 'Pages ' + chapterStart + '-' + chapterEnd,
+            content: chapterText.trim(),
+          });
+        }
+      }
+      
+      // Extract metadata if available
+      const metadata = await pdf.getMetadata();
+      const title = metadata?.info?.Title || '';
+      const author = metadata?.info?.Author || '';
+      
+      return {
+        title: title,
+        author: author,
+        chapters: chapters.length > 0 ? chapters : [{
+          number: 1,
+          title: 'Document',
+          content: 'Unable to extract text from this PDF.',
+        }],
+      };
+    } catch (error) {
+      console.error('[EpubParser] PDF parsing failed:', error);
+      throw new Error('Failed to parse PDF: ' + error.message);
+    }
+  }
+
   // ─── Public API ────────────────────────────────────────────────
   window.EpubParser = {
     parseEpub: parseEpub,
     parseTxt: parseTxt,
+    parsePdf: parsePdf,
     readAsArrayBuffer: readAsArrayBuffer,
   };
 })();

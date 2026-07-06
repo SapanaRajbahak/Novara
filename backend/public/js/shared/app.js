@@ -382,6 +382,10 @@ function createBrowseCard(book) {
 }
 
 function renderContinueReading() {
+  if (!elements.continueReadingRow) {
+    return;
+  }
+  
   elements.continueReadingRow.innerHTML = "";
   // Use unified continue reading data, sorted by updatedAt descending
   let entries = getContinueReading().filter(e => e.userId === getCurrentUserId());
@@ -411,6 +415,10 @@ function renderContinueReading() {
 }
 
 function renderTrending() {
+  if (!elements.trendingRow) {
+    return;
+  }
+  
   elements.trendingRow.innerHTML = "";
   const items = state.trending.slice(0, 14);
   if (!items.length) {
@@ -424,6 +432,10 @@ function renderTrending() {
 }
 
 function renderGenres() {
+  if (!elements.genreRow) {
+    return;
+  }
+  
   elements.genreRow.innerHTML = "";
   if (!state.genres.length) {
     elements.genreRow.appendChild(createEmptyState("Pick a genre from discovery to personalize this row."));
@@ -436,6 +448,10 @@ function renderGenres() {
 }
 
 function renderGenreChips() {
+  if (!elements.quickGenreChips) {
+    return;
+  }
+  
   elements.quickGenreChips.innerHTML = "";
   const allChip = document.createElement("button");
   allChip.type = "button";
@@ -473,6 +489,10 @@ function getFilteredBrowseBooks() {
 }
 
 function renderBrowseGrid() {
+  if (!elements.browseGrid || !elements.loadMoreBtn) {
+    return;
+  }
+  
   elements.browseGrid.innerHTML = "";
   const filtered = getFilteredBrowseBooks();
   if (!filtered.length) {
@@ -490,6 +510,11 @@ function renderBrowseGrid() {
 }
 
 function bindDiscoveryEvents() {
+  // Guard: only bind if discovery elements exist on this page
+  if (!elements.globalSearchInput || !elements.discoverySearchInput || !elements.quickGenreChips) {
+    return;
+  }
+
   const syncSearch = () => {
     state.searchTerm = elements.discoverySearchInput.value || elements.globalSearchInput.value || "";
     elements.globalSearchInput.value = state.searchTerm;
@@ -587,8 +612,12 @@ async function syncSessionUi() {
 
   if (user) {
     const displayName = user.name || user.email || "Reader";
-    elements.dashboardProfileName.textContent = `Welcome, ${displayName}`;
-    elements.dashboardAvatar.textContent = window.NovaraSession.getInitials(displayName);
+    if (elements.dashboardProfileName) {
+      elements.dashboardProfileName.textContent = `Welcome, ${displayName}`;
+    }
+    if (elements.dashboardAvatar) {
+      elements.dashboardAvatar.textContent = window.NovaraSession.getInitials(displayName);
+    }
   } else if (elements.dashboardProfileName) {
     elements.dashboardProfileName.textContent = "Welcome, Reader";
     if (elements.dashboardAvatar) {
@@ -596,23 +625,31 @@ async function syncSessionUi() {
     }
   }
 
-  window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
-    currentDashboard: "reader",
-    readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
-    writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
-  });
+  if (elements.dashboardSwitcher) {
+    window.NovaraSession.renderDashboardSwitcher(elements.dashboardSwitcher, {
+      currentDashboard: "reader",
+      readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
+      writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
+    });
+  }
 
-  window.NovaraSession.renderWriterJourneyCard(elements.writerJourneyPanel, {
-    readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
-    writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
-    onboardingHref: "/writer/writer-onboarding.html",
-  });
+  if (elements.writerJourneyPanel) {
+    window.NovaraSession.renderWriterJourneyCard(elements.writerJourneyPanel, {
+      readerHref: window.NovaraSession.APP_ROUTES.readerDashboard,
+      writerHref: window.NovaraSession.APP_ROUTES.writerDashboard,
+      onboardingHref: "/writer/writer-onboarding.html",
+    });
+  }
 
   const canUseWriter = window.NovaraSession.canUseWriter(user);
-  elements.writerNavLink.hidden = !canUseWriter;
-  elements.writerNavLink.href = window.NovaraSession.APP_ROUTES.writerDashboard;
-  elements.writerDropdownLink.hidden = !canUseWriter;
-  elements.writerDropdownLink.href = window.NovaraSession.APP_ROUTES.writerDashboard;
+  if (elements.writerNavLink) {
+    elements.writerNavLink.hidden = !canUseWriter;
+    elements.writerNavLink.href = window.NovaraSession.APP_ROUTES.writerDashboard;
+  }
+  if (elements.writerDropdownLink) {
+    elements.writerDropdownLink.hidden = !canUseWriter;
+    elements.writerDropdownLink.href = window.NovaraSession.APP_ROUTES.writerDashboard;
+  }
 
   return user;
 }
