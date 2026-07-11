@@ -946,6 +946,67 @@ async function autoAdvanceToNextChapter(playbackMode) {
   }
 }
 
+// ─── SEO Schema Generation ───────────────────────────────────────
+
+function updateStorySchema() {
+  if (!state.currentBook) return;
+  
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "CreativeWork",
+    "name": state.currentBook.title || "Unknown Story",
+    "description": state.currentBook.description || state.currentBook.title || "",
+    "author": {
+      "@type": "Person",
+      "name": state.currentBook.author || state.currentBook.authorName || "Unknown Author"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Novara"
+    },
+    "url": window.location.href.split('?')[0] + '?bookId=' + encodeURIComponent(state.currentBook.id),
+    "inLanguage": "en",
+    "genre": state.currentBook.genre || "Fiction"
+  };
+  
+  injectSchema('story-schema', schema);
+}
+
+function updateChapterSchema() {
+  if (!state.currentBook || !state.currentChapter) return;
+  
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Chapter",
+    "name": `Chapter ${state.currentChapter.number}: ${state.currentChapter.title}`,
+    "position": state.currentChapter.number || state.currentChapterIndex + 1,
+    "isPartOf": {
+      "@type": "CreativeWork",
+      "name": state.currentBook.title || "Unknown Story",
+      "url": window.location.href.split('?')[0] + '?bookId=' + encodeURIComponent(state.currentBook.id)
+    },
+    "author": {
+      "@type": "Person",
+      "name": state.currentBook.author || state.currentBook.authorName || "Unknown Author"
+    }
+  };
+  
+  injectSchema('chapter-schema', schema);
+}
+
+function injectSchema(id, schemaData) {
+  // Remove existing schema with this ID
+  const existing = document.getElementById(id);
+  if (existing) existing.remove();
+  
+  // Create new script tag
+  const script = document.createElement('script');
+  script.id = id;
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(schemaData, null, 2);
+  document.head.appendChild(script);
+}
+
 function resetTtsState() {
   state.listen.currentUtterance = null;
   state.listen.isTtsPaused = false;
@@ -3044,6 +3105,10 @@ async function bootstrap() {
     }
     state.currentBook = book;
     state.currentChapterIndex = chapterIdx;
+    
+    // Update SEO schema for the story
+    updateStorySchema();
+    
     // Debug log
     console.debug('[reader] Chapter resolved:', resolvedChapter);
 
@@ -3075,6 +3140,11 @@ async function bootstrap() {
       // Book/chapter titles
       elements.toolbarBookTitle.textContent = state.currentBook.title;
       elements.toolbarChapterTitle.textContent = `Chapter ${chapter.number}: ${chapter.title}`;
+      
+      // Update chapter SEO schema
+      state.currentChapter = chapter;
+      updateChapterSchema();
+      
       // PDF books: render via iframe using the stored blob URL
       if (state.currentBook.format === 'pdf' && state.localFileUrl) {
         elements.readerContent.innerHTML = `<div style="width:100%;height:85vh;"><iframe src="${state.localFileUrl}" style="width:100%;height:100%;border:none;" title="PDF Document"></iframe></div>`;

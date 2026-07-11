@@ -87,6 +87,41 @@ function createCoverSvg(title, genre) {
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+// ─── SEO Schema Generation ───────────────────────────────────────
+
+function updateAuthorSchema(profile) {
+  if (!profile || !profile.roles || !profile.roles.includes('writer')) return;
+  
+  const authorName = profile.penName || profile.fullName || "Unknown Author";
+  const userId = profile.id || '';
+  
+  const schema = {
+    "@context": "https://schema.org",
+    "@type": "Person",
+    "name": authorName,
+    "url": window.location.href,
+    "worksFor": {
+      "@type": "Organization",
+      "name": "Novara"
+    }
+  };
+  
+  injectSchema('author-schema', schema);
+}
+
+function injectSchema(id, schemaData) {
+  // Remove existing schema with this ID
+  const existing = document.getElementById(id);
+  if (existing) existing.remove();
+  
+  // Create new script tag
+  const script = document.createElement('script');
+  script.id = id;
+  script.type = 'application/ld+json';
+  script.textContent = JSON.stringify(schemaData, null, 2);
+  document.head.appendChild(script);
+}
+
 function formatDate(value) {
   if (!value) {
     return "Joined date unavailable";
@@ -281,7 +316,11 @@ function renderProfile(profile) {
   renderRoleChips(profile);
   renderPreferences(profile);
   populateForm(profile);
+  
+  // Update Author SEO schema if this is a writer profile
+  updateAuthorSchema(profile);
 }
+
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
