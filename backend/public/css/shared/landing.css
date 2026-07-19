@@ -275,6 +275,155 @@ a.outline-btn {
   max-width: 52ch;
 }
 
+.intro-grid,
+.learn-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: 0.8rem;
+}
+
+.intro-card,
+.stat-item,
+.step-card,
+.feature-card,
+.learn-list,
+.about-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.intro-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.intro-card--primary {
+  background: linear-gradient(135deg, color-mix(in oklab, var(--primary) 90%, white 10%) 0%, color-mix(in oklab, var(--accent) 74%, black 26%) 100%);
+  color: #fff9f3;
+}
+
+.intro-card p {
+  margin: 0;
+  line-height: 1.7;
+}
+
+.stat-stack {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.stat-item {
+  padding: 0.9rem 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.stat-item strong {
+  font-size: 1.4rem;
+  color: var(--primary);
+}
+
+.stat-item span {
+  color: var(--muted);
+}
+
+.step-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.step-card {
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.step-card span {
+  display: inline-flex;
+  width: 2rem;
+  height: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 12%, var(--surface));
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.step-card h3,
+.feature-card h3 {
+  font-size: 1.08rem;
+}
+
+.step-card p,
+.feature-card p,
+.learn-copy p,
+.about-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.68;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.feature-card {
+  padding: 0.95rem;
+}
+
+.learn-grid {
+  align-items: stretch;
+}
+
+.learn-copy {
+  padding: 0.2rem 0.2rem 0.2rem 0;
+}
+
+.learn-list {
+  padding: 1rem;
+}
+
+.learn-list ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.learn-list li {
+  padding-left: 1.1rem;
+  position: relative;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.learn-list li::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-size: 1.1rem;
+}
+
+.about-card {
+  padding: 1rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.about-card h2 {
+  font-size: clamp(1.45rem, 2.8vw, 2rem);
+}
+
 .sync-message {
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -310,6 +459,16 @@ a.outline-btn {
   overflow: hidden;
   display: grid;
   grid-template-rows: auto 1fr;
+}
+
+.story-card--original {
+  border-color: color-mix(in oklab, var(--primary) 30%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 94%, #f5ece0) 0%, var(--surface) 100%);
+}
+
+.story-card--public-domain {
+  border-color: color-mix(in oklab, var(--accent) 30%, var(--border));
+  background: linear-gradient(180deg, color-mix(in oklab, var(--surface) 95%, #efe6d8) 0%, var(--surface) 100%);
 }
 
 .restore-card {
@@ -358,12 +517,51 @@ a.outline-btn {
   font-size: 1.12rem;
 }
 
+.story-type-badge {
+  display: inline-flex;
+  width: fit-content;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  padding: 0.22rem 0.58rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.story-card--original .story-type-badge {
+  color: color-mix(in oklab, var(--primary) 86%, black 14%);
+  border-color: color-mix(in oklab, var(--primary) 28%, var(--border));
+  background: color-mix(in oklab, var(--primary) 10%, var(--surface));
+}
+
+.story-card--public-domain .story-type-badge {
+  color: color-mix(in oklab, var(--accent) 86%, black 14%);
+  border-color: color-mix(in oklab, var(--accent) 28%, var(--border));
+  background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+}
+
 .story-meta,
 .story-description {
   margin: 0;
   color: var(--muted);
   font-size: 0.84rem;
   line-height: 1.6;
+}
+
+.story-source-meta {
+  margin: -0.12rem 0 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.story-card--original .story-source-meta {
+  color: color-mix(in oklab, var(--primary) 66%, var(--muted));
+}
+
+.story-card--public-domain .story-source-meta {
+  color: color-mix(in oklab, var(--accent) 66%, var(--muted));
 }
 
 .story-actions {
@@ -392,6 +590,98 @@ a.outline-btn {
   background: linear-gradient(135deg, color-mix(in oklab, var(--accent) 88%, white 12%), color-mix(in oklab, var(--primary) 76%, black 24%));
   color: #fff7ef;
   border-color: transparent;
+}
+
+.community-section {
+  background:
+    radial-gradient(circle at 12% 16%, rgba(31, 74, 66, 0.09), transparent 26%),
+    radial-gradient(circle at 85% 78%, rgba(184, 100, 47, 0.12), transparent 28%),
+    color-mix(in oklab, var(--surface) 90%, var(--bg));
+}
+
+.community-layout {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 0.8rem;
+  align-items: stretch;
+}
+
+.community-cards {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.community-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  padding: 0.95rem;
+}
+
+.community-card h3 {
+  font-size: 1.08rem;
+}
+
+.community-card p {
+  margin: 0.45rem 0 0;
+  color: var(--muted);
+  line-height: 1.62;
+}
+
+.community-mockup {
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, var(--border));
+  border-radius: var(--radius-lg);
+  background: linear-gradient(160deg, color-mix(in oklab, var(--surface) 80%, #ece4d7) 0%, var(--surface) 100%);
+  box-shadow: var(--shadow-card);
+  padding: 0.95rem;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 0.7rem;
+}
+
+.mockup-header {
+  font-family: "DM Serif Display", serif;
+  font-size: 1.38rem;
+  color: var(--text);
+}
+
+.mockup-subtitle {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: color-mix(in oklab, var(--primary) 78%, var(--muted));
+}
+
+.mockup-thread {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  padding: 0.8rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.mockup-thread p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.56;
+}
+
+.mockup-thread strong {
+  color: var(--text);
+}
+
+.mockup-footer {
+  border-radius: 999px;
+  width: fit-content;
+  border: 1px solid color-mix(in oklab, var(--accent) 26%, var(--border));
+  background: color-mix(in oklab, var(--accent) 9%, var(--surface));
+  color: color-mix(in oklab, var(--accent) 76%, var(--text));
+  padding: 0.32rem 0.7rem;
+  font-size: 0.8rem;
+  font-weight: 700;
 }
 
 .genre-grid {
@@ -477,9 +767,9 @@ a.outline-btn {
   box-shadow: var(--shadow-soft);
   padding: 0.9rem;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.8rem;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 1rem;
 }
 
 .footer-brand {
@@ -489,6 +779,22 @@ a.outline-btn {
   font-weight: 700;
 }
 
+.footer-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.footer-group {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.footer-group h3 {
+  font-size: 1rem;
+  margin-bottom: 0.2rem;
+}
+
 .footer-links,
 .social-links {
   display: flex;
@@ -496,10 +802,7 @@ a.outline-btn {
   flex-wrap: wrap;
 }
 
-.footer-links {
-  justify-content: center;
-}
-
+.footer-group a,
 .footer-links a,
 .social-links a {
   color: var(--muted);
@@ -774,15 +1077,33 @@ a.outline-btn {
     grid-template-columns: 1fr;
   }
 
+  .community-layout {
+    grid-template-columns: 1fr;
+  }
+
   .story-grid,
   .genre-grid,
-  .benefit-grid {
+  .benefit-grid,
+  .feature-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .step-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .intro-grid,
+  .learn-grid {
+    grid-template-columns: 1fr;
   }
 
   .landing-footer {
     grid-template-columns: 1fr;
     justify-items: start;
+  }
+
+  .footer-columns {
+    width: 100%;
   }
 
   .footer-links {
@@ -816,7 +1137,10 @@ a.outline-btn {
 @media (max-width: 620px) {
   .story-grid,
   .genre-grid,
-  .benefit-grid {
+  .benefit-grid,
+  .feature-grid,
+  .step-grid,
+  .footer-columns {
     grid-template-columns: 1fr;
   }
 

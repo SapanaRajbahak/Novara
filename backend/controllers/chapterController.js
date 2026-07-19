@@ -1,5 +1,6 @@
 const prisma = require("../prisma/client");
 const chapterService = require("../services/chapterService");
+const chapterTranslationService = require("../services/chapterTranslationService");
 const {
   validateId,
   validateCreateChapter,
@@ -366,10 +367,167 @@ async function deleteChapter(req, res) {
   }
 }
 
+async function translateChapter(req, res) {
+  try {
+    const idErrors = validateId(req.params.id, "chapter id");
+    if (idErrors.length) {
+      return res.status(400).json({ success: false, error: idErrors.join(". ") });
+    }
+
+    const requestedLanguage = chapterTranslationService.normalizeLanguage(req.body?.language);
+    if (!requestedLanguage) {
+      return res.status(400).json({
+        success: false,
+        error: "language is required",
+      });
+    }
+
+    const [chapter, settings] = await Promise.all([
+      chapterService.getChapterById(req.params.id),
+      getMonetizationSettings(),
+    ]);
+
+    if (!chapter) {
+      return res.status(404).json({ success: false, error: "Chapter not found" });
+    }
+
+    const publicDomainBook = isPublicDomainBook(chapter.book);
+
+    if (settings.monetizationMaintMode && !publicDomainBook) {
+      return res.status(503).json({
+        success: false,
+        error: "Monetization is temporarily under maintenance. Please try again shortly.",
+        code: "MAINTENANCE",
+      });
+    }
+
+    const user = req.session && req.session.user;
+    const isAuthenticated = Boolean(user);
+    const isSubscriber = isAuthenticated && Boolean(user.isSubscribed);
+    const chNum = Number(chapter.chapterNumber);
+    const isFree = publicDomainBook || isFreeChapter(chNum, settings);
+    const earlyAccessLocked = isEarlyAccessLocked(chapter, settings, isSubscriber, publicDomainBook);
+
+    if (earlyAccessLocked) {
+      return res.status(403).json({
+        success: false,
+        error: "This chapter is in early access for Pro members.",
+        code: "EARLY_ACCESS_PRO_ONLY",
+        proRequired: true,
+      });
+    }
+
+    if (!isFree) {
+      if (!isAuthenticated) {
+        return res.status(403).json({
+          success: false,
+          error: "Login is required to translate this chapter",
+          code: "CHAPTER_LOCKED",
+          loginRequired: true,
+        });
+      }
+
+      if (!isSubscriber || settings.subUnlimited === false) {
+        const unlockedByCoin = await hasUserUnlockedChapter(user.id, chapter.id);
+        if (!unlockedByCoin) {
+          const coinCost = settings.chapterUnlockCost ?? 10;
+          return res.status(403).json({
+            success: false,
+            error: "This chapter requires coins to unlock",
+            code: "CHAPTER_LOCKED",
+            coinCost,
+            chapterUnlockCost: coinCost,
+          });
+        }
+      }
+    }
+
+    const translated = await chapterTranslationService.getOrCreateChapterTranslation({
+      chapterId: chapter.id,
+      language: requestedLanguage,
+      sourceText: chapter.content,
+    });
+
+    return res.json({
+      success: true,
+      message: translated.cached ? "Translation loaded from cache" : "Translation generated",
+      data: {
+        chapterId: chapter.id,
+        bookId: chapter.bookId,
+        language: translated.language,
+        languageLabel: chapterTranslationService.displayLanguage(translated.language),
+        content: translated.content,
+        cached: translated.cached,
+        provider: translated.provider,
+      },
+    });
+  } catch (error) {
+    console.error("translateChapter error:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Failed to translate chapter",
+    });
+  }
+}
+
+async function saveUserTranslation(req, res) {
+  try {
+    if (!req.session || !req.session.user) {
+      return res.status(401).json({ success: false, error: "Authentication required" });
+    }
+
+    const idErrors = validateId(req.params.bookId, "bookId");
+    if (idErrors.length) {
+      return res.status(400).json({ success: false, error: idErrors.join(". ") });
+    }
+
+    const language = chapterTranslationService.normalizeLanguage(req.body?.language);
+    if (!language) {
+      return res.status(400).json({ success: false, error: "language is required" });
+    }
+
+    const book = await prisma.book.findFirst({
+      where: {
+        id: req.params.bookId,
+        status: "PUBLISHED",
+      },
+      select: { id: true, title: true },
+    });
+
+    if (!book) {
+      return res.status(404).json({ success: false, error: "Book not found" });
+    }
+
+    await chapterTranslationService.saveUserTranslationPreference({
+      userId: req.session.user.id,
+      bookId: book.id,
+      language,
+    });
+
+    return res.json({
+      success: true,
+      message: "Translation saved to your library preferences",
+      data: {
+        bookId: book.id,
+        language,
+        languageLabel: chapterTranslationService.displayLanguage(language),
+      },
+    });
+  } catch (error) {
+    console.error("saveUserTranslation error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Failed to save translation preference",
+    });
+  }
+}
+
 module.exports = {
   getBookChapters,
   getChapterById,
   createChapter,
   updateChapter,
   deleteChapter,
+  translateChapter,
+  saveUserTranslation,
 };

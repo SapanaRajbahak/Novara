@@ -15,7 +15,8 @@ const REFERRAL_STORAGE_KEY = "novara_referral";
 const LEGACY_REFERRAL_STORAGE_KEY = "novara.pendingReferrer";
 
 const elements = {
-  featuredStoriesGrid: document.getElementById("featuredStoriesGrid"),
+  originalsGrid: document.getElementById("originalsGrid"),
+  classicsGrid: document.getElementById("classicsGrid"),
   genreGrid: document.getElementById("genreGrid"),
   chapterPreviewModal: document.getElementById("chapterPreviewModal"),
   chapterPreviewTitle: document.getElementById("chapterPreviewTitle"),
@@ -47,6 +48,23 @@ let featuredSource = "empty";
 const previewCache = new Map();
 let activePreviewState = null;
 let pendingSignupState = null;
+
+function isPublicDomainStory(story) {
+  const source = String(story && story.source ? story.source : "").toLowerCase();
+  if (source.includes("gutenberg") || source.includes("public domain")) {
+    return true;
+  }
+
+  const tags = Array.isArray(story && story.tags) ? story.tags : [];
+  return tags.some((tag) => {
+    const normalizedTag = String(tag || "").toLowerCase();
+    return normalizedTag === "public-domain" || normalizedTag === "project-gutenberg";
+  });
+}
+
+function getStoryTypeLabel(story) {
+  return isPublicDomainStory(story) ? "Public Domain" : "Novara Original";
+}
 
 function getLocalUploadedBooks() {
   try {
@@ -420,6 +438,8 @@ async function fetchLiveStories() {
       genre: book.genre || "General",
       description: book.description || "No description available yet.",
       coverUrl: toAbsoluteCoverUrl(book.coverUrl),
+      source: book.source || "",
+      tags: Array.isArray(book.tags) ? book.tags : [],
     }));
   }
 
@@ -446,11 +466,63 @@ async function fetchLiveStories() {
   return { stories: [], source: "empty" };
 }
 
+function renderStoryGrid(stories, gridElement) {
+  if (!stories || !stories.length) {
+    gridElement.innerHTML = `
+      <article class="story-card" style="grid-column: 1 / -1;">
+        <div class="story-content">
+          <p class="story-description">No stories in this category yet.</p>
+        </div>
+      </article>
+    `;
+    return;
+  }
+
+  gridElement.innerHTML = stories
+    .map((story) => {
+      const isPublicDomain = isPublicDomainStory(story);
+      const storyTypeLabel = getStoryTypeLabel(story);
+      const storyTypeClass = isPublicDomain ? "story-card--public-domain" : "story-card--original";
+      const sourceMeta = isPublicDomain ? "Public Domain Classic" : "Published on Novara";
+
+      return `
+      <article class="story-card ${storyTypeClass}">
+        <img class="story-cover" src="${story.coverUrl || createCoverSvg(story.title, story.genre)}" alt="${story.title} cover" loading="lazy" data-fallback-cover="${createCoverSvg(story.title, story.genre)}" data-open-story="${story.id}" />
+        <div class="story-content">
+          <span class="story-type-badge">${storyTypeLabel}</span>
+          <h3 data-open-story="${story.id}">${story.title}</h3>
+          <p class="story-meta">${story.author} · ${story.genre}</p>
+          <p class="story-source-meta">${sourceMeta}</p>
+          <p class="story-description">${story.description}</p>
+          <div class="story-actions">
+            <button type="button" class="preview-btn" data-preview-story="${story.id}">Read Chapter 1 Free</button>
+            <button type="button" data-locked-preview="true" data-preview-story="${story.id}">View Chapters</button>
+          </div>
+        </div>
+      </article>
+    `;
+    })
+    .join("");
+
+  gridElement.querySelectorAll("img.story-cover[data-fallback-cover]").forEach((img) => {
+    img.addEventListener(
+      "error",
+      () => {
+        const fallbackCover = img.getAttribute("data-fallback-cover");
+        if (fallbackCover && img.src !== fallbackCover) {
+          img.src = fallbackCover;
+        }
+      },
+      { once: true }
+    );
+  });
+}
+
 function renderFeaturedStories() {
   setFeaturedSyncMessage("", "");
 
   if (!featuredStories.length) {
-    elements.featuredStoriesGrid.innerHTML = `
+    const emptyMsg = `
       <article class="story-card" style="grid-column: 1 / -1;">
         <div class="story-content">
           <h3>No books available yet</h3>
@@ -458,10 +530,12 @@ function renderFeaturedStories() {
         </div>
       </article>
     `;
+    elements.originalsGrid.innerHTML = emptyMsg;
+    elements.classicsGrid.innerHTML = "";
 
     const localCount = getLocalUploadedBooks().length;
     if (localCount > 0) {
-      elements.featuredStoriesGrid.innerHTML += `
+      elements.originalsGrid.innerHTML += `
         <article class="story-card restore-card">
           <div class="story-content">
             <h3>Restore your local catalog</h3>
@@ -481,36 +555,13 @@ function renderFeaturedStories() {
     setFeaturedSyncMessage("Showing local browser books. Sync to backend to persist across devices.", "");
   }
 
-  elements.featuredStoriesGrid.innerHTML = featuredStories
-    .map((story) => `
-      <article class="story-card">
-        <img class="story-cover" src="${story.coverUrl || createCoverSvg(story.title, story.genre)}" alt="${story.title} cover" loading="lazy" data-fallback-cover="${createCoverSvg(story.title, story.genre)}" data-open-story="${story.id}" />
-        <div class="story-content">
-          <h3 data-open-story="${story.id}">${story.title}</h3>
-          <p class="story-meta">${story.author} · ${story.genre}</p>
-          <p class="story-description">${story.description}</p>
-          <div class="story-actions">
-            <button type="button" class="preview-btn" data-preview-story="${story.id}">Read Chapter 1 Free</button>
-            <button type="button" data-locked-preview="true" data-preview-story="${story.id}">View Chapters</button>
-          </div>
-        </div>
-      </article>
-    `)
-    .join("");
+  const originals = featuredStories.filter((story) => !isPublicDomainStory(story));
+  const classics = featuredStories.filter((story) => isPublicDomainStory(story));
 
-  elements.featuredStoriesGrid.querySelectorAll("img.story-cover[data-fallback-cover]").forEach((img) => {
-    img.addEventListener(
-      "error",
-      () => {
-        const fallbackCover = img.getAttribute("data-fallback-cover");
-        if (fallbackCover && img.src !== fallbackCover) {
-          img.src = fallbackCover;
-        }
-      },
-      { once: true }
-    );
-  });
+  renderStoryGrid(originals, elements.originalsGrid);
+  renderStoryGrid(classics, elements.classicsGrid);
 }
+
 
 async function restoreLocalBooksToBackend() {
   const localBooks = getLocalUploadedBooks();

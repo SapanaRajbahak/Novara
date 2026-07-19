@@ -1,0 +1,125 @@
+.community-page {
+  width: min(1120px, calc(100% - 2rem));
+  margin: 1.4rem auto 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.community-hero,
+.community-section-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in oklab, var(--surface) 90%, var(--bg));
+  box-shadow: var(--shadow-soft);
+}
+
+.community-hero {
+  padding: 1.2rem;
+  background:
+    radial-gradient(circle at 12% 12%, rgba(31, 74, 66, 0.14), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(184, 100, 47, 0.16), transparent 30%),
+    color-mix(in oklab, var(--surface) 88%, var(--bg));
+}
+
+.community-hero h1 {
+  margin-top: 0.4rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1.08;
+}
+
+.community-positioning {
+  margin: 0.8rem 0 0;
+  font-size: clamp(1rem, 2.2vw, 1.25rem);
+  font-weight: 700;
+  color: color-mix(in oklab, var(--primary) 85%, var(--text));
+  max-width: 72ch;
+}
+
+.community-intro {
+  margin: 0.7rem 0 0;
+  color: var(--muted);
+  line-height: 1.72;
+  max-width: 80ch;
+}
+
+.community-section-block {
+  padding: 1.05rem;
+}
+
+.community-section-block h2 {
+  font-size: clamp(1.4rem, 2.6vw, 2rem);
+}
+
+.community-section-block p {
+  margin: 0.62rem 0 0;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.community-grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.community-card-block {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+  padding: 0.9rem;
+}
+
+.community-card-block h3 {
+  font-size: 1.06rem;
+}
+
+.community-card-block p {
+  margin: 0.45rem 0 0;
+  font-size: 0.9rem;
+}
+
+.community-pill-row {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.community-pill {
+  border: 1px solid color-mix(in oklab, var(--primary) 28%, var(--border));
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--primary) 10%, var(--surface));
+  color: color-mix(in oklab, var(--primary) 78%, var(--text));
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.32rem 0.66rem;
+}
+
+.community-list {
+  margin: 0.7rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.45rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.community-list a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 920px) {
+  .community-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .community-hero,
+  .community-section-block {
+    border-radius: 16px;
+  }
+}

@@ -143,6 +143,15 @@ a {
   color: var(--text);
 }
 
+.translation-select {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0.44rem 0.58rem;
+  min-width: 118px;
+}
+
 .reader-main {
   position: relative;
   display: grid;
@@ -532,6 +541,17 @@ a {
   text-align: right;
 }
 
+.translation-status {
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--surface) 90%, var(--bg));
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 
 .center-tap-zone,
 .left-tap-zone,
@@ -590,6 +610,16 @@ a {
 .settings-field label {
   font-size: 0.78rem;
   color: var(--muted);
+}
+
+.settings-field--toggle {
+  align-content: end;
+}
+
+.settings-field--toggle input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
 }
 
 .settings-field input,
@@ -669,6 +699,10 @@ a {
   .search-inline {
     min-width: 120px;
     max-width: 150px;
+  }
+
+  .translation-select {
+    min-width: 110px;
   }
 
   .settings-grid {

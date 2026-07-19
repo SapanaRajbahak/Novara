@@ -3,7 +3,18 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Novara | Read, Write, and Fall Into New Worlds</title>
+  <title>Novara - Read, Listen & Discover Original Stories</title>
+  <meta name="description" content="Discover immersive stories, audiobooks, and reader communities on Novara. Read new novels, join discussions, and connect with writers and readers." />
+  <link rel="canonical" href="https://readnovara.ca/" />
+  <meta property="og:title" content="Novara - Stories That Bring Readers Together" />
+  <meta property="og:description" content="Read novels, listen to stories, and join communities of readers on Novara." />
+  <meta property="og:image" content="https://readnovara.ca/images/logo.png" />
+  <meta property="og:url" content="https://readnovara.ca/" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Novara - Read. Listen. Connect." />
+  <meta name="twitter:description" content="Discover stories and connect with readers worldwide." />
+  <meta name="twitter:image" content="https://readnovara.ca/images/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
@@ -38,42 +49,8 @@
 
     "potentialAction": {
       "@type": "SearchAction",
-      "target": "https://readnovara.ca/search?q={search_term_string}",
+      "target": "https://readnovara.ca/?q={search_term_string}",
       "query-input": "required name=search_term_string"
-    },
-
-    "mainEntity": {
-      "@type": "ItemList",
-      "name": "Featured Novara Stories",
-      "itemListOrder": "https://schema.org/ItemListOrderAscending",
-      "numberOfItems": 5,
-      "itemListElement": [
-        {
-          "@type": "ListItem",
-          "position": 1,
-          "url": "https://readnovara.ca/stories/example-1"
-        },
-        {
-          "@type": "ListItem",
-          "position": 2,
-          "url": "https://readnovara.ca/stories/example-2"
-        },
-        {
-          "@type": "ListItem",
-          "position": 3,
-          "url": "https://readnovara.ca/stories/example-3"
-        },
-        {
-          "@type": "ListItem",
-          "position": 4,
-          "url": "https://readnovara.ca/stories/example-4"
-        },
-        {
-          "@type": "ListItem",
-          "position": 5,
-          "url": "https://readnovara.ca/stories/example-5"
-        }
-      ]
     }
   }
   </script>
@@ -85,11 +62,7 @@
     "@type": "Organization",
     "name": "Novara",
     "url": "https://readnovara.ca",
-    "logo": "https://readnovara.ca/images/logo.png",
-    "sameAs": [
-      "https://instagram.com/yourpage",
-      "https://twitter.com/yourpage"
-    ]
+    "logo": "https://readnovara.ca/images/logo.png"
   }
   </script>
 </head>
@@ -102,8 +75,11 @@
     </a>
     <nav class="landing-nav" aria-label="Main navigation">
       <a href="#home">Home</a>
+      <a href="#why-novara">Why Novara</a>
       <a href="#featured">Explore</a>
+      <a href="/community/">Community</a>
       <a href="#genres">Genres</a>
+      <a href="#how-it-works">How It Works</a>
       <a href="#writer">Become a Writer</a>
       <a href="/privacy/">Privacy Policy</a>
       <a href="/terms/">Terms of Service</a>
@@ -120,7 +96,7 @@
       <div class="hero-copy">
         <p class="eyebrow">The premium home for readers and storytellers</p>
         <h1 id="heroTitle">Read, Write, and Fall Into New Worlds</h1>
-        <p>Novara brings immersive fiction and emerging voices into one elegant platform. Discover trending stories, preview chapters instantly, and start publishing under your writer identity when you are ready.</p>
+        <p>Novara brings immersive fiction and emerging voices into one elegant platform. With 100+ stories, 51 authors, and 7 genres, readers can discover new classics while writers build an audience from day one.</p>
         <div class="hero-ctas">
           <a class="solid-btn" href="/reader/reader-dashboard.html" id="startReadingBtn">Start Reading</a>
           <button type="button" class="outline-btn" id="startWriterJourneyBtn">Start Your Writer Journey</button>
@@ -145,15 +121,163 @@
       </div>
     </section>
 
-    <section class="section" id="featured" aria-labelledby="featuredHeading">
+    <section class="section intro-section" id="why-novara" aria-labelledby="whyNovaraHeading">
       <div class="section-head">
         <div>
-          <h2 id="featuredHeading">Featured Stories</h2>
-          <p>Preview Chapter 1 instantly. Continue reading full chapters after login or sign up.</p>
+          <p class="eyebrow">Why Novara</p>
+          <h2 id="whyNovaraHeading">A cleaner home for stories, readers, and writers.</h2>
+        </div>
+      </div>
+      <div class="intro-grid">
+        <article class="intro-card intro-card--primary">
+          <p>Reading should be immersive, social, and accessible. Novara was built to connect readers with original stories while giving independent writers a real platform to publish, grow an audience, and be discovered on their own terms.</p>
+          <p>We started Novara because too many great stories never find their readers, and too many readers are stuck choosing between expensive subscriptions and scattered fiction sites. Novara brings both sides together in one focused experience.</p>
+        </article>
+        <div class="stat-stack">
+          <div class="stat-item">
+            <strong>100+</strong>
+            <span>stories in the catalog</span>
+          </div>
+          <div class="stat-item">
+            <strong>51</strong>
+            <span>authors to discover</span>
+          </div>
+          <div class="stat-item">
+            <strong>7</strong>
+            <span>genres to explore</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="how-it-works" aria-labelledby="howItWorksHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">How Novara works</p>
+          <h2 id="howItWorksHeading">Stories that are easy to find, easy to start, and easy to keep coming back to.</h2>
+        </div>
+      </div>
+      <div class="step-grid">
+        <article class="step-card">
+          <span>1</span>
+          <h3>Discover stories</h3>
+          <p>Browse by genre, editorial picks, or community favorites with synopsis, reading time, and chapter details to help you choose.</p>
+        </article>
+        <article class="step-card">
+          <span>2</span>
+          <h3>Read free chapters instantly</h3>
+          <p>Every story’s first chapter is free to read immediately, with no account required to get started.</p>
+        </article>
+        <article class="step-card">
+          <span>3</span>
+          <h3>Listen with AI narration</h3>
+          <p>Switch smoothly between reading and listening, whether you are commuting, exercising, or winding down at home.</p>
+        </article>
+        <article class="step-card">
+          <span>4</span>
+          <h3>Continue anywhere</h3>
+          <p>Your reading progress syncs across desktop, tablet, and mobile so you never lose your place.</p>
+        </article>
+        <article class="step-card">
+          <span>5</span>
+          <h3>Support your favorite writers</h3>
+          <p>Follow authors, save stories to custom shelves, and help independent creators build the audience their work deserves.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="reader-choices" aria-labelledby="readerChoicesHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Why readers choose Novara</p>
+          <h2 id="readerChoicesHeading">A reading experience built for discovery, comfort, and momentum.</h2>
+        </div>
+      </div>
+      <div class="feature-grid">
+        <article class="feature-card">
+          <h3>Read original stories</h3>
+          <p>Discover fiction you will not find anywhere else, published directly by the authors who wrote it.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Learn through immersive storytelling</h3>
+          <p>Vocabulary and comprehension come naturally when the story is compelling enough to keep you turning pages.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Listen with high-quality narration</h3>
+          <p>Move between reading and listening without losing your place in the chapter.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Save your progress</h3>
+          <p>Pick up any story exactly where you left off, on any device.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Support independent authors</h3>
+          <p>Every read helps a writer grow an audience and strengthen their path to sustainable publishing.</p>
+        </article>
+        <article class="feature-card">
+          <h3>Discover new genres every week</h3>
+          <p>Curated picks and community momentum keep your reading shelf feeling fresh.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="featured" aria-labelledby="originalsHeading">
+      <div class="section-head">
+        <div>
+          <h2 id="originalsHeading">Novara Originals</h2>
+          <p>Stories published directly by their authors. Read Chapter 1 free instantly.</p>
+        </div>
+      </div>
+      <div class="story-grid" id="originalsGrid"></div>
+    </section>
+
+    <section class="section" id="classics" aria-labelledby="classicsHeading">
+      <div class="section-head">
+        <div>
+          <h2 id="classicsHeading">Classic Literature</h2>
+          <p>Timeless works from literature's greatest minds. Explore full texts free.</p>
         </div>
         <p class="sync-message" id="featuredSyncMessage" hidden></p>
       </div>
-      <div class="story-grid" id="featuredStoriesGrid"></div>
+      <div class="story-grid" id="classicsGrid"></div>
+    </section>
+
+    <section class="section community-section" id="community" aria-labelledby="communityHeading">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">More Than Just Reading</p>
+          <h2 id="communityHeading">Join the Conversation Behind Every Story</h2>
+          <p>Every story has a community. Discuss chapters, share theories, and connect with readers who love the same books.</p>
+        </div>
+      </div>
+
+      <div class="community-layout">
+        <div class="community-cards">
+          <article class="community-card">
+            <h3>💬 Book Discussions</h3>
+            <p>Talk about your favorite chapters with other readers.</p>
+          </article>
+          <article class="community-card">
+            <h3>👥 Reader Communities</h3>
+            <p>Join groups based on genres, authors, and interests.</p>
+          </article>
+          <article class="community-card">
+            <h3>✉️ Private Messages</h3>
+            <p>Connect with friends, writers, and fellow readers.</p>
+          </article>
+          <a class="solid-btn" href="/community/">Explore Novara Community</a>
+        </div>
+
+        <aside class="community-mockup" aria-label="Chat feature preview">
+          <div class="mockup-header">The Midnight Library</div>
+          <div class="mockup-subtitle">Chapter 8 Discussion</div>
+          <div class="mockup-thread">
+            <p><strong>👤 Emma</strong><br />"That ending surprised me!"</p>
+            <p><strong>👤 Alex</strong><br />"I think the author hinted at it earlier."</p>
+          </div>
+          <div class="mockup-footer">💬 245 readers discussing</div>
+        </aside>
+      </div>
     </section>
 
     <section class="section" id="genres" aria-labelledby="genresHeading">
@@ -165,25 +289,45 @@
 
     <section class="section benefits" id="benefits" aria-labelledby="benefitsHeading">
       <div class="section-head">
-        <h2 id="benefitsHeading">Built for Deep Reading</h2>
+        <div>
+          <p class="eyebrow">Built for deep reading</p>
+          <h2 id="benefitsHeading">A reading experience that follows you from first page to final chapter.</h2>
+        </div>
       </div>
       <div class="benefit-grid">
         <article class="benefit-card">
           <h3>Read Anywhere</h3>
-          <p>Pick up your story across desktop, tablet, and mobile with seamless progress continuity.</p>
+          <p>Pick up your story across desktop, tablet, and mobile with seamless progress continuity. Start a chapter on the train and finish it on the couch that evening.</p>
         </article>
         <article class="benefit-card">
           <h3>Audiobook Ready</h3>
-          <p>Switch between text and audio sessions without losing your place in the chapter.</p>
+          <p>Switch between reading and listening without losing your place. The experience stays accessible whether you prefer text, audio, or both.</p>
         </article>
         <article class="benefit-card">
           <h3>Favorites and Lists</h3>
-          <p>Save your favorite books, build custom shelves, and return to them in one click.</p>
+          <p>Save the stories that matter to you, build custom shelves by mood or genre, and return to them in one click.</p>
         </article>
         <article class="benefit-card">
           <h3>Discover New Writers</h3>
-          <p>Explore fresh voices and breakout stories before they trend everywhere else.</p>
+          <p>Explore fresh voices and breakout stories before they trend everywhere else, with discovery tools that surface new and emerging authors.</p>
         </article>
+      </div>
+    </section>
+
+    <section class="section learning-section" id="learning" aria-labelledby="learningHeading">
+      <div class="learn-grid">
+        <div class="learn-copy">
+          <p class="eyebrow">Learn through stories</p>
+          <h2 id="learningHeading">Build vocabulary and confidence through stories that feel worth finishing.</h2>
+          <p>Novara combines engaging storytelling with vocabulary, comprehension, and structured learning support. Instead of memorizing isolated word lists, readers build real fluency by following characters through situations that mirror everyday life.</p>
+        </div>
+        <div class="learn-list">
+          <ul>
+            <li>Context sticks better when a word appears inside a story you care about.</li>
+            <li>Readers stay motivated because they want to know what happens next.</li>
+            <li>Story-based learning makes comprehension feel natural rather than forced.</li>
+          </ul>
+        </div>
       </div>
     </section>
 
@@ -191,9 +335,17 @@
       <div class="writer-copy">
         <p class="eyebrow">For aspiring authors</p>
         <h2 id="writerHeading">Turn your ideas into published chapters on Novara.</h2>
-        <p>Create your writer profile with your reader account, build an audience, and move between reading and writing dashboards whenever you want.</p>
+        <p>Create a writer profile alongside your reader account, publish chapters on your own schedule, and grow a following organically without juggling a separate publishing platform.</p>
       </div>
       <button type="button" class="solid-btn" id="writerCtaBtn">Start Your Writer Journey</button>
+    </section>
+
+    <section class="section about-section" id="about" aria-labelledby="aboutHeading">
+      <div class="about-card">
+        <p class="eyebrow">About Novara</p>
+        <h2 id="aboutHeading">A platform for readers and writers who believe stories deserve better than algorithm feeds and paywalled anthologies.</h2>
+        <p>We built Novara to solve two problems at once: readers were stuck choosing between expensive subscriptions and cluttered free-fiction sites, and independent writers had few real paths to reach an audience without giving up ownership of their work.</p>
+      </div>
     </section>
   </main>
 
@@ -278,16 +430,29 @@
   </div>
 
   <footer class="landing-footer">
-    <div class="footer-content">
-      <div class="footer-brand">
-        <span class="brand-dot"></span>
-        <span>Novara</span>
-      </div>
-      <div class="footer-links">
-        <a href="https://github.com/SapanaRajbahak/Novara" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">GitHub</a>
+    <div class="footer-brand">
+      <span class="brand-dot"></span>
+      <span>Novara</span>
+    </div>
+    <div class="footer-columns">
+      <div class="footer-group">
+        <h3>About</h3>
+        <a href="#about">About Novara</a>
+        <a href="#why-novara">Our Mission</a>
         <a href="/contact/">Contact</a>
-        <a href="/privacy/">Privacy Policy</a>
-        <a href="/terms/">Terms of Service</a>
+      </div>
+      <div class="footer-group">
+        <h3>For Readers</h3>
+        <a href="#featured">Browse Stories</a>
+        <a href="/community/">Community</a>
+        <a href="#genres">Browse Genres</a>
+        <a href="#learning">Learning Through Stories</a>
+      </div>
+      <div class="footer-group">
+        <h3>For Writers</h3>
+        <a href="#writer">Start Your Writer Journey</a>
+        <a href="#about">Writer Resources</a>
+        <a href="https://github.com/SapanaRajbahak/Novara" target="_blank" rel="noopener noreferrer" aria-label="GitHub Repository">GitHub</a>
       </div>
     </div>
   </footer>

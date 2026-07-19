@@ -5,6 +5,7 @@
     privacy: "/privacy/",
     terms: "/terms/",
     contact: "/contact/",
+    community: "/community/",
   };
 
   if (global.document.querySelector("[data-novara-footer]")) {
@@ -20,6 +21,7 @@
     "  <span>Novara</span>",
     "</div>",
     '<nav class="footer-links" aria-label="Legal">',
+    `  <a href="${global.NovaraLegalRoutes.community}">Community</a>`,
     `  <a href="${global.NovaraLegalRoutes.privacy}">Privacy</a>`,
     `  <a href="${global.NovaraLegalRoutes.terms}">Terms</a>`,
     `  <a href="${global.NovaraLegalRoutes.contact}">Contact</a>`,

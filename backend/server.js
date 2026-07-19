@@ -74,6 +74,8 @@ app.use(
 );
 
 const LEGAL_CANONICAL_PATHS = {
+  "/community": "/community/",
+  "/community/index.html": "/community/",
   "/privacy": "/privacy/",
   "/privacy/index.html": "/privacy/",
   "/terms": "/terms/",

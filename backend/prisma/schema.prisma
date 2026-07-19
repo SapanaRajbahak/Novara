@@ -92,6 +92,7 @@ model User {
   readingProgress    ReadingProgress[]
   listeningProgress  ListeningProgress[]
   savedBooks         SavedBook[]
+  userTranslations   UserTranslation[]
   aiGenerationLogs   AIGenerationLog[]  @relation("AdminGenerationLogs")
   referredByUser     User?              @relation("UserReferrals", fields: [referredBy], references: [id], onDelete: SetNull)
   referredUsers      User[]             @relation("UserReferrals")
@@ -173,6 +174,7 @@ model Book {
   readingProgress      ReadingProgress[]
   listeningProgress    ListeningProgress[]
   savedByUsers         SavedBook[]
+  userTranslations     UserTranslation[]
 
   @@index([createdBy])
   @@index([categoryId])
@@ -198,10 +200,42 @@ model Chapter {
   highlights       Highlight[]
   notes            Note[]
   readingProgress  ReadingProgress[]
+  translations     ChapterTranslation[]
 
   @@unique([bookId, chapterNumber])
   @@index([bookId])
   @@index([isPublished])
+}
+
+model ChapterTranslation {
+  id         String   @id @default(cuid())
+  chapterId  String
+  language   String
+  content    String   @db.Text
+  provider   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  chapter    Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+
+  @@unique([chapterId, language])
+  @@index([chapterId])
+  @@index([language])
+}
+
+model UserTranslation {
+  id         String   @id @default(cuid())
+  userId     String
+  bookId     String
+  language   String
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  book       Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, bookId, language])
+  @@index([userId, createdAt])
+  @@index([bookId])
 }
 
 model BookPage {

@@ -25,6 +25,15 @@
 
       <div class="toolbar-right">
         <input id="searchInput" class="search-inline" type="search" placeholder="Search in chapter" />
+        <select id="translationLanguageSelect" class="translation-select" aria-label="Chapter translation language">
+          <option value="en">English</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="hi">Hindi</option>
+          <option value="ja">Japanese</option>
+        </select>
+        <button id="translateChapterBtn" class="icon-btn" type="button">Translate Chapter</button>
         <button id="listenBtn" class="icon-btn" type="button">Listen</button>
         <span id="listenModeLabel" class="listen-mode-label">Idle</span>
         <a id="bookChatBtn" href="#" class="icon-btn" target="_blank">Chat</a>
@@ -64,6 +73,8 @@
         <input id="progressSlider" type="range" min="0" max="100" step="1" value="0" />
         <span id="progressText">0%</span>
       </div>
+      <div id="translationStatus" class="translation-status hidden" aria-live="polite"></div>
+      <button id="saveTranslationBtn" class="icon-btn hidden" type="button">Save Translation</button>
     </footer>
 
     <div id="listenMiniPlayer" class="listen-mini-player hidden" aria-live="polite">
@@ -239,6 +250,28 @@
         <div class="settings-field">
           <label>&nbsp;</label>
           <button id="closeSettingsBtn" class="text-btn" type="button">Close Settings</button>
+        </div>
+      </div>
+
+      <div class="settings-grid">
+        <div class="settings-field">
+          <label for="preferredLanguageSelect">Preferred Language</label>
+          <select id="preferredLanguageSelect">
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="hi">Hindi</option>
+            <option value="ja">Japanese</option>
+          </select>
+        </div>
+        <div class="settings-field settings-field--toggle">
+          <label for="autoTranslateInput">Automatically translate</label>
+          <input id="autoTranslateInput" type="checkbox" />
+        </div>
+        <div class="settings-field settings-field--toggle">
+          <label for="saveTranslationsInput">Save translations</label>
+          <input id="saveTranslationsInput" type="checkbox" />
         </div>
       </div>
     </div>

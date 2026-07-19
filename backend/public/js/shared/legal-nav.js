@@ -3,6 +3,7 @@
   if (!doc) return;
 
   const routes = global.NovaraLegalRoutes || {
+    community: "/community/",
     privacy: "/privacy/",
     terms: "/terms/",
     contact: "/contact/",

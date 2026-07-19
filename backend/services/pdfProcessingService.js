@@ -3,13 +3,26 @@
  * Handles PDF upload, text extraction, and automatic chapter detection
  */
 
-// Use legacy build for Node.js compatibility
-const pdfjsLib = require('pdfjs-dist/legacy/build/pdf');
+let pdfjsLib = null;
 
-// Disable worker for Node.js environment
-if (typeof window === 'undefined') {
-  const pdfjsWorker = require('pdfjs-dist/legacy/build/pdf.worker.entry');
-  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+function getPdfjsLib() {
+  if (pdfjsLib) {
+    return pdfjsLib;
+  }
+
+  // Lazy-load pdfjs so optional canvas/polyfill warnings do not fire during server startup.
+  pdfjsLib = require('pdfjs-dist/legacy/build/pdf');
+
+  if (typeof window === 'undefined') {
+    try {
+      const pdfjsWorker = require('pdfjs-dist/legacy/build/pdf.worker.entry');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+    } catch (error) {
+      // Worker setup is optional in this Node flow; pdfjs can still process in-process.
+    }
+  }
+
+  return pdfjsLib;
 }
 
 class PDFProcessingService {
@@ -20,7 +33,8 @@ class PDFProcessingService {
    */
   async processPDF(pdfBuffer) {
     try {
-      const loadingTask = pdfjsLib.getDocument({ data: pdfBuffer });
+      const lib = getPdfjsLib();
+      const loadingTask = lib.getDocument({ data: pdfBuffer });
       const pdfDoc = await loadingTask.promise;
       
       const numPages = pdfDoc.numPages;
@@ -58,7 +72,7 @@ class PDFProcessingService {
       };
       
       // Try to detect chapters
-      const detectedChapters = this.detectChapters(pages, pdfDoc);
+      const detectedChapters = await this.detectChapters(pages, pdfDoc);
       
       return {
         pages,

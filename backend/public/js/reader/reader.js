@@ -97,8 +97,12 @@ const state = {
     theme: "light",
     pageWidth: 700,
     readingMode: "scroll",
-    contentFormat: "structured"
+    contentFormat: "structured",
+    preferredLanguage: "en",
+    autoTranslate: false,
+    saveTranslations: false
   },
+  translationCache: {},
   listen: {
     audioElement: null,
     isPlaying: false,
@@ -150,6 +154,8 @@ const elements = {
   notesToggleBtn: document.getElementById("notesToggleBtn"),
   settingsBtn: document.getElementById("settingsBtn"),
   searchInput: document.getElementById("searchInput"),
+  translationLanguageSelect: document.getElementById("translationLanguageSelect"),
+  translateChapterBtn: document.getElementById("translateChapterBtn"),
   listenBtn: document.getElementById("listenBtn"),
   listenModeLabel: document.getElementById("listenModeLabel"),
   toolbarBookTitle: document.getElementById("toolbarBookTitle"),
@@ -166,6 +172,8 @@ const elements = {
   nextBtn: document.getElementById("nextBtn"),
   progressSlider: document.getElementById("progressSlider"),
   progressText: document.getElementById("progressText"),
+  translationStatus: document.getElementById("translationStatus"),
+  saveTranslationBtn: document.getElementById("saveTranslationBtn"),
   listenMiniPlayer: document.getElementById("listenMiniPlayer"),
   listenSettingsPanel: document.getElementById("listenSettingsPanel"),
   miniPlaybackTitle: document.getElementById("miniPlaybackTitle"),
@@ -188,6 +196,9 @@ const elements = {
   pageWidthInput: document.getElementById("pageWidthInput"),
   modeSelect: document.getElementById("modeSelect"),
   formatSelect: document.getElementById("formatSelect"),
+  preferredLanguageSelect: document.getElementById("preferredLanguageSelect"),
+  autoTranslateInput: document.getElementById("autoTranslateInput"),
+  saveTranslationsInput: document.getElementById("saveTranslationsInput"),
   filePicker: document.getElementById("filePicker"),
   selectionTools: document.getElementById("selectionTools"),
   highlightBtn: document.getElementById("highlightBtn"),
@@ -480,6 +491,18 @@ function applySettings() {
   elements.pageWidthInput.value = String(state.settings.pageWidth);
   elements.modeSelect.value = state.settings.readingMode;
   elements.formatSelect.value = state.settings.contentFormat;
+  if (elements.translationLanguageSelect) {
+    elements.translationLanguageSelect.value = state.settings.preferredLanguage;
+  }
+  if (elements.preferredLanguageSelect) {
+    elements.preferredLanguageSelect.value = state.settings.preferredLanguage;
+  }
+  if (elements.autoTranslateInput) {
+    elements.autoTranslateInput.checked = Boolean(state.settings.autoTranslate);
+  }
+  if (elements.saveTranslationsInput) {
+    elements.saveTranslationsInput.checked = Boolean(state.settings.saveTranslations);
+  }
 
   if (state.settings.readingMode === "paginated") {
     elements.readingViewport.style.scrollSnapType = "y mandatory";
@@ -611,6 +634,140 @@ async function fetchChapterById(chapterId) {
 
   state.chapterCache[chapterId] = payload.data;
   return payload.data;
+}
+
+function getLanguageLabel(code) {
+  const labels = {
+    en: "English",
+    es: "Spanish",
+    fr: "French",
+    de: "German",
+    hi: "Hindi",
+    ja: "Japanese",
+  };
+  return labels[String(code || "").toLowerCase()] || String(code || "").toUpperCase();
+}
+
+function getCachedTranslation(chapterId, language) {
+  const chapterMap = state.translationCache[String(chapterId || "")];
+  if (!chapterMap) {
+    return "";
+  }
+  return chapterMap[String(language || "").toLowerCase()] || "";
+}
+
+function setCachedTranslation(chapterId, language, content) {
+  const key = String(chapterId || "");
+  const lang = String(language || "").toLowerCase();
+  if (!state.translationCache[key]) {
+    state.translationCache[key] = {};
+  }
+  state.translationCache[key][lang] = String(content || "");
+}
+
+function updateTranslationStatus(message, options = {}) {
+  if (!elements.translationStatus) {
+    return;
+  }
+  elements.translationStatus.textContent = message || "";
+  elements.translationStatus.classList.toggle("hidden", !message);
+
+  if (elements.saveTranslationBtn) {
+    elements.saveTranslationBtn.classList.toggle("hidden", !options.showSave);
+  }
+}
+
+async function saveCurrentLanguageToLibrary() {
+  if (!state.currentBook || !state.currentUser) {
+    showToast("Sign in to save translated books");
+    return;
+  }
+
+  const language = String(state.settings.preferredLanguage || "en").toLowerCase();
+  if (!language || language === "en") {
+    showToast("Select a translated language first");
+    return;
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/books/${encodeURIComponent(state.currentBook.id)}/translations/save`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ language }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || "Unable to save translation");
+  }
+
+  showToast(`${getLanguageLabel(language)} saved to your library preferences`);
+}
+
+async function translateCurrentChapter(languageOverride) {
+  if (!state.currentChapter || !state.currentBook) {
+    return;
+  }
+
+  const language = String(languageOverride || state.settings.preferredLanguage || "en").toLowerCase();
+  state.settings.preferredLanguage = language;
+  if (elements.translationLanguageSelect) {
+    elements.translationLanguageSelect.value = language;
+  }
+  if (elements.preferredLanguageSelect) {
+    elements.preferredLanguageSelect.value = language;
+  }
+  persistSettings();
+
+  if (language === "en") {
+    updateTranslationStatus("Showing original English chapter", { showSave: false });
+    renderCurrentChapter();
+    return;
+  }
+
+  const cached = getCachedTranslation(state.currentChapter.id, language);
+  if (cached) {
+    state.currentChapter.translatedContent = cached;
+    state.currentChapter.translatedLanguage = language;
+    updateTranslationStatus(`${getLanguageLabel(language)} translation loaded from cache`, { showSave: true });
+    renderCurrentChapter();
+    return;
+  }
+
+  updateTranslationStatus(`Translating to ${getLanguageLabel(language)}...`, { showSave: false });
+
+  const response = await fetch(`${API_BASE_URL}/api/chapters/${encodeURIComponent(state.currentChapter.id)}/translate`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ language }),
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || !payload.success) {
+    throw new Error(payload.error || "Unable to translate chapter");
+  }
+
+  const translatedText = payload?.data?.content || "";
+  setCachedTranslation(state.currentChapter.id, language, translatedText);
+  state.currentChapter.translatedContent = translatedText;
+  state.currentChapter.translatedLanguage = language;
+
+  if (state.settings.saveTranslations && state.currentUser) {
+    try {
+      await saveCurrentLanguageToLibrary();
+    } catch (error) {
+      // Non-blocking save preference failure.
+    }
+  }
+
+  const sourceLabel = payload?.data?.cached ? "from community cache" : "created";
+  updateTranslationStatus(`${getLanguageLabel(language)} version ${sourceLabel} ✓`, { showSave: true });
+  renderCurrentChapter();
 }
 
 function getProgressMap() {
@@ -1820,6 +1977,15 @@ function renderCurrentChapter() {
   }
 
   const chapter = state.currentChapter;
+  const preferredLanguage = String(state.settings.preferredLanguage || "en").toLowerCase();
+  const translated = preferredLanguage !== "en"
+    ? (chapter.translatedLanguage === preferredLanguage
+      ? chapter.translatedContent
+      : getCachedTranslation(chapter.id, preferredLanguage))
+    : "";
+  const chapterToRender = translated
+    ? { ...chapter, content: translated }
+    : chapter;
   elements.toolbarBookTitle.textContent = state.currentBook.title;
   elements.toolbarChapterTitle.textContent = `Chapter ${chapter.number}: ${chapter.title}`;
   document.title = `${state.currentBook.title} - Chapter ${chapter.number}`;
@@ -1828,15 +1994,15 @@ function renderCurrentChapter() {
   const hasEpubSource = Boolean(state.localFileUrl && /\.epub(\?|#|$)/i.test(state.localFileUrl));
 
   if (state.settings.contentFormat === "pdf" && !hasPdfSource) {
-    renderStructuredChapter(chapter);
+    renderStructuredChapter(chapterToRender);
   } else if (state.settings.contentFormat === "epub" && !hasEpubSource) {
-    renderStructuredChapter(chapter);
+    renderStructuredChapter(chapterToRender);
   } else if (state.settings.contentFormat === "pdf") {
     renderPdfShell();
   } else if (state.settings.contentFormat === "epub") {
     renderEpubShell();
   } else {
-    renderStructuredChapter(chapter);
+    renderStructuredChapter(chapterToRender);
   }
 
   updateChapterNavUi();
@@ -2012,12 +2178,20 @@ async function loadAndRenderChapterByIndex(index) {
     content: chapterContent,
   };
 
+  updateTranslationStatus("", { showSave: false });
+
   const params = new URLSearchParams(window.location.search);
   params.set("bookId", state.currentBook.id);
   params.set("chapterId", chapterMeta.id);
   window.history.replaceState({}, "", `/reader/reader.html?${params.toString()}`);
 
   renderCurrentChapter();
+
+  if (state.settings.autoTranslate && String(state.settings.preferredLanguage || "en").toLowerCase() !== "en") {
+    translateCurrentChapter(state.settings.preferredLanguage).catch((error) => {
+      updateTranslationStatus(error.message || "Translation failed", { showSave: false });
+    });
+  }
 }
 
 function jumpToChapter(index) {
@@ -2361,6 +2535,42 @@ function bindEvents() {
     searchInChapter(elements.searchInput.value);
   });
 
+  if (elements.translateChapterBtn) {
+    elements.translateChapterBtn.addEventListener("click", async () => {
+      try {
+        elements.translateChapterBtn.disabled = true;
+        const lang = elements.translationLanguageSelect
+          ? elements.translationLanguageSelect.value
+          : state.settings.preferredLanguage;
+        await translateCurrentChapter(lang);
+      } catch (error) {
+        updateTranslationStatus(error.message || "Translation failed", { showSave: false });
+      } finally {
+        elements.translateChapterBtn.disabled = false;
+      }
+    });
+  }
+
+  if (elements.translationLanguageSelect) {
+    elements.translationLanguageSelect.addEventListener("change", () => {
+      state.settings.preferredLanguage = elements.translationLanguageSelect.value;
+      if (elements.preferredLanguageSelect) {
+        elements.preferredLanguageSelect.value = state.settings.preferredLanguage;
+      }
+      persistSettings();
+    });
+  }
+
+  if (elements.saveTranslationBtn) {
+    elements.saveTranslationBtn.addEventListener("click", async () => {
+      try {
+        await saveCurrentLanguageToLibrary();
+      } catch (error) {
+        showToast(error.message || "Unable to save translation");
+      }
+    });
+  }
+
   elements.fontSizeInput.addEventListener("input", () => {
     state.settings.fontSize = Number(elements.fontSizeInput.value);
     persistSettings();
@@ -2398,6 +2608,30 @@ function bindEvents() {
   elements.formatSelect.addEventListener("change", () => {
     setContentFormat(elements.formatSelect.value);
   });
+
+  if (elements.preferredLanguageSelect) {
+    elements.preferredLanguageSelect.addEventListener("change", () => {
+      state.settings.preferredLanguage = elements.preferredLanguageSelect.value;
+      if (elements.translationLanguageSelect) {
+        elements.translationLanguageSelect.value = state.settings.preferredLanguage;
+      }
+      persistSettings();
+    });
+  }
+
+  if (elements.autoTranslateInput) {
+    elements.autoTranslateInput.addEventListener("change", () => {
+      state.settings.autoTranslate = Boolean(elements.autoTranslateInput.checked);
+      persistSettings();
+    });
+  }
+
+  if (elements.saveTranslationsInput) {
+    elements.saveTranslationsInput.addEventListener("change", () => {
+      state.settings.saveTranslations = Boolean(elements.saveTranslationsInput.checked);
+      persistSettings();
+    });
+  }
 
   elements.filePicker.addEventListener("change", () => {
     const file = elements.filePicker.files?.[0];
