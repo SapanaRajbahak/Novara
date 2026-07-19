@@ -81,9 +81,11 @@ async function buildAiContext(chapter, body, sessionUser) {
     textBeforeCursor,
     textAfterCursor,
     instructions: body.instructions === undefined ? "" : String(body.instructions),
-    writerPenName: sessionUser.writerProfile?.penName || sessionUser.name,
+    writerPenName: sessionUser.writerProfile?.penName || sessionUser.penName || sessionUser.name,
     preferredGenres: Array.isArray(sessionUser.writerProfile?.preferredGenres)
       ? sessionUser.writerProfile.preferredGenres
+      : Array.isArray(sessionUser.preferredGenres)
+      ? sessionUser.preferredGenres
       : [],
   };
 }

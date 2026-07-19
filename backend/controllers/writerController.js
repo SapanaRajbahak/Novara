@@ -215,8 +215,10 @@ async function getWriterDashboard(req, res) {
     const totalComments = books.reduce((sum, book) => sum + (book._count?.notes || 0), 0);
 
     const genres = new Set([
-      ...(Array.isArray(req.session.user.writerProfile.preferredGenres)
+      ...(Array.isArray(req.session.user.writerProfile?.preferredGenres)
         ? req.session.user.writerProfile.preferredGenres
+        : Array.isArray(req.session.user.preferredGenres)
+        ? req.session.user.preferredGenres
         : []),
       ...books.map((book) => book.genre).filter(Boolean),
     ]);
@@ -389,9 +391,9 @@ async function getWriterDashboard(req, res) {
       data: {
         profile: {
           name: req.session.user.name,
-          penName: req.session.user.writerProfile.penName || req.session.user.name,
-          bio: req.session.user.writerProfile.bio,
-          preferredGenres: req.session.user.writerProfile.preferredGenres,
+          penName: req.session.user.writerProfile?.penName || req.session.user.penName || req.session.user.name,
+          bio: req.session.user.writerProfile?.bio || req.session.user.bio || "",
+          preferredGenres: req.session.user.writerProfile?.preferredGenres || req.session.user.preferredGenres || [],
         },
         stats: {
           totalBooks: books.length,
