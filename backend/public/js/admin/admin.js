@@ -201,6 +201,7 @@ async function bootstrap() {
       elements.aiPanel.hidden = true;
     }
   } catch (error) {
+    console.error("Failed to load admin dashboard data:", error);
     renderWidgets({
       totalBooks: 0,
       totalChapters: 0,
@@ -215,21 +216,22 @@ async function bootstrap() {
     if (elements.aiPanel) {
       elements.aiPanel.hidden = true;
     }
+    
+    const errorMessage = document.createElement("div");
+    errorMessage.className = "error-message";
+    errorMessage.style.cssText = "padding: 16px; background: #fee; border: 1px solid #fcc; border-radius: 8px; margin: 16px 0; color: #c33;";
+    errorMessage.textContent = `Unable to load dashboard data: ${error.message || "Unknown error"}. Please check your connection and try again.`;
+    
+    const widgetsSection = document.querySelector(".widgets");
+    if (widgetsSection && widgetsSection.parentNode) {
+      widgetsSection.parentNode.insertBefore(errorMessage, widgetsSection.nextSibling);
+    }
   }
 
   bindEvents();
 }
 
 bootstrap();
-
-const monetizationPanel = document.getElementById("monetizationPanel");
-const monetizationTabs = document.querySelectorAll(".monetization-tab");
-const monetizationSections = {
-  controls: document.getElementById("monetization-controls"),
-  payout: document.getElementById("monetization-payout"),
-  subscriptions: document.getElementById("monetization-subscriptions"),
-  revenue: document.getElementById("monetization-revenue"),
-};
 
 const openControlsPanelBtn = document.getElementById("openControlsPanelBtn");
 const openPayoutPanelBtn = document.getElementById("openPayoutPanelBtn");
@@ -256,26 +258,4 @@ if (openSubscriptionPanelBtn) {
     window.location.href = "admin-subscriptions.html";
   });
 }
-
-if (monetizationTabs && monetizationTabs.length) {
-  monetizationTabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      monetizationTabs.forEach((currentTab) => currentTab.classList.remove("active"));
-      tab.classList.add("active");
-      Object.keys(monetizationSections).forEach((key) => {
-        const panel = monetizationSections[key];
-        if (!panel) {
-          return;
-        }
-        panel.style.display = tab.dataset.tab === key ? "block" : "none";
-      });
-    });
-  });
-}
-
-document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && monetizationPanel && monetizationPanel.style.display !== "none") {
-    monetizationPanel.style.display = "none";
-  }
-});
 

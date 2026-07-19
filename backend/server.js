@@ -172,8 +172,6 @@ app.use((error, req, res, next) => {
   return next(error);
 });
 
-app.use("/admin", requireAdmin);
-
 app.get("/admin/dashboard", (req, res) => {
   if (!req.session || !req.session.user || req.session.user.role !== "ADMIN") {
     return res.redirect(`${getFrontendOrigin(req)}/admin-login.html?next=${encodeURIComponent("/admin/dashboard")}`);
