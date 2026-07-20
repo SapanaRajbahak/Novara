@@ -47,6 +47,10 @@ const contactRoutes = require("./routes/contactRoutes");
 
 const app = express();
 
+if (process.env.NODE_ENV === "production") {
+  // Allow express-session to recognize HTTPS when the app is behind a proxy.
+  app.set("trust proxy", 1);
+}
 
 // ====== CLEAN MIDDLEWARE SETUP ======
 app.use(cors({

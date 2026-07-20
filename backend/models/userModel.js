@@ -2,7 +2,7 @@ const bcrypt = require("bcrypt");
 const { prisma } = require("../config/db");
 
 const demoAdminCredentials = {
-  email: "admin@Novara.com",
+  email: "admin@novara.com",
   password: "admin123",
 };
 
@@ -47,6 +47,7 @@ async function initializeUserStore() {
       avatarUrl: null,
       role: "ADMIN",
       isWriter: false,
+      isVerified: true,
       penName: null,
       bio: null,
       preferredGenres: [],
@@ -64,6 +65,7 @@ async function initializeUserStore() {
       avatarUrl: null,
       role: "ADMIN",
       isWriter: false,
+      isVerified: true,
       penName: null,
       bio: null,
       preferredGenres: [],
