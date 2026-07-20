@@ -9,7 +9,7 @@
   <p>Redirecting to Admin Dashboard...</p>
   <script>
     (function redirectToBackend() {
-      const target = `${window.location.protocol}//${window.location.hostname}:5001/admin/dashboard${window.location.search || ""}${window.location.hash || ""}`;
+      const target = `${window.location.protocol}//${window.location.host}/admin/dashboard${window.location.search || ""}${window.location.hash || ""}`;
       window.location.replace(target);
     })();
   </script>

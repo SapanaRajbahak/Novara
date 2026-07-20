@@ -1,5 +1,7 @@
 FROM node:20-alpine
 
+ENV NODE_ENV=production
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -9,6 +11,6 @@ COPY . .
 
 RUN npm run prisma:generate
 
-EXPOSE 5001
+EXPOSE 5002
 
 CMD ["npm", "run", "start:docker"]
