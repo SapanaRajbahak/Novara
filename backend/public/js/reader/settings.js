@@ -1,4 +1,4 @@
-const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://readnovara.ca";
 
 async function apiFetch(path, options = {}) {
   const url = `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;

@@ -1,5 +1,5 @@
 (function attachNovaraSession(global) {
-  const PROD_API_BASE_URL = "https://novara-6s67.onrender.com";
+  const PROD_API_BASE_URL = "https://readnovara.ca";
   const DEV_API_PORT = 5002;
   const DEV_API_BASE_URL = `http://localhost:${DEV_API_PORT}`;
 

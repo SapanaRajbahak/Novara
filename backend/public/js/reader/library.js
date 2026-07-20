@@ -1,4 +1,4 @@
-const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://readnovara.ca";
 
 function readerScoped(segment) {
   if (window.NovaraSession && typeof window.NovaraSession.readerDataKey === "function") {

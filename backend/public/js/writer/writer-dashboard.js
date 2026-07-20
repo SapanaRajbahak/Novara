@@ -1265,7 +1265,7 @@ function resolveWriterApiBaseUrl() {
   if (window.NovaraSession && window.NovaraSession.API_BASE_URL) {
     return window.NovaraSession.API_BASE_URL;
   }
-  return "https://novara-6s67.onrender.com";
+  return "https://readnovara.ca";
 }
 
 function bindReferralCopy(referralLink) {
@@ -2168,7 +2168,7 @@ function initializePageInteractions() {
       }
 
       try {
-        const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+        const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://readnovara.ca";
         const response = await fetch(`${API_BASE_URL}/api/profile`, {
           method: "PATCH",
           credentials: "include",

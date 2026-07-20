@@ -454,7 +454,7 @@ function resolveApiBaseUrl() {
   if (window.NovaraSession && window.NovaraSession.API_BASE_URL) {
     return window.NovaraSession.API_BASE_URL;
   }
-  return "https://novara-6s67.onrender.com";
+  return "https://readnovara.ca";
 }
 
 function bindReferralCopyButton(link) {

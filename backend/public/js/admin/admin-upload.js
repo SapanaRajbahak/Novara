@@ -1,5 +1,5 @@
 const ADMIN_AUTH_KEY = "novara.admin.auth";
-const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://readnovara.ca";
 
 const elements = {
   logoutBtn: document.getElementById("logoutBtn"),

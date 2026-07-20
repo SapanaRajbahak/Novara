@@ -9,7 +9,7 @@ const genres = [
   "Action",
 ];
 
-const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://readnovara.ca";
 const POST_LOGIN_REDIRECT_KEY = "novara.postLoginRedirect";
 const REFERRAL_STORAGE_KEY = "novara_referral";
 const LEGACY_REFERRAL_STORAGE_KEY = "novara.pendingReferrer";

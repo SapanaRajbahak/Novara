@@ -56,7 +56,7 @@ function addBookmark({ bookId, chapterId, note }) {
   entries.unshift({ userId, bookId, chapterId, note });
   setBookmarks(entries);
 }
-const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://novara-6s67.onrender.com";
+const API_BASE_URL = (window.NovaraSession && window.NovaraSession.API_BASE_URL) || "https://readnovara.ca";
 const elements = {
   continueReadingRow: document.getElementById("continueReadingRow"),
   trendingRow: document.getElementById("trendingRow"),
@@ -94,7 +94,7 @@ function getApiBaseCandidates() {
     return window.NovaraSession.getApiBaseCandidates();
   }
 
-  return [API_BASE_URL, "https://novara-6s67.onrender.com"];
+  return [API_BASE_URL, "https://readnovara.ca"];
 }
 
 function loadSavedBooks() {
