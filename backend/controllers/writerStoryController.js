@@ -35,8 +35,17 @@ function parseFileType(bookType) {
   return null;
 }
 
+function normalizeIdentityValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function getWriterIdentityCandidates(sessionUser) {
-  const candidates = [
+  const seeds = [
     sessionUser?.writerProfile?.penName,
     sessionUser?.penName,
     sessionUser?.name,
@@ -44,15 +53,40 @@ function getWriterIdentityCandidates(sessionUser) {
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
-  const seen = new Set();
-  return candidates.filter((value) => {
-    const key = value.toLowerCase();
-    if (seen.has(key)) {
-      return false;
+  const candidates = new Set();
+
+  seeds.forEach((value) => {
+    const normalized = normalizeIdentityValue(value);
+    if (!normalized) {
+      return;
     }
-    seen.add(key);
-    return true;
+
+    candidates.add(normalized);
+
+    const parts = normalized.split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      candidates.add(parts[0]);
+      candidates.add(parts[parts.length - 1]);
+      candidates.add(parts.slice(-2).join(" "));
+    }
   });
+
+  return [...candidates].filter(Boolean);
+}
+
+function buildAuthorFallbackWhere(sessionUser) {
+  const candidates = getWriterIdentityCandidates(sessionUser);
+  if (!candidates.length) {
+    return null;
+  }
+
+  return {
+    OR: candidates.flatMap((candidate) => [
+      { authorName: { equals: candidate, mode: "insensitive" } },
+      { authorName: { contains: candidate, mode: "insensitive" } },
+      candidate.length >= 3 ? { authorName: { startsWith: candidate, mode: "insensitive" } } : null,
+    ].filter(Boolean)),
+  };
 }
 
 function mapStory(book) {
@@ -72,12 +106,19 @@ function mapStory(book) {
 }
 
 function storyMatchesWriterIdentity(story, sessionUser) {
-  const storyAuthor = String(story?.authorName || "").trim().toLowerCase();
+  const storyAuthor = normalizeIdentityValue(story?.authorName || "");
   if (!storyAuthor) {
     return false;
   }
 
-  return getWriterIdentityCandidates(sessionUser).some((candidate) => candidate.toLowerCase() === storyAuthor);
+  return getWriterIdentityCandidates(sessionUser).some((candidate) => {
+    const normalizedCandidate = normalizeIdentityValue(candidate);
+    return (
+      normalizedCandidate === storyAuthor ||
+      normalizedCandidate.includes(storyAuthor) ||
+      storyAuthor.includes(normalizedCandidate)
+    );
+  });
 }
 
 async function findStoryForRole(storyId, sessionUser) {
@@ -129,12 +170,12 @@ async function listWriterStories(req, res) {
     const where = req.session.user.role === "ADMIN"
       ? {}
       : (() => {
-        const authorNames = getWriterIdentityCandidates(req.session.user);
-        if (authorNames.length > 0) {
+        const authorFallbackWhere = buildAuthorFallbackWhere(req.session.user);
+        if (authorFallbackWhere) {
           return {
             OR: [
               { createdBy: String(req.session.user.id) },
-              { authorName: { in: authorNames } },
+              authorFallbackWhere,
             ],
           };
         }

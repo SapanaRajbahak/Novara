@@ -72,8 +72,17 @@ function formatActivityDate(dateValue) {
   });
 }
 
+function normalizeIdentityValue(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function getWriterIdentityCandidates(user) {
-  const candidates = [
+  const seeds = [
     user?.writerProfile?.penName,
     user?.penName,
     user?.name,
@@ -81,15 +90,40 @@ function getWriterIdentityCandidates(user) {
     .map((value) => String(value || "").trim())
     .filter(Boolean);
 
-  const seen = new Set();
-  return candidates.filter((value) => {
-    const key = value.toLowerCase();
-    if (seen.has(key)) {
-      return false;
+  const candidates = new Set();
+
+  seeds.forEach((value) => {
+    const normalized = normalizeIdentityValue(value);
+    if (!normalized) {
+      return;
     }
-    seen.add(key);
-    return true;
+
+    candidates.add(normalized);
+
+    const parts = normalized.split(" ").filter(Boolean);
+    if (parts.length >= 2) {
+      candidates.add(parts[0]);
+      candidates.add(parts[parts.length - 1]);
+      candidates.add(parts.slice(-2).join(" "));
+    }
   });
+
+  return [...candidates].filter(Boolean);
+}
+
+function buildAuthorFallbackWhere(user) {
+  const candidates = getWriterIdentityCandidates(user);
+  if (!candidates.length) {
+    return null;
+  }
+
+  return {
+    OR: candidates.flatMap((candidate) => [
+      { authorName: { equals: candidate, mode: "insensitive" } },
+      { authorName: { contains: candidate, mode: "insensitive" } },
+      candidate.length >= 3 ? { authorName: { startsWith: candidate, mode: "insensitive" } } : null,
+    ].filter(Boolean)),
+  };
 }
 
 function settledValue(result, fallback) {
@@ -195,10 +229,10 @@ async function getWriterDashboard(req, res) {
       });
 
       if (!books.length) {
-        const writerIdentityCandidates = getWriterIdentityCandidates(req.session.user);
-        if (writerIdentityCandidates.length > 0) {
+        const authorFallbackWhere = buildAuthorFallbackWhere(req.session.user);
+        if (authorFallbackWhere) {
           const fallbackBooks = await prisma.book.findMany({
-            where: { authorName: { in: writerIdentityCandidates } },
+            where: authorFallbackWhere,
             orderBy: { updatedAt: "desc" },
             select: bookSelect,
           });
