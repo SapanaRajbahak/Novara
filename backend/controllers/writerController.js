@@ -72,6 +72,30 @@ function formatActivityDate(dateValue) {
   });
 }
 
+function getWriterIdentityCandidates(user) {
+  const candidates = [
+    user?.writerProfile?.penName,
+    user?.penName,
+    user?.name,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  const seen = new Set();
+  return candidates.filter((value) => {
+    const key = value.toLowerCase();
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+function settledValue(result, fallback) {
+  return result.status === "fulfilled" ? result.value : fallback;
+}
+
 function buildFallbackWriterDashboardData(user) {
   const profile = {
     name: user?.name || "Writer",
@@ -147,102 +171,164 @@ async function getWriterDashboard(req, res) {
     const streakWindowStart = new Date();
     streakWindowStart.setDate(streakWindowStart.getDate() - 14);
 
-    const [
-      books,
-      todayChapterUpdates,
-      streakChapterUpdates,
-      totalChapterCount,
-      publishedChapterCount,
-      readingProgressRows,
-      listeningProgressRows,
-      noteRows,
-      bookmarkRows,
-    ] = await Promise.all([
-      prisma.book.findMany({
+    const bookSelect = {
+      id: true,
+      title: true,
+      slug: true,
+      description: true,
+      genre: true,
+      tags: true,
+      status: true,
+      coverUrl: true,
+      fileType: true,
+      authorName: true,
+      createdAt: true,
+      updatedAt: true,
+    };
+
+    let books = [];
+    try {
+      books = await prisma.book.findMany({
         where: { createdBy: String(userId) },
         orderBy: { updatedAt: "desc" },
-        include: {
-          _count: {
-            select: {
-              chapters: true,
-              readingProgress: true,
-              listeningProgress: true,
-              bookmarks: true,
-              notes: true,
-            },
+        select: bookSelect,
+      });
+
+      if (!books.length) {
+        const writerIdentityCandidates = getWriterIdentityCandidates(req.session.user);
+        if (writerIdentityCandidates.length > 0) {
+          const fallbackBooks = await prisma.book.findMany({
+            where: { authorName: { in: writerIdentityCandidates } },
+            orderBy: { updatedAt: "desc" },
+            select: bookSelect,
+          });
+
+          if (fallbackBooks.length > 0) {
+            books = fallbackBooks;
+          }
+        }
+      }
+    } catch (bookError) {
+      console.warn("getWriterDashboard book lookup failed:", bookError);
+    }
+
+    const bookIds = books.map((book) => book.id);
+
+    const [
+      chapterRowsResult,
+      todayChapterUpdatesResult,
+      streakChapterUpdatesResult,
+      totalChapterCountResult,
+      publishedChapterCountResult,
+      readingProgressRowsResult,
+      listeningProgressRowsResult,
+      noteRowsResult,
+      bookmarkRowsResult,
+    ] = await Promise.allSettled([
+      bookIds.length
+        ? prisma.chapter.findMany({
+          where: { bookId: { in: bookIds } },
+          select: { bookId: true },
+        })
+        : Promise.resolve([]),
+      bookIds.length
+        ? prisma.chapter.findMany({
+          where: {
+            bookId: { in: bookIds },
+            updatedAt: { gte: todayStart },
           },
-        },
-      }),
-      prisma.chapter.findMany({
-        where: {
-          book: { createdBy: String(userId) },
-          updatedAt: { gte: todayStart },
-        },
-        select: { content: true, updatedAt: true },
-      }),
-      prisma.chapter.findMany({
-        where: {
-          book: { createdBy: String(userId) },
-          updatedAt: { gte: streakWindowStart },
-        },
-        select: { updatedAt: true },
-      }),
-      prisma.chapter.count({
-        where: { book: { createdBy: String(userId) } },
-      }),
-      prisma.chapter.count({
-        where: {
-          book: { createdBy: String(userId) },
-          isPublished: true,
-        },
-      }),
-      prisma.readingProgress.findMany({
-        where: {
-          book: { createdBy: String(userId) },
-          updatedAt: { gte: monthWindow.start },
-        },
-        select: {
-          id: true,
-          bookId: true,
-          updatedAt: true,
-          progressPercent: true,
-          book: { select: { title: true } },
-        },
-      }),
-      prisma.listeningProgress.findMany({
-        where: {
-          book: { createdBy: String(userId) },
-          updatedAt: { gte: monthWindow.start },
-        },
-        select: {
-          id: true,
-          bookId: true,
-          updatedAt: true,
-          currentTimeSeconds: true,
-          book: { select: { title: true } },
-        },
-      }),
-      prisma.note.findMany({
-        where: { book: { createdBy: String(userId) } },
-        orderBy: { createdAt: "desc" },
-        take: 8,
-        select: {
-          id: true,
-          createdAt: true,
-          book: { select: { title: true } },
-        },
-      }),
-      prisma.bookmark.findMany({
-        where: { book: { createdBy: String(userId) } },
-        orderBy: { createdAt: "desc" },
-        take: 8,
-        select: {
-          id: true,
-          createdAt: true,
-          book: { select: { title: true } },
-        },
-      }),
+          select: { bookId: true, content: true, updatedAt: true },
+        })
+        : Promise.resolve([]),
+      bookIds.length
+        ? prisma.chapter.findMany({
+          where: {
+            bookId: { in: bookIds },
+            updatedAt: { gte: streakWindowStart },
+          },
+          select: { bookId: true, updatedAt: true },
+        })
+        : Promise.resolve([]),
+      bookIds.length
+        ? prisma.chapter.count({
+          where: { bookId: { in: bookIds } },
+        })
+        : Promise.resolve(0),
+      bookIds.length
+        ? prisma.chapter.count({
+          where: {
+            bookId: { in: bookIds },
+            isPublished: true,
+          },
+        })
+        : Promise.resolve(0),
+      bookIds.length
+        ? prisma.readingProgress.findMany({
+          where: {
+            bookId: { in: bookIds },
+            updatedAt: { gte: monthWindow.start },
+          },
+          select: {
+            id: true,
+            bookId: true,
+            updatedAt: true,
+            progressPercent: true,
+            book: { select: { title: true } },
+          },
+        })
+        : Promise.resolve([]),
+      bookIds.length
+        ? prisma.listeningProgress.findMany({
+          where: {
+            bookId: { in: bookIds },
+            updatedAt: { gte: monthWindow.start },
+          },
+          select: {
+            id: true,
+            bookId: true,
+            updatedAt: true,
+            currentTimeSeconds: true,
+            book: { select: { title: true } },
+          },
+        })
+        : Promise.resolve([]),
+      bookIds.length
+        ? prisma.note.findMany({
+          where: { bookId: { in: bookIds } },
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          select: {
+            id: true,
+            bookId: true,
+            createdAt: true,
+            book: { select: { title: true } },
+          },
+        })
+        : Promise.resolve([]),
+      bookIds.length
+        ? prisma.bookmark.findMany({
+          where: { bookId: { in: bookIds } },
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          select: {
+            id: true,
+            bookId: true,
+            createdAt: true,
+            book: { select: { title: true } },
+          },
+        })
+        : Promise.resolve([]),
     ]);
+
+    const chapterRows = settledValue(chapterRowsResult, []);
+    const todayChapterUpdates = settledValue(todayChapterUpdatesResult, []);
+    const streakChapterUpdates = settledValue(streakChapterUpdatesResult, []);
+    const totalChapterCount = settledValue(totalChapterCountResult, chapterRows.length);
+    const publishedChapterCount = settledValue(publishedChapterCountResult, 0);
+    const readingProgressRows = settledValue(readingProgressRowsResult, []);
+    const listeningProgressRows = settledValue(listeningProgressRowsResult, []);
+    const noteRows = settledValue(noteRowsResult, []);
+    const bookmarkRows = settledValue(bookmarkRowsResult, []);
 
     const [giftSummaryResult, giftRowsResult, referralSummaryResult, coinEarningsResult, earningsByTypeResult] =
       await Promise.allSettled([
@@ -319,13 +405,62 @@ async function getWriterDashboard(req, res) {
 
     const publishedCount = books.filter((book) => book.status === "PUBLISHED").length;
     const draftCount = books.filter((book) => book.status === "DRAFT").length;
-    const totalChapters = books.reduce((sum, book) => sum + (book._count?.chapters || 0), 0);
-    const totalReads = books.reduce(
-      (sum, book) => sum + (book._count?.readingProgress || 0) + (book._count?.listeningProgress || 0),
+
+    const bookMetrics = new Map(
+      books.map((book) => [
+        book.id,
+        {
+          chapters: 0,
+          readingProgress: 0,
+          listeningProgress: 0,
+          likes: 0,
+          comments: 0,
+        },
+      ])
+    );
+
+    chapterRows.forEach((row) => {
+      const metric = bookMetrics.get(row.bookId);
+      if (metric) {
+        metric.chapters += 1;
+      }
+    });
+
+    readingProgressRows.forEach((row) => {
+      const metric = bookMetrics.get(row.bookId);
+      if (metric) {
+        metric.readingProgress += 1;
+      }
+    });
+
+    listeningProgressRows.forEach((row) => {
+      const metric = bookMetrics.get(row.bookId);
+      if (metric) {
+        metric.listeningProgress += 1;
+      }
+    });
+
+    noteRows.forEach((row) => {
+      const metric = bookMetrics.get(row.bookId);
+      if (metric) {
+        metric.comments += 1;
+      }
+    });
+
+    bookmarkRows.forEach((row) => {
+      const metric = bookMetrics.get(row.bookId);
+      if (metric) {
+        metric.likes += 1;
+      }
+    });
+
+    const totalChapters = totalChapterCount;
+    const totalReads = [...bookMetrics.values()].reduce(
+      (sum, metric) => sum + metric.readingProgress + metric.listeningProgress,
       0
     );
-    const totalFavorites = books.reduce((sum, book) => sum + (book._count?.bookmarks || 0), 0);
-    const totalComments = books.reduce((sum, book) => sum + (book._count?.notes || 0), 0);
+    const totalFavorites = [...bookMetrics.values()].reduce((sum, metric) => sum + metric.likes, 0);
+    const totalComments = [...bookMetrics.values()].reduce((sum, metric) => sum + metric.comments, 0);
 
     const genres = new Set([
       ...(Array.isArray(req.session.user.writerProfile?.preferredGenres)
@@ -459,17 +594,35 @@ async function getWriterDashboard(req, res) {
         dateLabel: formatActivityDate(item.date),
       }));
 
-    const booksPayload = books.map((book) => ({
-      id: book.id,
-      title: book.title,
-      status: book.status,
-      updatedAt: book.updatedAt,
-      genre: book.genre,
-      chapters: book._count?.chapters || 0,
-      reads: (book._count?.readingProgress || 0) + (book._count?.listeningProgress || 0),
-      likes: book._count?.bookmarks || 0,
-      comments: book._count?.notes || 0,
-    }));
+    const booksPayload = books.map((book) => {
+      const metric = bookMetrics.get(book.id) || {
+        chapters: 0,
+        readingProgress: 0,
+        listeningProgress: 0,
+        likes: 0,
+        comments: 0,
+      };
+
+      return {
+        id: book.id,
+        title: book.title,
+        status: book.status,
+        updatedAt: book.updatedAt,
+        genre: book.genre,
+        authorName: book.authorName,
+        chapters: metric.chapters,
+        reads: metric.readingProgress + metric.listeningProgress,
+        likes: metric.likes,
+        comments: metric.comments,
+        _count: {
+          chapters: metric.chapters,
+          readingProgress: metric.readingProgress,
+          listeningProgress: metric.listeningProgress,
+          bookmarks: metric.likes,
+          notes: metric.comments,
+        },
+      };
+    });
 
     return res.json({
       success: true,

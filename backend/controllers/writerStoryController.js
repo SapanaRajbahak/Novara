@@ -35,6 +35,26 @@ function parseFileType(bookType) {
   return null;
 }
 
+function getWriterIdentityCandidates(sessionUser) {
+  const candidates = [
+    sessionUser?.writerProfile?.penName,
+    sessionUser?.penName,
+    sessionUser?.name,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+
+  const seen = new Set();
+  return candidates.filter((value) => {
+    const key = value.toLowerCase();
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
 function mapStory(book) {
   return {
     id: book.id,
@@ -51,17 +71,35 @@ function mapStory(book) {
   };
 }
 
+function storyMatchesWriterIdentity(story, sessionUser) {
+  const storyAuthor = String(story?.authorName || "").trim().toLowerCase();
+  if (!storyAuthor) {
+    return false;
+  }
+
+  return getWriterIdentityCandidates(sessionUser).some((candidate) => candidate.toLowerCase() === storyAuthor);
+}
+
 async function findStoryForRole(storyId, sessionUser) {
   const story = await prisma.book.findUnique({
     where: { id: storyId },
-    include: {
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      description: true,
+      genre: true,
+      tags: true,
+      status: true,
+      coverUrl: true,
+      fileType: true,
+      authorName: true,
+      createdBy: true,
+      createdAt: true,
+      updatedAt: true,
       _count: {
         select: {
           chapters: true,
-          readingProgress: true,
-          listeningProgress: true,
-          bookmarks: true,
-          notes: true,
         },
       },
     },
@@ -75,30 +113,53 @@ async function findStoryForRole(storyId, sessionUser) {
     return story;
   }
 
-  if (story.createdBy !== String(sessionUser.id)) {
-    return null;
+  if (story.createdBy === String(sessionUser.id)) {
+    return story;
   }
 
-  return story;
+  if (storyMatchesWriterIdentity(story, sessionUser)) {
+    return story;
+  }
+
+  return null;
 }
 
 async function listWriterStories(req, res) {
   try {
     const where = req.session.user.role === "ADMIN"
       ? {}
-      : { createdBy: String(req.session.user.id) };
+      : (() => {
+        const authorNames = getWriterIdentityCandidates(req.session.user);
+        if (authorNames.length > 0) {
+          return {
+            OR: [
+              { createdBy: String(req.session.user.id) },
+              { authorName: { in: authorNames } },
+            ],
+          };
+        }
+        return { createdBy: String(req.session.user.id) };
+      })();
 
     const stories = await prisma.book.findMany({
       where,
       orderBy: { updatedAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        description: true,
+        genre: true,
+        tags: true,
+        status: true,
+        coverUrl: true,
+        fileType: true,
+        authorName: true,
+        createdAt: true,
+        updatedAt: true,
         _count: {
           select: {
             chapters: true,
-            readingProgress: true,
-            listeningProgress: true,
-            bookmarks: true,
-            notes: true,
           },
         },
       },
@@ -189,10 +250,6 @@ async function createWriterStory(req, res) {
         _count: {
           select: {
             chapters: true,
-            readingProgress: true,
-            listeningProgress: true,
-            bookmarks: true,
-            notes: true,
           },
         },
       },
@@ -278,10 +335,6 @@ async function updateWriterStory(req, res) {
         _count: {
           select: {
             chapters: true,
-            readingProgress: true,
-            listeningProgress: true,
-            bookmarks: true,
-            notes: true,
           },
         },
       },
@@ -334,10 +387,6 @@ async function publishWriterStory(req, res) {
         _count: {
           select: {
             chapters: true,
-            readingProgress: true,
-            listeningProgress: true,
-            bookmarks: true,
-            notes: true,
           },
         },
       },
@@ -369,10 +418,6 @@ async function unpublishWriterStory(req, res) {
         _count: {
           select: {
             chapters: true,
-            readingProgress: true,
-            listeningProgress: true,
-            bookmarks: true,
-            notes: true,
           },
         },
       },
