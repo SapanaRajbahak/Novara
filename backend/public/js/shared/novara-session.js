@@ -47,7 +47,7 @@
       return DEV_API_BASE_URL;
     }
 
-    return location.origin || PROD_API_BASE_URL;
+    return PROD_API_BASE_URL;
   }
 
   function getApiBaseCandidates() {

@@ -9,6 +9,18 @@ const session = require("express-session");
 const PgSession = require("connect-pg-simple")(session);
 const path = require("path");
 
+const CANONICAL_APP_URL = process.env.APP_URL || "https://readnovara.ca";
+let canonicalOrigin = "https://readnovara.ca";
+let canonicalHost = "readnovara.ca";
+
+try {
+  const parsedCanonicalUrl = new URL(CANONICAL_APP_URL);
+  canonicalOrigin = parsedCanonicalUrl.origin;
+  canonicalHost = parsedCanonicalUrl.host.toLowerCase();
+} catch (error) {
+  console.warn("Invalid APP_URL for canonical redirects. Falling back to https://readnovara.ca");
+}
+
 // Route imports
 const stripeWebhookRoutes = require("./routes/stripeWebhookRoutes");
 const billingRoutes = require("./routes/billingRoutes");
@@ -52,6 +64,21 @@ const app = express();
 if (isProduction) {
   // Allow express-session to recognize HTTPS when the app is behind a proxy.
   app.set("trust proxy", 1);
+}
+
+if (isProduction) {
+  // Keep non-API traffic on one canonical host so session cookies remain consistent.
+  app.use((req, res, next) => {
+    const requestHost = (req.hostname || "").toLowerCase();
+    const isApiRequest = req.path.startsWith("/api");
+    const isHealthCheck = req.path === "/health";
+
+    if (!isApiRequest && !isHealthCheck && requestHost && requestHost !== canonicalHost) {
+      return res.redirect(308, `${canonicalOrigin}${req.originalUrl}`);
+    }
+
+    return next();
+  });
 }
 
 const sessionStore = new PgSession({
