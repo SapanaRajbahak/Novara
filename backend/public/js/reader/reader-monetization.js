@@ -686,7 +686,18 @@ async function buyPack(packId) {
         cancelUrl: buildCheckoutReturnUrl('cancel')
       })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
+
+    if (res.status === 401) {
+      toast('Your session expired. Please sign in again to continue checkout.', '⚠️', 'warn');
+      return;
+    }
+
+    if (!res.ok) {
+      toast(data?.error || 'Failed to start checkout', '❌', 'warn');
+      return;
+    }
+
     if (data.url) {
       window.location.href = data.url;
     } else {
@@ -713,7 +724,18 @@ async function subscribePlan(planId) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ plan: planId })
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => null);
+
+    if (res.status === 401) {
+      toast('Your session expired. Please sign in again to continue subscription.', '⚠️', 'warn');
+      return;
+    }
+
+    if (!res.ok) {
+      toast(data?.error || 'Failed to start subscription', '❌', 'warn');
+      return;
+    }
+
     if (data.url) {
       window.location.href = data.url;
     } else {

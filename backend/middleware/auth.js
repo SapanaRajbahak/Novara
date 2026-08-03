@@ -1,5 +1,14 @@
 function requireAuth(req, res, next) {
   if (!req.session || !req.session.user) {
+    if (process.env.STRIPE_DEBUG === '1' && req.originalUrl?.startsWith('/api/billing/')) {
+      console.warn('[Billing Auth Debug] Authentication required', {
+        path: req.originalUrl,
+        hasSession: Boolean(req.session),
+        hasSessionUser: Boolean(req.session?.user),
+        authenticatedUser: req.user?.id || req.session?.user?.id || null,
+      });
+    }
+
     return res.status(401).json({
       success: false,
       error: "Authentication required",

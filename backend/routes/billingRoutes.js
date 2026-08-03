@@ -20,6 +20,20 @@ function logStripeCheckoutError(context, err) {
   });
 }
 
+function logStripeRuntimeDebug(context, req, effectivePriceId) {
+  if (!STRIPE_DEBUG_ENABLED) {
+    return;
+  }
+
+  console.log(`[Billing Debug] ${context} runtime`, {
+    stripeMode: process.env.STRIPE_MODE || stripe.__novara?.keyMode || 'unset',
+    stripeKeyPrefix: process.env.STRIPE_SECRET_KEY?.substring(0, 8) || null,
+    priceId: process.env.STRIPE_COIN_PRICE_ID || null,
+    effectivePriceId: effectivePriceId || null,
+    authenticatedUser: req.user?.id || req.session?.user?.id || null,
+  });
+}
+
 async function logStripeCheckoutDebug(context, priceId) {
   if (!STRIPE_DEBUG_ENABLED) {
     return;
@@ -71,8 +85,21 @@ const COIN_PACKS = {
   coins_2600: { priceId: process.env.STRIPE_PRICE_COINS_2600, coins: 2600 },
 };
 
+function logCoinCheckoutRequest(req, res, next) {
+  const pack = req.body?.pack;
+  const packInfo = COIN_PACKS[pack];
+  logStripeRuntimeDebug('create-coin-checkout', req, packInfo?.priceId || null);
+  next();
+}
+
+function logSubscriptionCheckoutRequest(req, res, next) {
+  const plan = req.body?.plan;
+  logStripeRuntimeDebug('create-subscription-checkout', req, PLAN_PRICE_IDS[plan] || null);
+  next();
+}
+
 // POST /api/billing/create-subscription-checkout
-router.post('/create-subscription-checkout', requireAuth, async (req, res) => {
+router.post('/create-subscription-checkout', logSubscriptionCheckoutRequest, requireAuth, async (req, res) => {
   const { plan } = req.body;
   const user = req.session.user;
   if (!PLAN_PRICE_IDS[plan]) {
@@ -105,7 +132,7 @@ router.post('/create-subscription-checkout', requireAuth, async (req, res) => {
 });
 
 // POST /api/billing/create-coin-checkout
-router.post('/create-coin-checkout', requireAuth, async (req, res) => {
+router.post('/create-coin-checkout', logCoinCheckoutRequest, requireAuth, async (req, res) => {
   const { pack } = req.body;
   const user = req.session.user;
   const packInfo = COIN_PACKS[pack];
