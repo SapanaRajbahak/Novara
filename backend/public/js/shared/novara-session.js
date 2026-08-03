@@ -4,11 +4,23 @@
   const DEV_API_BASE_URL = `http://localhost:${DEV_API_PORT}`;
 
   function resolveApiBaseUrl() {
+    const location = global.location || {};
+    const isFileProtocol = location.protocol === "file:";
+    const isLocalHost = ["localhost", "127.0.0.1"].includes(location.hostname);
+    const isLocalPage = isFileProtocol || isLocalHost;
+
     const configuredBase = global.APP_CONFIG && typeof global.APP_CONFIG.API_BASE_URL === "string"
       ? global.APP_CONFIG.API_BASE_URL.trim()
       : "";
     if (configuredBase) {
-      return configuredBase.replace(/\/$/, "");
+      try {
+        const parsed = new URL(configuredBase);
+        if (isLocalPage || parsed.origin === location.origin) {
+          return configuredBase.replace(/\/$/, "");
+        }
+      } catch (error) {
+        // Ignore invalid APP_CONFIG API base and fall back.
+      }
     }
 
     const explicitBase = global.localStorage
@@ -16,21 +28,21 @@
     if (explicitBase) {
       try {
         const parsed = new URL(explicitBase);
-        const location = global.location || {};
-        const isLocalPage = location.protocol === "file:" || ["localhost", "127.0.0.1"].includes(location.hostname);
         const isExplicitLocal = ["localhost", "127.0.0.1"].includes(parsed.hostname);
 
-        if (!isLocalPage || isExplicitLocal) {
+        // In local dev, allow explicit local override. In production, only allow same-origin.
+        if ((isLocalPage && isExplicitLocal) || (!isLocalPage && parsed.origin === location.origin)) {
           return explicitBase.replace(/\/$/, "");
         }
+
+        // Self-heal stale or cross-origin overrides that break session cookies.
+        global.localStorage.removeItem("Novara.apiBaseUrl");
+        global.localStorage.removeItem("novara.apiBaseUrl");
       } catch (error) {
         // Ignore invalid override and fall back to local default.
       }
     }
 
-    const location = global.location || {};
-    const isFileProtocol = location.protocol === "file:";
-    const isLocalHost = ["localhost", "127.0.0.1"].includes(location.hostname);
     if (isFileProtocol || isLocalHost) {
       return DEV_API_BASE_URL;
     }

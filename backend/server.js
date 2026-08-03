@@ -6,6 +6,7 @@ const http = require('http');
 const { Server: SocketIOServer } = require('socket.io');
 const cors = require("cors");
 const session = require("express-session");
+const PgSession = require("connect-pg-simple")(session);
 const path = require("path");
 
 // Route imports
@@ -44,13 +45,20 @@ const monetizationRoutes = require("./routes/monetizationRoutes");
 const giftRoutes = require("./routes/giftRoutes");
 const contactRoutes = require("./routes/contactRoutes");
 
+const isProduction = process.env.NODE_ENV === "production";
 
 const app = express();
 
-if (process.env.NODE_ENV === "production") {
+if (isProduction) {
   // Allow express-session to recognize HTTPS when the app is behind a proxy.
   app.set("trust proxy", 1);
 }
+
+const sessionStore = new PgSession({
+  conString: process.env.DATABASE_URL,
+  tableName: "sessions",
+  createTableIfMissing: true,
+});
 
 // ====== CLEAN MIDDLEWARE SETUP ======
 app.use(cors({
@@ -65,14 +73,15 @@ app.use(express.urlencoded({ extended: true }));
 // Session (ONE instance)
 app.use(
   session({
+    store: sessionStore,
     secret: process.env.SESSION_SECRET || "Novara-session-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-      maxAge: 1000 * 60 * 60 * 24,
+      secure: isProduction,
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 * 30,
     },
   })
 );
