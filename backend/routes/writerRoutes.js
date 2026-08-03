@@ -1,8 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const prisma = require("../prisma/client");
-const Stripe = require("stripe");
-const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = require("../config/stripe");
 
 const { getWriterDashboard, getWriterReferrals } = require("../controllers/writerController");
 const { requireAuth, requireWriter } = require("../middleware/auth");

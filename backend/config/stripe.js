@@ -4,7 +4,7 @@
 
 const Stripe = require('stripe');
 const dotenv = require('dotenv');
-dotenv.config();
+const dotenvResult = dotenv.config();
 
 if (!process.env.STRIPE_SECRET_KEY) {
   throw new Error('STRIPE_SECRET_KEY is not set in .env');
@@ -37,6 +37,21 @@ function detectKeyMode(secretKey) {
 
 const configuredMode = normalizeStripeMode(process.env.STRIPE_MODE);
 const keyMode = detectKeyMode(process.env.STRIPE_SECRET_KEY);
+const envFileKey = dotenvResult?.parsed?.STRIPE_SECRET_KEY;
+
+function detectKeySource(runtimeKey, parsedKey) {
+  if (!parsedKey) {
+    return 'runtime-env-only';
+  }
+
+  if (runtimeKey === parsedKey) {
+    return 'env-file-or-same-runtime';
+  }
+
+  return 'runtime-env-overrode-env-file';
+}
+
+const keySource = detectKeySource(process.env.STRIPE_SECRET_KEY, envFileKey);
 
 if (configuredMode && configuredMode !== keyMode) {
   throw new Error(
@@ -47,5 +62,17 @@ if (configuredMode && configuredMode !== keyMode) {
 const stripe = Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16',
 });
+
+stripe.__novara = {
+  keyMode,
+  configuredMode: configuredMode || 'unset',
+  keySource,
+};
+
+if (process.env.STRIPE_DEBUG === '1') {
+  console.log('[Stripe Config] runtime key mode:', keyMode.toUpperCase());
+  console.log('[Stripe Config] STRIPE_MODE:', configuredMode ? configuredMode.toUpperCase() : 'UNSET');
+  console.log('[Stripe Config] key source:', keySource);
+}
 
 module.exports = stripe;
