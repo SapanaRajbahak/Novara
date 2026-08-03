@@ -17,14 +17,15 @@
     "books:sync:genres": "node scripts/syncMappedGenresToDb.js"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
-    "bcrypt": "^5.1.1",
+    "@prisma/client": "^6.19.2",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
-    "express": "^4.21.2",
+    "express": "^5.2.1",
     "express-session": "^1.19.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
+    "node-fetch": "^2.7.0",
     "pdfjs-dist": "3.11.174",
     "resend": "^4.8.0",
     "socket.io": "^4.8.3",
@@ -32,6 +33,6 @@
   },
   "devDependencies": {
     "nodemon": "^3.1.9",
-    "prisma": "^6.5.0"
+    "prisma": "^6.19.2"
   }
 }

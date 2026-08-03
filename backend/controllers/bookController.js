@@ -25,12 +25,23 @@ const {
  */
 async function getBooks(req, res) {
   try {
+    console.log("=== GET /api/books DEBUG ===");
+    console.log("DATABASE_URL:", process.env.DATABASE_URL ? "SET" : "NOT SET");
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("Query params:", req.query);
+
     const queryErrors = validateListQuery(req.query);
     if (queryErrors.length > 0) {
+      console.log("Query validation errors:", queryErrors);
       return res.status(400).json({ success: false, error: queryErrors.join(". ") });
     }
 
     const result = await bookService.listBooks(req.query);
+
+    console.log("Books returned:", result.books.length);
+    console.log("Pagination:", result.pagination);
+    console.log("Book IDs:", result.books.map(b => b.id));
+    console.log("Book statuses:", result.books.map(b => b.status));
 
     return res.json({
       success:    true,

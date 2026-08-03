@@ -366,12 +366,12 @@ async function getWriterDashboard(req, res) {
 
     const [giftSummaryResult, giftRowsResult, referralSummaryResult, coinEarningsResult, earningsByTypeResult] =
       await Promise.allSettled([
-        prisma.gift.aggregate({
+        prisma.gift && prisma.gift.aggregate ? prisma.gift.aggregate({
           where: { toAuthorId: String(userId) },
           _sum: { amount: true },
           _count: { id: true },
-        }),
-        prisma.gift.findMany({
+        }) : Promise.resolve({ _sum: { amount: 0 }, _count: { id: 0 } }),
+        prisma.gift && prisma.gift.findMany ? prisma.gift.findMany({
           where: { toAuthorId: String(userId) },
           orderBy: { createdAt: "desc" },
           take: 8,
@@ -386,9 +386,9 @@ async function getWriterDashboard(req, res) {
               select: { id: true, name: true, penName: true, email: true },
             },
           },
-        }),
+        }) : Promise.resolve([]),
         getReferrerSummary(userId),
-        prisma.walletTransaction.aggregate({
+        prisma.walletTransaction && prisma.walletTransaction.aggregate ? prisma.walletTransaction.aggregate({
           where: {
             userId: String(userId),
             amount: { gt: 0 },
@@ -399,8 +399,8 @@ async function getWriterDashboard(req, res) {
           _count: {
             id: true,
           },
-        }),
-        prisma.walletTransaction.groupBy({
+        }) : Promise.resolve({ _sum: { amount: 0 }, _count: { id: 0 } }),
+        prisma.walletTransaction && prisma.walletTransaction.groupBy ? prisma.walletTransaction.groupBy({
           by: ["type"],
           where: {
             userId: String(userId),
@@ -412,7 +412,7 @@ async function getWriterDashboard(req, res) {
           _count: {
             id: true,
           },
-        }),
+        }) : Promise.resolve([]),
       ]);
 
     const optionalDashboardErrors = [

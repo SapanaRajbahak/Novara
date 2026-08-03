@@ -281,6 +281,9 @@ async function getPublishedDiscoverCatalog(filters = {}) {
  * @param {object} filters - Parsed query params from the request
  */
 async function listBooks(filters) {
+  console.log("=== listBooks SERVICE DEBUG ===");
+  console.log("Filters received:", filters);
+
   const {
     page  = 1,
     limit = 10,
@@ -323,11 +326,18 @@ async function listBooks(filters) {
     ];
   }
 
+  console.log("Prisma where clause:", JSON.stringify(where, null, 2));
+  console.log("Skip:", skip, "Take:", take, "OrderBy:", orderBy);
+
   // Run the data query and the count query in parallel for performance
   const [books, total] = await Promise.all([
     prisma.book.findMany({ where, orderBy, skip, take, include: BOOK_INCLUDE }),
     prisma.book.count({ where }),
   ]);
+
+  console.log("Prisma query results - Books count:", books.length, "Total count:", total);
+  console.log("Book IDs from DB:", books.map(b => b.id));
+  console.log("Book statuses from DB:", books.map(b => b.status));
 
   return {
     books,
